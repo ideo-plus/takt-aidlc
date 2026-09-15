@@ -24,7 +24,7 @@ export function sources(root: string): Record<string, string> {
 }
 function sourcePath(root: string, path: unknown) {
   assert.ok(typeof path === 'string' && !path.startsWith('/') && !path.split('/').some(p => !p || p === '.' || p === '..'));
-  assert.ok(!/^(?:\.git|\.claude|\.takt|input|cg)(?:\/|$)/.test(path));
+  assert.ok(!/^(?:\.git|\.claude|\.codex|\.agents|\.takt|input|cg)(?:\/|$)/.test(path));
   const full = join(root, path);
   assert.ok(lstatSync(full).isFile() && realpathSync(full).startsWith(realpathSync(root) + '/'));
   return path;

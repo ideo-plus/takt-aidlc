@@ -68,7 +68,7 @@ steps:
       本家CGのStep 4（生成）とStep 5（成果物記録）に従い、次の計画を順番に実装してください。
       {report:01-cg-plan.json}
       新たな設計判断は行わず、InputのIntent・Unit設計・CG定義・開発規約・Testing Contractを維持します。
-      input、.claude、.kiro、.takt、../control、元のAI-DLCプロジェクトは編集しません。
+      input、.claude、.codex、.agents、.kiro、.takt、../control、元のAI-DLCプロジェクトは編集しません。
       cg/source-manifest.jsonへ{"stage":"code-generation","version":1,"unit":"現在のUnit","writes":[{"path":"作成・変更・削除したソース/テストの相対パス"}]}を保存してください。全変更を列挙します。
       cg/traceability.jsonへ{"stage":"code-generation","unit":"現在のUnit","upstream_ids":["全要求ID"],"coverage":[{"id":"要求ID","status":"OK","target":"実在するソースまたはテスト"}]}を保存してください。IDはinput/context.jsonを使います。
       応答後に固定スクリプトがビルド・テスト・設定済みセンサーを実行します。失敗時はcg/build.json、cg/test.json、cg/linter.json、cg/type-check.jsonを読み、修正してください。
@@ -118,7 +118,7 @@ steps:
     instruction: |
       本家CGの要求・規約・Testing Contractを守って以下の指摘を修正してください。
       {report:03-code-review.json}
-      cg/source-manifest.jsonとcg/traceability.jsonも実際の変更に合わせます。input、.claude、.takt、../control、元のAI-DLC記録は変更しません。
+      cg/source-manifest.jsonとcg/traceability.jsonも実際の変更に合わせます。input、.claude、.codex、.agents、.takt、../control、元のAI-DLC記録は変更しません。
       修正後は必ずビルド・テスト・センサーが再実行され、別のコードレビュアーへ戻ります。
       cg/の検証ログを参照し、目標を下げずに直してください。解決不能ならcg/blocked.jsonへ理由を保存してblockedで終了し、人の承認待ちにしません。
     quality_gates:

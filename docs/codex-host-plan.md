@@ -1,5 +1,7 @@
 # Codexホストプラグインの検討
 
+> 設計履歴: CG単体のCodexホスト対応は実装済みです。現在の構成・導入方法は[Codexホストガイド](codex-host.md)、確認済みの範囲は[実機試験](../experiments/codex-host/RESULTS.md)を参照してください。以下は実装前の検討記録です。
+
 2026年9月15日時点。対象はCodex CLI 0.154.0、AI-DLC 2.8.2。
 
 ## 結論

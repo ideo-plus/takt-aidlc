@@ -2,9 +2,11 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { cleanEnvironment, fileInside } from '../handoff/io';
+import { harnessDirectory, type HostHarness } from '../hosts/harness';
 
 export type CgContext = {
   version: 1;
+  hostHarness: HostHarness;
   record: string;
   unit: string | null;
   files: string[];
@@ -36,19 +38,20 @@ function markdownFiles(project: string, dir: string): string[] {
   });
 }
 
-export function collectCgContext(project: string, artifacts: string[], unit: string | null, checks: Record<string, string> = {}): CgContext {
+export function collectCgContext(project: string, artifacts: string[], unit: string | null, checks: Record<string, string> = {}, host: HostHarness = 'claude'): CgContext {
+  const shell = harnessDirectory(host);
   const { space, record } = intentRecord(project);
   if (unit !== null && !/^[\w-]+$/.test(unit)) throw new Error('不正なUnitです');
   if (artifacts.some(path => !path.startsWith(`${record}/inception/`) && !path.startsWith(`${record}/construction/`))) throw new Error('CGの成果物入力は現在のIntent内に限定してください');
   const intentFile = `${record}/project-description.json`;
-  const stageFile = '.claude/aidlc-common/stages/construction/code-generation.md';
+  const stageFile = `${shell}/aidlc-common/stages/construction/code-generation.md`;
   const stageText = readFileSync(fileInside(project, stageFile), 'utf8');
   const front = stageText.match(/^---\n([\s\S]*?)\n---/);
   if (!front) throw new Error('CG定義のfrontmatterがありません');
   const stage = Bun.YAML.parse(front[1]) as { sensors?: string[] };
   const sensors = (stage.sensors ?? []).map(id => {
     if (!['required-sections', 'linter', 'type-check', 'traceability'].includes(id)) throw new Error(`未対応のCGセンサー: ${id}`);
-    const file = `.claude/sensors/aidlc-${id}.md`;
+    const file = `${shell}/sensors/aidlc-${id}.md`;
     const definition = readFileSync(fileInside(project, file), 'utf8');
     const command = definition.match(/^command:\s*(.+)$/m)?.[1];
     if (!command) throw new Error(`センサーのcommandがありません: ${id}`);
@@ -64,13 +67,13 @@ export function collectCgContext(project: string, artifacts: string[], unit: str
   const common = [...artifacts, ...unitDesigns, intentFile, stageFile, ...Object.values(templates), ...Object.values(checks),
     ...sensors.map(s => s.file),
     ...['org', 'team', 'project'].map(name => `aidlc/spaces/${space}/memory/${name}.md`),
-    ...markdownFiles(project, '.claude/knowledge/aidlc-shared'),
+    ...markdownFiles(project, `${shell}/knowledge/aidlc-shared`),
     ...markdownFiles(project, `aidlc/spaces/${space}/knowledge/aidlc-shared`),
   ];
   const phaseRules = `aidlc/spaces/${space}/memory/phases/construction.md`;
   if (existsSync(join(project, phaseRules))) common.push(phaseRules);
-  const forRole = (role: string) => [`${'.claude/agents'}/${role}.md`,
-    ...markdownFiles(project, `.claude/knowledge/${role}`),
+  const forRole = (role: string) => [`${shell}/agents/${role}.md`,
+    ...markdownFiles(project, `${shell}/knowledge/${role}`),
     ...markdownFiles(project, `aidlc/spaces/${space}/knowledge/${role}`)];
   const roles = {
     plan: [...common, ...forRole('aidlc-developer-agent')],
@@ -78,7 +81,7 @@ export function collectCgContext(project: string, artifacts: string[], unit: str
     review: [...common, ...forRole('aidlc-architecture-reviewer-agent'), ...forRole('aidlc-quality-agent')],
     report: [...common, ...forRole('aidlc-developer-agent')],
   };
-  const traceabilityTool = '.claude/tools/aidlc-sensor-traceability.ts';
+  const traceabilityTool = `${shell}/tools/aidlc-sensor-traceability.ts`;
   const files = [...new Set([...artifacts, ...Object.values(roles).flat(), traceabilityTool])];
   for (const path of files) fileInside(project, path);
   const result = spawnSync('aidlc', ['engine', 'testing-posture', 'render', '--project-dir', project], { cwd: project, env: cleanEnvironment(), encoding: 'utf8', timeout: 15000, maxBuffer: 1024 * 1024 });
@@ -102,7 +105,7 @@ export function collectCgContext(project: string, artifacts: string[], unit: str
     requirementIds = output.missing_from_upstream_ids;
     if (!Array.isArray(requirementIds) || !requirementIds.length || requirementIds.some(id => typeof id !== 'string')) throw new Error('対応を追跡できる要求IDがありません');
   } finally { rmSync(probeDir, { recursive: true, force: true }); }
-  return { version: 1, record, unit, files, roles, testingContract, testingContractText: result.stdout, requirementIds, intentFile, stageFile, sensors, templates, checks, mode: 'hotl' };
+  return { version: 1, hostHarness: host, record, unit, files, roles, testingContract, testingContractText: result.stdout, requirementIds, intentFile, stageFile, sensors, templates, checks, mode: 'hotl' };
 }
 
 export const adaptation = `# AI-DLC CGのHOTL実行契約
@@ -110,7 +113,7 @@ TAKTが担うのはCode Generationステージだけです。設計工程やBuil
 以下の資料は固定したAI-DLCの原文です。Intent、既存設計、開発規約、CGの実装手順と成果物要件に従ってください。
 ただし人間の対話承認・ウォーキングスケルトン後の承認・AI-DLCエンジンの状態更新は実行しません。ユーザーの方針により、CG内の計画確認とレビューはTAKTの自動判定へ置き換えます。
 本家のTask委譲はTAKTの担当ステップへの委譲として扱います。ネイティブのPlan Approval receiptやdispatch markerは生成・要求せず、ここでは固定入力のhash、計画のTesting Contract hash、TAKTの計画レビュー結果を生成の前提にします。
-センサー定義も開発契約です。定義された検査を実行し、その実測結果を残してください。ただしAI-DLCのネイティブ監査記録を捏造せず、人間のApprove Planを得たとも記録しないでください。元のaidlc/や.claude/を更新せず、CGの報告はTAKTのレポートとcg/に保存します。
+センサー定義も開発契約です。定義された検査を実行し、その実測結果を残してください。ただしAI-DLCのネイティブ監査記録を捏造せず、人間のApprove Planを得たとも記録しないでください。元のaidlc/・.claude/・.codex/・.agents/を更新せず、CGの報告はTAKTのレポートとcg/に保存します。
 原文の<record>などは元プロジェクトでの出典です。添付した固定コピーと作業領域のソースを参照し、元の記録領域へ書き込まないでください。
 規約はstrict-additiveとして読み、空のテンプレート例を確定事項と見なさないでください。人が明示した既存の要求・例外を優先し、不明な判断は捏造せずblockedとして終了してください。
 Testing Contractの方法・順序・品質目標を弱めてはいけません。ビルドとテストの両方が成功するまでCG完了を返してはいけません。

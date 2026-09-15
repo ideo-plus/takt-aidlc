@@ -2,12 +2,12 @@
 
 ## Supported environment
 
-The integration currently targets macOS and Linux, AI-DLC 2.8.2, TAKT 0.65.0, Bun 1.3.13, and Node.js 22.22.0 or newer. Claude Code is the host plugin environment. TAKT workers can use Claude or Codex. Tested CLI versions are Claude Code 2.1.270 and Codex 0.154.0.
+The integration currently targets macOS and Linux, AI-DLC 2.8.2, TAKT 0.65.0, Bun 1.3.13, and Node.js 22.22.0 or newer. Claude Code and Codex CLI are supported CG host environments. TAKT workers can use Claude or Codex. Tested CLI versions are Claude Code 2.1.270 and Codex 0.154.0.
 
 Install Bun, Node.js, and Git through your usual tool manager. Install the pinned TAKT and Claude Code CLIs:
 
 ```sh
-npm install --global takt@0.65.0 @anthropic-ai/claude-code@2.1.270
+npm install --global takt@0.65.0 @anthropic-ai/claude-code@2.1.270 @openai/codex@0.154.0
 ```
 
 For AI-DLC, use the versioned [official release](https://github.com/awslabs/aidlc-workflows/releases/tag/v2.8.2). Its installer provides both the native executable and matching harness runtime:
@@ -35,6 +35,8 @@ Tests prepare a runtime cache with the native `aidlc config` command, then run T
 
 ## Configure an AI-DLC project
 
+Choose the host independently of the TAKT worker. For Codex, follow the [Codex host guide](codex-host.md). The following setup uses Claude Code; both hosts share the CG configuration below.
+
 Run the following in the target project before starting Inception:
 
 ```sh
@@ -61,6 +63,7 @@ Create `aidlc/takt-handoff/config.json`. This is a template: replace `<intent-di
 {
   "enabled": true,
   "handoffStage": "code-generation",
+  "hostHarness": "claude",
   "provider": "codex",
   "model": "gpt-5.6-luna",
   "codexReasoningEffort": "max",

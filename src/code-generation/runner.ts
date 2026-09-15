@@ -5,8 +5,10 @@ import { pathToFileURL } from 'node:url';
 import { cleanEnvironment, command, digest, fileInside, quote, readJson, requireSuccess, snapshot, unchanged, withoutBedrock, writeJson, type Snapshot } from '../handoff/io';
 import { adaptation, collectCgContext, intentRecord, type CgContext } from './context';
 import { sources } from './cg-gate';
+import { hostHarness, harnessDirectory, type HostHarness } from '../hosts/harness';
 
 export type CgConfig = {
+  hostHarness?: HostHarness;
   enabled: boolean; handoffStage: 'code-generation'; provider: 'mock' | 'claude' | 'codex';
   artifacts: string[]; sources: string[]; workflow: string; buildScript: string; verifyScript: string;
   sensorScripts: Partial<Record<'linter' | 'type-check', string>>;
@@ -27,12 +29,13 @@ export function cgEnabled(project: string) {
 function loadConfig(project: string) {
   const configPath = fileInside(project, 'aidlc/takt-handoff/config.json');
   const c = readJson<CgConfig>(configPath);
+  hostHarness(c.hostHarness);
   if (!c.enabled || c.handoffStage !== 'code-generation' || !['claude', 'codex', 'mock'].includes(c.provider)) throw new Error('CG設定が無効です');
   if (!Number.isInteger(c.timeoutMs) || c.timeoutMs < 1000 || c.timeoutMs > 3600000) throw new Error('CGの時間上限は1秒〜1時間です');
   if (c.model !== undefined && (typeof c.model !== 'string' || !c.model.trim())) throw new Error('modelが不正です');
   if (c.codexReasoningEffort !== undefined && (c.provider !== 'codex' || typeof c.codexReasoningEffort !== 'string' || !c.codexReasoningEffort.trim())) throw new Error('codexReasoningEffortはCodex用の空でない文字列です');
   if (!Array.isArray(c.artifacts) || !c.artifacts.length || !Array.isArray(c.sources) || !c.sources.length) throw new Error('CGの入力とソースを指定してください');
-  for (const p of c.sources) if (/^(?:\.git|\.claude|\.takt|aidlc|input|cg)(?:\/|$)/.test(p)) throw new Error(`制御領域をソースにできません: ${p}`);
+  for (const p of c.sources) if (/^(?:\.git|\.claude|\.codex|\.agents|\.takt|aidlc|input|cg)(?:\/|$)/.test(p)) throw new Error(`制御領域をソースにできません: ${p}`);
   for (const key of ['workflow', 'buildScript', 'verifyScript'] as const) fileInside(project, c[key]);
   for (const id of ['linter', 'type-check'] as const) {
     if (c.sensorScripts?.[id]) fileInside(project, c.sensorScripts[id]!);
@@ -40,7 +43,7 @@ function loadConfig(project: string) {
   }
   return { c, configHash: digest(readFileSync(configPath)) };
 }
-export function isCgEntryCommand(text: string) {
+export function isCgEntryCommand(text: string, project?: string) {
   const words: string[] = [];
   const token = /\s*(?:'([^']*)'|"([^"$`\\]*)"|([^\s'"\\;&|<>`$()]+))/y;
   let pos = 0;
@@ -49,10 +52,12 @@ export function isCgEntryCommand(text: string) {
     token.lastIndex = pos; const m = token.exec(text); if (!m) return false;
     words.push(m[1] ?? m[2] ?? m[3]); pos = token.lastIndex;
   }
+  const projects = words.map((word, i) => word === '--project-dir' ? i : -1).filter(i => i >= 0);
+  if (project && (projects.length > 1 || projects.some(i => words[i + 1] !== project))) return false;
   return words.slice(0, 3).join(' ') === 'aidlc engine orchestrate' && ['next', 'continue'].includes(words[3]) && (words[3] !== 'continue' || words.length >= 5);
 }
-export function cgEntryCommandIssue(text: string) {
-  return /^\s*aidlc engine orchestrate (?:next|continue)\b/.test(text) && !isCgEntryCommand(text)
+export function cgEntryCommandIssue(text: string, project?: string) {
+  return /^\s*aidlc engine orchestrate (?:next|continue)\b/.test(text) && !isCgEntryCommand(text, project)
     ? 'CG委譲ではnext/continueのJSON応答を使います。元のaidlcコマンドを単独で実行し、リダイレクト・echo・シェル連結は付けないでください。まだ実行されていません。'
     : null;
 }
@@ -61,7 +66,7 @@ export async function prepareCg(project: string, directive: any) {
   if (directive?.kind !== 'run-stage' || directive.stage !== 'code-generation') return null;
   if (directive.single) throw new Error('単独runnerのAI-DLC状態はCG自動引き継ぎの対象外です');
   const { c, configHash } = loadConfig(project);
-  const cg = collectCgContext(project, c.artifacts, typeof directive.unit === 'string' ? directive.unit : null, { build: c.buildScript, test: c.verifyScript, ...c.sensorScripts });
+  const cg = collectCgContext(project, c.artifacts, typeof directive.unit === 'string' ? directive.unit : null, { build: c.buildScript, test: c.verifyScript, ...c.sensorScripts }, hostHarness(c.hostHarness));
   const statePath = join(project, cg.record, 'aidlc-state.md');
   const state = readFileSync(statePath, 'utf8');
   if (!/\*\*State Version\*\*:\s*8\b/.test(state) || !/\*\*Current Stage\*\*:\s*code-generation\b/.test(state) || !/\*\*Status\*\*:\s*Running\b/.test(state)) throw new Error('AI-DLC 2.8.2のCG入口ではありません');
@@ -69,7 +74,7 @@ export async function prepareCg(project: string, directive: any) {
   const version = await command(['aidlc', '--version'], project, cleanEnvironment(), 10000);
   requireSuccess(version); if (!/^aidlc 2\.8\.2\b/.test(version.stdout)) throw new Error('aidlc 2.8.2が必要です');
   const files = snapshot(project, [...cg.files, ...c.sources, c.workflow, c.buildScript, c.verifyScript, ...Object.values(c.sensorScripts ?? {}), ...(c.mockScenario ? [c.mockScenario] : [])]);
-  const lib = await import(pathToFileURL(fileInside(project, '.claude/tools/aidlc-lib.ts')).href);
+  const lib = await import(pathToFileURL(fileInside(project, `${harnessDirectory(cg.hostHarness)}/tools/aidlc-lib.ts`)).href);
   const rows = lib.readAuditShardEvents(project);
   if (new Set(rows.map((row: any) => row.shard)).size !== 1) throw new Error('CG初版は単一の監査シャードのみ対応しています');
   const start = rows.findLast((row: any) => row.event === 'STAGE_STARTED' && lib.auditBlockField(row.block, 'Stage') === 'code-generation');

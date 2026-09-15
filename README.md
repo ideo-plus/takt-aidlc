@@ -2,7 +2,7 @@
 
 [日本語](README.ja.md) · [Setup](docs/getting-started.md) · [Delegation modes](docs/delegation-modes.md)
 
-Delegate AI-DLC work to TAKT through a host plugin. The project targets **Claude Code and Codex hosts**, with a choice of **Code Generation (CG) only** or **the entire Construction phase**. AI-DLC is parked while TAKT works in a separate workspace; no AI-DLC core patch is required.
+Delegate AI-DLC work to TAKT through a host plugin. The project supports **Claude Code and Codex hosts** and is developing two delegation modes: **Code Generation (CG) only** and **the entire Construction phase**. AI-DLC is parked while TAKT works in a separate workspace; no AI-DLC core patch is required.
 
 Experimental integration for **AI-DLC 2.8.2 / TAKT 0.65.0**. Host, delegation scope, and TAKT worker provider are separate choices. **The target design is broader than the current implementation; see the status below.**
 
@@ -11,12 +11,12 @@ Experimental integration for **AI-DLC 2.8.2 / TAKT 0.65.0**. Host, delegation sc
 | Choice | Option | Current status |
 |---|---|---|
 | AI-DLC host | Claude Code | Host plugin implemented; build output: `dist/claude/` |
-| AI-DLC host | Codex | Design and runtime investigation complete; `dist/codex/` is planned, not yet generated |
+| AI-DLC host | Codex | CG host integration implemented; plugin and local distribution manifest generated in `dist/codex/` |
 | Delegation scope | CG stage only | Workflow, source injection, and build/test/sensor gates implemented |
 | Delegation scope | Entire Construction phase | Design-to-verification prototype exists; integration with the shared CG behavior and quality gates is planned |
 | TAKT worker | Claude / Codex | CG workers support both; Codex can use `gpt-5.6-luna` with reasoning effort `max` |
 
-Both delegation modes are intended to run as HOTL, without interactive approval inside TAKT, and require successful build, tests, and applicable sensor checks. The Construction mode will reuse the CG implementation. See [delegation modes](docs/delegation-modes.md) and the [Codex host plan](docs/codex-host-plan.md).
+Both delegation modes are intended to run as HOTL, without interactive approval inside TAKT, and require successful build, tests, and applicable sensor checks. The Construction mode will reuse the CG implementation. See [delegation modes](docs/delegation-modes.md) and the [Codex host guide](docs/codex-host.md).
 
 ## Implemented CG features
 
@@ -27,7 +27,7 @@ Both delegation modes are intended to run as HOTL, without interactive approval 
 
 ## Quickstart
 
-Requirements: Bun **1.3.13**, Node.js **22.22.0+**, Git, `aidlc` **2.8.2**, and `takt` **0.65.0** on macOS or Linux. See [tool installation](docs/getting-started.md). Tests use mock responses and need no model credentials.
+Requirements: Bun **1.3.13**, Node.js **22.22.0+**, Git, `aidlc` **2.8.2**, `takt` **0.65.0**, and Codex CLI **0.154.0** on macOS or Linux. See [tool installation](docs/getting-started.md). Tests use mock responses and need no model credentials.
 
 ```sh
 git clone https://github.com/ideo-plus/takt-aidlc.git
@@ -37,11 +37,11 @@ bun run test
 bun run build:plugin
 ```
 
-Tests prepare the matching AI-DLC runtime under `.experiments/cache/`. The current build generates the Claude Code plugin in `dist/claude/`. The planned Codex host distribution is not yet included.
+Tests prepare the matching AI-DLC runtime under `.experiments/cache/`. Both host distributions are generated in `dist/claude/` and `dist/codex/`. Tests also install the Codex plugin using an isolated Codex configuration.
 
 ## Usage
 
-### Current host integration: Claude Code + CG
+### Claude Code host + CG
 
 Configure the target project's inputs, source files, build/test scripts, and sensors before CG entry using the [setup guide](docs/getting-started.md). Start its normal AI-DLC session with:
 
@@ -49,7 +49,18 @@ Configure the target project's inputs, source files, build/test scripts, and sen
 claude --plugin-dir /absolute/path/to/takt-aidlc/dist/claude
 ```
 
-This command uses the implemented Claude Code host adapter. `provider: "codex"` selects the TAKT worker; it does not select the AI-DLC host. Codex host setup will be added with `dist/codex/`. Loading the plugin alone does not enable delegation.
+Use `hostHarness: "claude"` for this host (the default when omitted). Loading the plugin alone does not enable delegation.
+
+### Codex host + CG
+
+```sh
+codex plugin marketplace add /absolute/path/to/takt-aidlc/dist/codex
+codex plugin add takt-aidlc@takt-aidlc-local
+```
+
+Prepare the target project with `aidlc config --harness codex --yes` and set `hostHarness: "codex"` in the handoff config. Enable and trust its hooks, start a new Codex session, and use `$aidlc`. See the [Codex setup guide](docs/codex-host.md).
+
+`provider` selects the TAKT worker independently of either host.
 
 ### Try a Codex worker
 
@@ -65,12 +76,14 @@ This requires an authenticated Codex CLI. For deterministic build and type-check
 
 The implemented CG profile supports `test-after`, one active unit/workspace, and one AI-DLC audit shard. Human plan approval is replaced by automatic technical review. Native lifecycle completion and audit receipts are not reproduced. **`verified` does not mark native AI-DLC CG complete or import code into the original project.**
 
-See [CG verification results](experiments/code-generation/RESULTS.md) for mock and live evidence. Earlier [Inception handoff](experiments/native-session/STATUS.md) and [full Construction](experiments/construction/RESULTS.md) experiments are separate results. They do not establish that the planned Codex host or unified Construction mode is complete.
+See [CG verification results](experiments/code-generation/RESULTS.md) for mock and live evidence. Earlier [Inception handoff](experiments/native-session/STATUS.md) and [full Construction](experiments/construction/RESULTS.md) experiments are separate results. They do not establish that the unified Construction mode is complete.
+
+The [live Codex host test](experiments/codex-host/RESULTS.md) passed with a Luna Max host, native AI-DLC hooks, and a TAKT mock worker, including build and tests. This is separate from completing all CG steps with a live model worker.
 
 ## Documentation
 
 - [CG-only and Construction delegation modes](docs/delegation-modes.md)
-- [Codex host design and remaining work](docs/codex-host-plan.md)
+- [Codex host setup, behavior, and validation](docs/codex-host.md)
 - [Installation and configuration](docs/getting-started.md)
 - [CG behavior, sensors, and limits](docs/code-generation.md)
 - [Claude Code host plugin](docs/claude-plugin.md)

@@ -18,6 +18,7 @@
     "experiments/native-session/**/*.ts",
     "experiments/plugin-load/**/*.ts",
     "experiments/construction/**/*.ts",
-    "experiments/code-generation/**/*.ts"
+    "experiments/code-generation/**/*.ts",
+    "experiments/codex-host/**/*.ts"
   ]
 }

@@ -2,7 +2,7 @@
 
 ## 接続の構造
 
-AI-DLCは通常どおりInceptionと必要なConstruction設計を進める。`next`または`continue`が`run-stage / code-generation`を返した時点で、Claude CodeのPostToolUseフックが入力を固定し、公式CLIでparkする。TAKTは別の作業領域でCGだけを実行する。
+AI-DLCは通常どおりInceptionと必要なConstruction設計を進める。`next`または`continue`が`run-stage / code-generation`を返した時点で、選択したホスト（Claude Code／Codex）のPostToolUseフックが入力を固定し、公式CLIでparkする。TAKTは別の作業領域でCGだけを実行する。
 
 ```mermaid
 flowchart LR
@@ -15,7 +15,7 @@ flowchart LR
   F --> G[CG結果を保存]
 ```
 
-これはClaude Codeのホストプラグインであり、AI-DLC独自Stageのプラグインや本体パッチではない。tmuxも不要。TAKTのワーカーはClaudeまたはCodexを使用する。
+これはClaude Code／Codexのホストプラグインであり、AI-DLC独自Stageのプラグインや本体パッチではない。tmuxも不要。TAKTのワーカーはClaudeまたはCodexを使用する。
 
 ## 本家CGとの対応
 
