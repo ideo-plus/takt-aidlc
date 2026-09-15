@@ -19,6 +19,7 @@
     "experiments/plugin-load/**/*.ts",
     "experiments/construction/**/*.ts",
     "experiments/code-generation/**/*.ts",
-    "experiments/codex-host/**/*.ts"
+    "experiments/codex-host/**/*.ts",
+    "experiments/construction-phase/**/*.ts"
   ]
 }

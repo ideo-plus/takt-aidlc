@@ -2,9 +2,9 @@
 
 ## 対応範囲
 
-Codex CLI 0.154.0、AI-DLC 2.8.2、TAKT 0.65.0を対象に、CG単体のホスト連携を実装した。AI-DLCをCodex上で進め、CG入口でparkし、TAKTへ委譲する。TAKT内の対話承認はなく、ビルド・テスト・適用するセンサーの成功条件はClaude Codeホストと共通。
+Codex CLI 0.154.0、AI-DLC 2.8.2、TAKT 0.65.0を対象に、CG単体とConstruction全体のホスト連携を実装した。AI-DLCをCodex上で進め、CG入口でparkし、TAKTへ委譲する。TAKT内の対話承認はなく、ビルド・テスト・適用するセンサーの成功条件はClaude Codeホストと共通。
 
-ホストとワーカーは別の選択である。`hostHarness: "codex"`はAI-DLC側、`provider: "codex"`はTAKT側を指定する。Construction全体版の品質条件の統一は[別の作業](delegation-modes.md)として残る。
+ホストとワーカーは別の選択である。`hostHarness: "codex"`はAI-DLC側、`provider: "codex"`はTAKT側を指定する。Construction全体版の設定は[専用の導入手順](construction-phase.md)を参照。以下はCG単体の例。
 
 ## ビルドとインストール
 

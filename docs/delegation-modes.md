@@ -4,7 +4,7 @@
 
 TAKTへ委譲する範囲として、CGステージ単体とConstructionフェーズ全体の2モードを用意する。Claude Code／Codexというホストの選択、TAKTワーカーのprovider・モデルとは別の設定として扱う。
 
-これは2モード統一の目標仕様。CG単体のClaude Code／Codexホスト対応は実装済み。旧Construction試作との品質条件の統一はこれから。
+CG単体とConstruction全体の両モードを実装済み。Claude Code／Codexの両ホストに対応し、同じCG実行処理と品質ゲートを使う。実モデルでの全工程完走は未確認。
 
 ## 2つのモード
 
@@ -42,13 +42,13 @@ Construction全体
     → 検証済みConstruction結果
 ```
 
-共通化するのは、原文の解決、Testing Contract、CG計画と要求対応、実装・レビューの契約、検証ゲート。現在のCG runnerは元のAI-DLCがCGに入っていることを前提としているため、そのままConstruction全体版から呼ぶことはできない。ホストでの入口確認・parkと、固定入力を受けて動くCG処理を分離する。
+共通化するのは、原文の解決、Testing Contract、CG計画と要求対応、実装・レビューの契約、検証ゲート。ホストでの入口確認・parkと、固定入力から動くCG処理を分離した。Construction内のCG呼び出しのために、元のAI-DLCの状態をCGへ進める必要はない。
 
 Construction内で作ったUnit設計は、技術レビュー後にCG用の入力として固定する。元のAI-DLCにCG開始や人間承認の監査記録を作って、この条件を満たしたことにしない。
 
-## 設定を分ける案
+## 設定
 
-次は目標仕様の例であり、まだ使用できる設定ではない。
+次は設定の主要部分。入力ファイルや検証スクリプトなどの設定も必要。[Construction設定手順](construction-phase.md)を参照。
 
 ```json
 {
@@ -66,15 +66,8 @@ Construction内で作ったUnit設計は、技術レビュー後にCG用の入�
 
 現行の`handoffStage: code-generation`、`handoffStage: inception-legacy`、`construction: true`からの移行は、黙って実行範囲を広げない明示的な変換にする。
 
-## 現状と実装順
+## 現状
 
-CG版には原文注入、Testing Contract、ビルド・テスト・センサー検証がある。旧Construction版には設計・レビュー・実装・修正の試作があるが、原文注入と検証条件はCG版と同等ではない。単に旧方式を新しいモード名で有効にして完成とはしない。
+[CG単体](code-generation.md)と[Construction全体](construction-phase.md)を選択できる。設計の差し戻し、CGの修正、全体検証から所有Unitへの修正依頼は、TAKT側で自動処理する。入力の矛盾や上限到達は停止し、成功として受け入れない。
 
-推奨する実装順は次のとおり。
-
-1. 委譲範囲とホストを明示し、入口処理とCG実行処理を分離する。
-2. [Codexホスト対応](codex-host.md)は追加済み。両ホストのCG接続とmockワーカーの検証を維持する。
-3. Construction全体版を、工程ごとの原文と共通CG処理を使う構成へ整える。
-4. 両モードの成功・修正・停止と、誤った入口で起動しないことをCIで確認する。
-
-[現行CGの動作](code-generation.md)と[旧Construction試作](construction-workflow.md)は、この目標仕様と区別して参照する。
+[旧Construction試作](construction-workflow.md)は、`inception-legacy`を明示した過去の実験用に残している。新しい全体版には`delegationScope: "construction"`を使う。

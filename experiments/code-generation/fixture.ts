@@ -7,7 +7,7 @@ import { collectCgContext } from '../../src/code-generation/context';
 import { testSource as baseTests } from '../construction/fixture';
 const testSource = baseTests + `\nimport * as api from './value';\ntest('public API is unchanged', () => expect(Object.keys(api)).toEqual(['answer']));\ntest('answer is a finite integer', () => expect(Number.isFinite(answer) && Number.isInteger(answer)).toBe(true));\n`;
 
-export async function cgFixture(options: { hostHarness?: 'claude' | 'codex'; live?: boolean; provider?: 'claude' | 'codex'; model?: string; reasoningEffort?: string; buildFailure?: boolean; sensorFailure?: boolean; blocked?: boolean; maxSteps?: number } = {}) {
+export async function cgFixture(options: { constructionEntry?: boolean; hostHarness?: 'claude' | 'codex'; live?: boolean; provider?: 'claude' | 'codex'; model?: string; reasoningEffort?: string; buildFailure?: boolean; sensorFailure?: boolean; blocked?: boolean; maxSteps?: number } = {}) {
   const f = await fixture({ approved: false });
   rmSync(join(f.project, '.takt-aidlc'), { recursive: true });
   for (const directory of ['aidlc-common', 'agents', 'knowledge', 'sensors']) cpSync(join(testRuntime, '.claude', directory), join(f.project, '.claude', directory), { recursive: true });
@@ -20,8 +20,11 @@ export async function cgFixture(options: { hostHarness?: 'claude' | 'codex'; liv
   const unit = 'answer-value-update';
   let state = readFileSync(f.state, 'utf8').replace('**Scope**: feature', '**Scope**: classic\n- **Project Type**: Brownfield\n- **Test Strategy**: Standard').replace('**Current Stage**: functional-design', '**Current Stage**: code-generation');
   for (const stage of ['functional-design', 'nfr-requirements', 'nfr-design', 'infrastructure-design']) state = state.replace(new RegExp(`- \\[[^\\]]+\\] ${stage} — EXECUTE`), `- [S] ${stage} — EXECUTE`);
-  state = state.replace('- [ ] code-generation', '- [-] code-generation'); put(f.state, state);
-  f.audit.appendAuditEntry('STAGE_STARTED', { Stage: 'code-generation', Details: 'SYNTHETIC CG ENTRY — not a human approval' }, f.project);
+  if(options.constructionEntry) {
+    state = state.replace('**Current Stage**: code-generation','**Current Stage**: functional-design').replaceAll('- [S]','- [ ]').replace('- [ ] functional-design','- [-] functional-design');
+  } else state = state.replace('- [ ] code-generation', '- [-] code-generation');
+  put(f.state, state);
+  if(!options.constructionEntry) f.audit.appendAuditEntry('STAGE_STARTED', { Stage: 'code-generation', Details: 'SYNTHETIC CG ENTRY — not a human approval' }, f.project);
   const names = ['requirements-analysis/requirements.md', 'practices-discovery/team-practices.md', 'units-generation/unit-of-work.md', 'units-generation/unit-of-work-dependency.md', 'delivery-planning/bolt-plan.md'];
   for (const name of names) put(join(f.project, record, 'inception', name), readFileSync(join(repo, 'experiments/code-generation/input', name), 'utf8'));
   writeJson(join(f.project, record, 'project-description.json'), 'CG-INTENT-SENTINEL: 合成テスト入力。answerを41から42へ変更する。既存の設計・規約に従い、CG単体をHOTLで実行する。standardの5テストとビルドを必ず通す。');

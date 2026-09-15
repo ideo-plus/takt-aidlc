@@ -9,6 +9,8 @@ import { put } from './handoff-fixture';
 
 test('CG原文を展開し、ビルド失敗・型検査不合格を修正してから完了する', async () => {
   const f = await cgFixture({ buildFailure: true, sensorFailure: true });
+  const buildPath = join(f.project, f.config.buildScript);
+  put(buildPath, readFileSync(buildPath,'utf8') + "\nrequire('node:fs').mkdirSync('packages/probe/node_modules/probe-package',{recursive:true});require('node:fs').writeFileSync('packages/probe/node_modules/probe-package/index.js','module.exports = 1;');\n");
   const h = (await prepareCg(f.project, f.directive))!;
   expect((await prepareCg(f.project, f.directive))!.id).toBe(h.id);
   const result = await executeCg(f.project, h.id);

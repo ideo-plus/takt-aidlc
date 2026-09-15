@@ -2,23 +2,23 @@
 
 [日本語](README.ja.md) · [Setup](docs/getting-started.md) · [Delegation modes](docs/delegation-modes.md)
 
-Delegate AI-DLC work to TAKT through a host plugin. The project supports **Claude Code and Codex hosts** and is developing two delegation modes: **Code Generation (CG) only** and **the entire Construction phase**. AI-DLC is parked while TAKT works in a separate workspace; no AI-DLC core patch is required.
+Delegate AI-DLC work to TAKT through a host plugin. The project supports **Claude Code and Codex hosts** with two delegation modes: **Code Generation (CG) only** and **the entire Construction phase**. AI-DLC is parked while TAKT works in a separate workspace; no AI-DLC core patch is required.
 
-Experimental integration for **AI-DLC 2.8.2 / TAKT 0.65.0**. Host, delegation scope, and TAKT worker provider are separate choices. **The target design is broader than the current implementation; see the status below.**
+Experimental integration for **AI-DLC 2.8.2 / TAKT 0.65.0**. Host, delegation scope, and TAKT worker provider are separate choices. **See the implementation status and verification limits below.**
 
 ## Design and implementation status
 
 | Choice | Option | Current status |
 |---|---|---|
 | AI-DLC host | Claude Code | Host plugin implemented; build output: `dist/claude/` |
-| AI-DLC host | Codex | CG host integration implemented; plugin and local distribution manifest generated in `dist/codex/` |
+| AI-DLC host | Codex | CG and Construction host integration implemented; plugin and local distribution manifest generated in `dist/codex/` |
 | Delegation scope | CG stage only | Workflow, source injection, and build/test/sensor gates implemented |
-| Delegation scope | Entire Construction phase | Design-to-verification prototype exists; integration with the shared CG behavior and quality gates is planned |
+| Delegation scope | Entire Construction phase | Dependency-ordered design, shared CG, full verification, and applicable CI stage implemented |
 | TAKT worker | Claude / Codex | CG workers support both; Codex can use `gpt-5.6-luna` with reasoning effort `max` |
 
-Both delegation modes are intended to run as HOTL, without interactive approval inside TAKT, and require successful build, tests, and applicable sensor checks. The Construction mode will reuse the CG implementation. See [delegation modes](docs/delegation-modes.md) and the [Codex host guide](docs/codex-host.md).
+Both delegation modes run as HOTL, without interactive approval inside TAKT, and require successful build, tests, and applicable sensor checks. The Construction mode reuses the same CG implementation. See [delegation modes](docs/delegation-modes.md) and the [Codex host guide](docs/codex-host.md).
 
-## Implemented CG features
+## Shared features
 
 - Injects the actual CG stage definition, Intent, unit designs, conventions, agent knowledge, and sensor definitions into TAKT instructions.
 - Runs CG as **HOTL (human-on-the-loop)**: automatic technical review and bounded corrections, with no approval prompts inside TAKT. Unresolved conflicts terminate as `blocked`.
@@ -41,9 +41,9 @@ Tests prepare the matching AI-DLC runtime under `.experiments/cache/`. Both host
 
 ## Usage
 
-### Claude Code host + CG
+### Claude Code host
 
-Configure the target project's inputs, source files, build/test scripts, and sensors before CG entry using the [setup guide](docs/getting-started.md). Start its normal AI-DLC session with:
+Configure the target project's inputs, source files, build/test scripts, and sensors before the selected delegation boundary using the [setup guide](docs/getting-started.md). Start its normal AI-DLC session with:
 
 ```sh
 claude --plugin-dir /absolute/path/to/takt-aidlc/dist/claude
@@ -51,7 +51,7 @@ claude --plugin-dir /absolute/path/to/takt-aidlc/dist/claude
 
 Use `hostHarness: "claude"` for this host (the default when omitted). Loading the plugin alone does not enable delegation.
 
-### Codex host + CG
+### Codex host
 
 ```sh
 codex plugin marketplace add /absolute/path/to/takt-aidlc/dist/codex
@@ -61,6 +61,13 @@ codex plugin add takt-aidlc@takt-aidlc-local
 Prepare the target project with `aidlc config --harness codex --yes` and set `hostHarness: "codex"` in the handoff config. Enable and trust its hooks, start a new Codex session, and use `$aidlc`. See the [Codex setup guide](docs/codex-host.md).
 
 `provider` selects the TAKT worker independently of either host.
+
+### Choose the delegation scope
+
+- `delegationScope: "code-generation"`: complete the required designs in AI-DLC and delegate at CG entry.
+- `delegationScope: "construction"`: delegate after final Inception approval and run design through phase-wide verification.
+
+Construction mode requires the stage workflow, per-unit checks, and full-project checks. Follow the [Construction setup guide](docs/construction-phase.md).
 
 ### Try a Codex worker
 
@@ -76,12 +83,15 @@ This requires an authenticated Codex CLI. For deterministic build and type-check
 
 The implemented CG profile supports `test-after`, one active unit/workspace, and one AI-DLC audit shard. Human plan approval is replaced by automatic technical review. Native lifecycle completion and audit receipts are not reproduced. **`verified` does not mark native AI-DLC CG complete or import code into the original project.**
 
-See [CG verification results](experiments/code-generation/RESULTS.md) for mock and live evidence. Earlier [Inception handoff](experiments/native-session/STATUS.md) and [full Construction](experiments/construction/RESULTS.md) experiments are separate results. They do not establish that the unified Construction mode is complete.
+See [CG verification results](experiments/code-generation/RESULTS.md) for mock and live evidence. Earlier [Inception handoff](experiments/native-session/STATUS.md) and [full Construction](experiments/construction/RESULTS.md) experiments are separate results. They are separate from verification of the new Construction mode.
 
 The [live Codex host test](experiments/codex-host/RESULTS.md) passed with a Luna Max host, native AI-DLC hooks, and a TAKT mock worker, including build and tests. This is separate from completing all CG steps with a live model worker.
 
+[Construction verification](experiments/construction-phase/RESULTS.md) uses synthetic inputs and mock workers to cover multiple units, design revisions, CG corrections, full verification, and CI generation. The [Luna Max live trial](experiments/construction-phase/LIVE-2026-09-16.md) completed two design stages within its one-hour budget and did not reach CG. Full live completion remains unverified.
+
 ## Documentation
 
+- [Construction setup and behavior](docs/construction-phase.md)
 - [CG-only and Construction delegation modes](docs/delegation-modes.md)
 - [Codex host setup, behavior, and validation](docs/codex-host.md)
 - [Installation and configuration](docs/getting-started.md)
@@ -98,4 +108,4 @@ Run `bun run typecheck`, `bun run test`, and `bun run build:plugin`. CI validate
 
 ## License
 
-A license has not been selected. No license grant is implied.
+Licensed under the [MIT License](LICENSE).

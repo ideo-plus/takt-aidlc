@@ -2,7 +2,7 @@
 
 [English](README.md) · [導入手順](docs/getting-started.md) · [委譲モード](docs/delegation-modes.md)
 
-AI-DLCの作業をホストプラグインからTAKTへ委譲する実験的な連携です。**Claude Code／Codexの両ホスト**に対応し、**CGステージ単体／Constructionフェーズ全体の2モード**を整備しています。AI-DLCをparkし、別の作業領域でTAKTを実行します。AI-DLC本体へのパッチは不要です。
+AI-DLCの作業をホストプラグインからTAKTへ委譲する実験的な連携です。**Claude Code／Codexの両ホスト**に対応し、**CGステージ単体／Constructionフェーズ全体の2モード**を選べます。AI-DLCをparkし、別の作業領域でTAKTを実行します。AI-DLC本体へのパッチは不要です。
 
 対象は **AI-DLC 2.8.2 / TAKT 0.65.0**。ホスト・委譲範囲・TAKTワーカーは別の選択です。**実装済みの範囲と今後の対応は、次の表で区別しています。**
 
@@ -11,14 +11,14 @@ AI-DLCの作業をホストプラグインからTAKTへ委譲する実験的な�
 | 選択するもの | 選択肢 | 現在の状態 |
 |---|---|---|
 | AI-DLCのホスト | Claude Code | ホストプラグインを実装済み。`dist/claude/`を生成 |
-| AI-DLCのホスト | Codex | CGホスト連携を実装済み。`dist/codex/`にプラグインとローカル配布定義を生成 |
+| AI-DLCのホスト | Codex | CG／Constructionホスト連携を実装済み。`dist/codex/`にプラグインとローカル配布定義を生成 |
 | 委譲範囲 | CGステージ単体 | Workflow・原文注入・ビルド／テスト／センサーの検証を実装済み |
-| 委譲範囲 | Constructionフェーズ全体 | 設計から検証までの試作あり。共通CG処理と品質条件への統一はこれから |
+| 委譲範囲 | Constructionフェーズ全体 | 依存順の設計・共通CG・全体検証・必要なCI工程を実装済み |
 | TAKTワーカー | Claude／Codex | CG実行で両方に対応。CodexはLuna Max（`gpt-5.6-luna`・推論強度`max`）を指定可能 |
 
-両モードともTAKT内はHOTLとし、対話承認を挟まず、ビルド・テスト・適用するセンサーの成功を必須にする方針です。Construction全体版でも同じCG処理を使います。[委譲モード](docs/delegation-modes.md)と[Codexホストの導入手順](docs/codex-host.md)を参照してください。
+両モードともTAKT内はHOTLとし、対話承認を挟まず、ビルド・テスト・適用するセンサーの成功を必須にします。Construction全体版でも同じCG処理を使います。[委譲モード](docs/delegation-modes.md)と[Codexホストの導入手順](docs/codex-host.md)を参照してください。
 
-## 実装済みのCG機能
+## 共通の機能
 
 - 本家CG定義、Intent、Unit設計、規約、担当エージェントの知識、センサー定義の原文をTAKTのインストラクションへ渡します。
 - CG内は**HOTL（人が監督し、実行中の対話承認を挟まない方式）**です。技術レビューと修正を自動で繰り返し、解決不能な矛盾は`blocked`で終了します。
@@ -41,9 +41,9 @@ bun run build:plugin
 
 ## 使い方
 
-### Claude Codeホスト＋CG
+### Claude Codeホスト
 
-[導入手順](docs/getting-started.md)に従って、CGに入る前に対象プロジェクトの入力・ソース・ビルドとテストのスクリプト・センサーを設定します。そのプロジェクトから通常のAI-DLCセッションを起動します。
+[導入手順](docs/getting-started.md)に従って、選択した委譲入口に入る前に対象プロジェクトの入力・ソース・ビルドとテストのスクリプト・センサーを設定します。そのプロジェクトから通常のAI-DLCセッションを起動します。
 
 ```sh
 claude --plugin-dir /absolute/path/to/takt-aidlc/dist/claude
@@ -51,7 +51,7 @@ claude --plugin-dir /absolute/path/to/takt-aidlc/dist/claude
 
 この構成では`hostHarness: "claude"`を指定します（省略時の既定値）。プラグインを読み込むだけでは委譲は有効になりません。
 
-### Codexホスト＋CG
+### Codexホスト
 
 ```sh
 codex plugin marketplace add /absolute/path/to/takt-aidlc/dist/codex
@@ -61,6 +61,13 @@ codex plugin add takt-aidlc@takt-aidlc-local
 対象プロジェクトを`aidlc config --harness codex --yes`で準備し、連携設定に`hostHarness: "codex"`を指定します。フックを有効化・信頼して新しいCodexセッションを開始し、`$aidlc`で進めます。[Codex導入手順](docs/codex-host.md)を参照してください。
 
 `provider`は両ホストに共通するTAKTワーカーの選択です。
+
+### 委譲範囲を選ぶ
+
+- `delegationScope: "code-generation"`：必要な設計をAI-DLCで終え、CG入口から委譲します。
+- `delegationScope: "construction"`：Inception最終承認後に委譲し、設計から全体検証まで実行します。
+
+Constructionモードには工程用Workflow、Unitごとの検証、全体検証の設定が必要です。[Construction導入手順](docs/construction-phase.md)を参照してください。
 
 ### Codexワーカーを試す
 
@@ -76,12 +83,15 @@ bun run experiment:cg -- --live --provider codex --model gpt-5.6-luna --reasonin
 
 実装済みのCGは`test-after`、現在の1 Unit・1作業領域、単一の監査シャードを対象とします。人間の計画承認は自動の技術レビューへ置き換えます。AI-DLC本体の完了処理や承認の監査記録は再現しません。**`verified`になっても、本家CGの完了や元のプロジェクトへのコード取り込みは自動実行しません。**
 
-mockと実モデルの結果は[CG検証記録](experiments/code-generation/RESULTS.md)を参照してください。以前の[Inception引き継ぎ](experiments/native-session/STATUS.md)と[Construction全体](experiments/construction/RESULTS.md)の試験は、別の構成の検証結果です。品質条件を統一したConstruction全体版の完成を示すものではありません。
+mockと実モデルの結果は[CG検証記録](experiments/code-generation/RESULTS.md)を参照してください。以前の[Inception引き継ぎ](experiments/native-session/STATUS.md)と[Construction全体](experiments/construction/RESULTS.md)の試験は、別の構成の検証結果です。新しいConstruction全体版の検証とは区別しています。
 
 [Codexホストの実機試験](experiments/codex-host/RESULTS.md)では、Luna Maxホストと本家フックからTAKT mockへ委譲し、ビルド・テスト成功まで確認しました。実モデルのCG全工程完走とは区別しています。
 
+[Construction全体版の検証](experiments/construction-phase/RESULTS.md)では、合成入力とmockワーカーで複数Unit・設計差し戻し・CG修正・全体検証・CI生成を確認します。[Luna Maxでの実モデル試験](experiments/construction-phase/LIVE-2026-09-16.md)は1時間で設計2工程まで完了し、CG以降には未到達でした。全工程完走は未確認です。
+
 ## ドキュメント
 
+- [Construction全体の設定・動作](docs/construction-phase.md)
 - [CG単体／Construction全体の委譲モード](docs/delegation-modes.md)
 - [Codexホストの導入・動作・検証](docs/codex-host.md)
 - [導入と設定](docs/getting-started.md)
@@ -98,4 +108,4 @@ mockと実モデルの結果は[CG検証記録](experiments/code-generation/RESU
 
 ## ライセンス
 
-ライセンスは未選定です。利用許諾を表明するものではありません。
+[MITライセンス](LICENSE)で公開しています。

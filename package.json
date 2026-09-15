@@ -1,16 +1,18 @@
 {
   "name": "takt-aidlc",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
-    "test": "bun scripts/test-runtime.ts && bun test tests/handoff.test.ts tests/plugin.test.ts tests/environment.test.ts tests/construction.test.ts tests/code-generation.test.ts tests/codex-plugin.test.ts",
+    "test": "bun scripts/test-runtime.ts && bun test tests/handoff.test.ts tests/plugin.test.ts tests/environment.test.ts tests/construction.test.ts tests/code-generation.test.ts tests/codex-plugin.test.ts tests/construction-phase.test.ts tests/construction-live-input.test.ts tests/command-output.test.ts",
     "prepare:test-runtime": "bun scripts/test-runtime.ts",
     "build:plugin": "bun scripts/build-plugin.ts",
     "typecheck": "tsc --noEmit",
     "experiment:handoff": "bun experiments/automatic-handoff/run.ts",
     "experiment:construction": "bun experiments/construction/run.ts",
     "experiment:cg": "bun scripts/test-runtime.ts && bun experiments/code-generation/run.ts",
-    "experiment:codex-host": "bun scripts/test-runtime.ts && bun experiments/codex-host/run.ts"
+    "experiment:codex-host": "bun scripts/test-runtime.ts && bun experiments/codex-host/run.ts",
+    "experiment:construction-phase": "bun scripts/test-runtime.ts && bun experiments/construction-phase/run.ts"
   },
   "devDependencies": {
     "bun-types": "1.3.13",
