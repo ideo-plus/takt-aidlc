@@ -1,0 +1,21 @@
+{
+  "name": "takt-aidlc",
+  "version": "0.1.0",
+  "description": "AI-DLCのCGをTAKTへ委譲するCodexホストプラグイン",
+  "author": {
+    "name": "takt-aidlc contributors"
+  },
+  "interface": {
+    "displayName": "TAKT AI-DLC",
+    "shortDescription": "AI-DLCのCGをTAKTで実行",
+    "longDescription": "AI-DLCのCG入口でparkし、TAKTのHOTL実装・レビュー・検証へ委譲します。",
+    "developerName": "takt-aidlc contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "Write"
+    ],
+    "defaultPrompt": [
+      "AI-DLCのCGをTAKTへ委譲する設定を確認して"
+    ]
+  }
+}
