@@ -1,5 +1,7 @@
 # AI-DLC v2とTAKTは、承認済みUnitの実装で接続する
 
+> 履歴: 以下はCG単体への委譲に方針を絞る前の検討・実験です。現在の設計は[CGの動作](code-generation.md)、設定は[導入手順](getting-started.md)を参照してください。旧Inception委譲は`handoffStage: "inception-legacy"`の明示が必要です。
+
 調査日: 2026年9月15日。品質改善を主目的とした統合案の比較。
 
 > 会話後の方針: Inception完了後にAI-DLCが自動でparkし、TAKTへConstruction全体を引き渡す案を第一候補として具体化した。[自動引き継ぎ案](automatic-handoff.md)を参照。本稿のUnit単位の委譲は、当初の比較・推奨案として残す。

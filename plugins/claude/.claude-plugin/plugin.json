@@ -2,5 +2,5 @@
   "name": "takt-aidlc",
   "version": "0.1.0",
   "author": { "name": "takt-aidlc contributors" },
-  "description": "AI-DLC v2.8.2のInception承認後にTAKTへ処理を引き継ぐClaude Codeプラグイン。プロジェクトごとの明示的な設定が必要です。"
+  "description": "AI-DLC v2.8.2のCGステージをTAKTのHOTLワークフローへ委譲するClaude Codeプラグイン。Claude/Codexワーカーに対応し、プロジェクトごとの明示的な設定が必要です。"
 }

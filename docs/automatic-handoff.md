@@ -1,5 +1,7 @@
 # Inceptionの承認後にTAKTを自動起動する
 
+> 履歴: 以下はCG単体への委譲に方針を絞る前の検討・実験です。現在の設計は[CGの動作](code-generation.md)、設定は[導入手順](getting-started.md)を参照してください。旧Inception委譲は`handoffStage: "inception-legacy"`の明示が必要です。
+
 > 進捗: Claude Codeプラグインによる最終承認後の自動引き継ぎと、設計・レビュー・修正を含むConstruction用Workflowを実装した。[実セッションの記録](../experiments/native-session/STATUS.md)と[Constructionの検証結果](../experiments/construction/RESULTS.md)を参照。
 
 ## ユーザーの操作はInceptionの最終承認まで

@@ -17,6 +17,7 @@
     "experiments/automatic-handoff/**/*.ts",
     "experiments/native-session/**/*.ts",
     "experiments/plugin-load/**/*.ts",
-    "experiments/construction/**/*.ts"
+    "experiments/construction/**/*.ts",
+    "experiments/code-generation/**/*.ts"
   ]
 }

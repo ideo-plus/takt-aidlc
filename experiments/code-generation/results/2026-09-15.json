@@ -1,0 +1,58 @@
+{
+  "date": "2026-09-15",
+  "verdict": "NOT VERIFIED",
+  "scope": "CG only HOTL; synthetic Intent/design and CG entry; real upstream CG/knowledge/sensors",
+  "runId": "32dac133a05ea09e921180a9",
+  "versions": {
+    "aidlc": "2.8.2",
+    "takt": "0.65.0",
+    "bun": "1.3.13",
+    "codex": "0.154.0"
+  },
+  "provider": "codex",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "max",
+  "modelAttestation": "Codex turn_context confirmed model=gpt-5.6-luna, effort=max",
+  "timeoutMs": 1800000,
+  "state": "failed",
+  "taktExitCode": null,
+  "lastStepStarted": "plan",
+  "checks": [
+    {
+      "phase": "plan",
+      "verdict": "ready"
+    },
+    {
+      "phase": "plan-review",
+      "verdict": "changes_requested"
+    }
+  ],
+  "originalSource": "export const answer = 41;\n",
+  "gateSha256": "64324e285c7bba232c597103afcf49279d1603d4405d88d2bf02d960646e5ce1",
+  "gateDiffersFromFinalSource": true,
+  "limitations": [
+    "Live CG completion is unverified unless state=verified.",
+    "Native AI-DLC CG-entry host hooks were tested with synthetic events, not a fresh full native session.",
+    "No automatic import or native CG completion."
+  ],
+  "localValidation": {
+    "tests": 30,
+    "assertions": 162,
+    "typecheck": "passed",
+    "pluginBuild": "passed",
+    "pluginValidate": "passed"
+  },
+  "timedOut": true,
+  "failureReason": "30-minute execution limit reached while revising the CG plan after technical review.",
+  "planReviewFindings": [
+    "Plan Markdown omitted requirement-to-step mapping present in plan JSON.",
+    "Brownfield impact analysis, diff preview, and pre-change test baseline were missing from the plan."
+  ],
+  "fixesAfterRun": [
+    "Accept frozen context/index files as applied-rule sources.",
+    "Preserve Unit, requirements, and files when rendering plan Markdown.",
+    "Allow planMarkdown beyond custom-template cases; request Brownfield baseline planning.",
+    "Bind plan/test-instruction/summary hashes and validate current Unit."
+  ],
+  "originalInputsUnchanged": true
+}

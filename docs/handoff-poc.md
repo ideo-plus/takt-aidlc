@@ -1,5 +1,7 @@
 # Inception承認後の自動引き継ぎPoC
 
+> 履歴: 以下はCG単体への委譲に方針を絞る前の検討・実験です。現在の設計は[CGの動作](code-generation.md)、設定は[導入手順](getting-started.md)を参照してください。旧Inception委譲は`handoffStage: "inception-legacy"`の明示が必要です。
+
 > Claude Codeプラグインとしてパッケージ化した。[プラグインの利用手順](claude-plugin.md)を参照。プラグインを使う場合、この文書の手動フック登録は不要である。
 
 ## フックからpark・TAKT起動・受入検証まで動いた

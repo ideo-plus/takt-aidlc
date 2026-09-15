@@ -7,6 +7,7 @@ import { cleanEnvironment, digest, readJson, writeJson } from '../src/handoff/io
 import { fixture, repo, testRoot } from './handoff-fixture';
 import type { HookEvent, Status } from '../src/handoff/bridge';
 import { constructionFixture } from '../experiments/construction/fixture';
+import { cgFixture } from '../experiments/code-generation/fixture';
 
 let moved: string;
 let hooks: Record<string, Array<{ hooks: Array<{ command: string }> }>>;
@@ -136,3 +137,32 @@ test('移動した配布物からConstructionの品質ゲートとレビュー�
   expect(state.state).toBe('verified');
   expect(state.construction?.state).toBe('complete');
 }, 30000);
+
+test('CG設定はInception承認で起動せず、CG入口から一度だけ自動実行する', async () => {
+  const f = await cgFixture();
+  expect(existsSync(join(moved, 'scripts/cg-gate.ts'))).toBe(true);
+  expect(existsSync(join(moved, 'workflows/aidlc-code-generation.yaml'))).toBe(true);
+  const denied = invoke(f.project, 'PreToolUse', { ...f.event, hook_event_name: 'PreToolUse', tool_input: { command: 'aidlc engine orchestrate next 2>&1; echo ok' } });
+  expect(JSON.parse(denied.stdout).hookSpecificOutput.permissionDecision).toBe('deny');
+  const legacy = invoke(f.project, 'PostToolUse', { ...f.event, tool_input: { command: 'aidlc engine orchestrate report --stage delivery-planning --result approved' }, tool_response: { stdout: '{"kind":"done"}' } });
+  expect(legacy.stdout).toBe('');
+  expect(existsSync(join(f.project, 'aidlc/takt-handoff/cg-runs'))).toBe(false);
+  for (let n = 0; n < 2; n++) {
+    const started = invoke(f.project, 'PostToolUse', f.event);
+    expect(started.status).toBe(0);
+    expect(started.stdout).toContain('CG単体');
+  }
+  const { readdirSync } = await import('node:fs');
+  const runs = join(f.project, 'aidlc/takt-handoff/cg-runs');
+  const ids = readdirSync(runs).filter(n => /^[a-f0-9]{24}$/.test(n)); expect(ids).toHaveLength(1);
+  const path = join(runs, ids[0], 'status.json');
+  const until = Date.now() + 25000;
+  let state: any;
+  do {
+    state = readJson(path);
+    if (['verified', 'failed', 'blocked'].includes(state.state)) break;
+    await Bun.sleep(100);
+  } while (Date.now() < until);
+  expect(state.state).toBe('verified'); expect(state.attempts).toBe(1);
+  expect(readFileSync(join(f.project, 'src/value.ts'), 'utf8')).toContain('41');
+}, 60000);

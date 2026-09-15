@@ -1,23 +1,21 @@
 # takt-aidlc
 
-[日本語](README.ja.md) · [Setup](docs/getting-started.md) · [Construction workflow](docs/construction-workflow.md)
+[日本語](README.ja.md) · [Setup](docs/getting-started.md) · [CG workflow](docs/code-generation.md)
 
-Hand off approved AI-DLC Inception work to TAKT, without patching AI-DLC. A Claude Code plugin parks the original workflow, starts TAKT in a separate workspace, and verifies the result against frozen inputs.
+Delegate AI-DLC's **Code Generation (CG) stage** to TAKT. A Claude Code host plugin captures the CG entry, parks AI-DLC, and runs planning, review, implementation, and verification in a separate workspace. No AI-DLC core patch is required.
 
-This is an experimental integration for AI-DLC **2.8.2** and TAKT **0.65.0**.
+Experimental integration for **AI-DLC 2.8.2 / TAKT 0.65.0**. TAKT workers can use Claude or Codex, including **Luna Max**.
 
 ## Highlights
 
-- The normal Inception questions and approval gates stay in AI-DLC.
-- The final approval triggers the handoff; no separate terminal command is needed afterward.
-- The Construction workflow includes detailed design, design review, implementation, tests, code review, and bounded correction loops.
-- Tests run through a fixed verification script. Source hashes prevent stale review results from being accepted.
-- New requirements or unresolved decisions produce `needs_input`; the integration does not invent human approval.
-- Original code and AI-DLC records stay separate. There is no automatic merge or deployment.
+- Injects the actual CG stage definition, Intent, unit designs, conventions, agent knowledge, and sensor definitions into TAKT instructions.
+- Runs CG as **HOTL (human-on-the-loop)**: automatic technical review and bounded corrections, with no approval prompts inside TAKT. Unresolved conflicts terminate as `blocked`.
+- Requires successful build, tests, applicable sensor checks, and review of the same source before returning `verified`.
+- Keeps the original project parked. Generated code and CG reports remain available for inspection in a separate workspace.
 
 ## Quickstart
 
-Requirements: **Bun 1.3.13**, **Node.js 22.22.0+**, Git, `aidlc` **2.8.2**, and `takt` **0.65.0**, on macOS or Linux. See [tool installation](docs/getting-started.md). These tests use the mock provider and need no model credentials.
+Requirements: Bun **1.3.13**, Node.js **22.22.0+**, Git, `aidlc` **2.8.2**, and `takt` **0.65.0** on macOS or Linux. See [tool installation](docs/getting-started.md). Tests use mock responses and need no model credentials.
 
 ```sh
 git clone https://github.com/ideo-plus/takt-aidlc.git
@@ -27,45 +25,46 @@ bun run test
 bun run build:plugin
 ```
 
-The test command prepares the matching AI-DLC runtime under `.experiments/cache/`. The plugin is built into `dist/claude/` and can be copied to another location.
+Tests prepare the matching AI-DLC runtime under `.experiments/cache/`. The portable Claude Code plugin is built into `dist/claude/`.
 
 ## Usage
 
-Configure the target project's handoff inputs **before** approving Delivery Planning, then start Claude Code from that project:
+Configure the target project's inputs, source files, build/test scripts, and sensors before CG entry using the [setup guide](docs/getting-started.md). Start its normal AI-DLC session with:
 
 ```sh
 claude --plugin-dir /absolute/path/to/takt-aidlc/dist/claude
 ```
 
-Loading the plugin alone does not enable execution. The project must have `aidlc/takt-handoff/config.json` with `enabled: true`, input paths, a workflow, and a verification script. Follow the [setup guide](docs/getting-started.md).
+The host stays Claude Code; `provider: "codex"` selects Codex for TAKT workers. Loading the plugin alone does not enable delegation.
 
-Set `construction: true` to use the bundled six-step Construction workflow. Set `disableBedrock: true` when the TAKT child should use normal Claude authentication instead of inherited Bedrock settings.
-
-To exercise the correction paths locally without calling a model:
+Run a separate, synthetic CG experiment with Codex CLI:
 
 ```sh
-bun run experiment:construction -- --repairs
+bun run experiment:cg -- --live --provider codex --model gpt-5.6-luna --reasoning-effort max
 ```
 
-## Validation and scope
+This requires an authenticated Codex CLI. For deterministic build and type-check correction tests, use `bun run experiment:cg -- --build-failure --sensor-failure`.
 
-The native final-approval-to-handoff path has completed without manual recovery. The expanded workflow has also completed with a live Claude provider: three application tests passed with 100% line coverage. Deterministic tests cover design revisions, failed tests, code fixes, unresolved questions, and execution limits. [Recorded experiments](experiments/native-session/STATUS.md) distinguish successful runs from earlier failures and recovery attempts.
+## Scope and evidence
 
-The workflow uses one workspace and processes units serially. It does not recreate every AI-DLC Construction gate, manage parallel unit workspaces, or resume AI-DLC Operation. The current evidence comes from a small constant-change application; it does not establish a general improvement in code quality.
+Current support is CG only, `test-after`, one active unit/workspace, and one AI-DLC audit shard. Human plan approval is replaced by automatic technical review. Native lifecycle completion and audit receipts are not reproduced. **`verified` does not mark native AI-DLC CG complete or import code into the original project.**
+
+See [CG verification results](experiments/code-generation/RESULTS.md) for mock and live evidence. Earlier [Inception handoff](experiments/native-session/STATUS.md) and [full Construction](experiments/construction/RESULTS.md) experiments are historical, separate results.
 
 ## Documentation
 
-- [Installation and project setup](docs/getting-started.md)
-- [Claude Code plugin](docs/claude-plugin.md) — Japanese
-- [Construction workflow and result states](docs/construction-workflow.md) — Japanese
-- [Handoff configuration and limitations](docs/handoff-poc.md) — Japanese
-- [Integration design](docs/automatic-handoff.md) — Japanese
-- [Expanded workflow experiment](experiments/construction/RESULTS.md) — Japanese
+- [Installation and configuration](docs/getting-started.md)
+- [CG behavior, sensors, and limits](docs/code-generation.md)
+- [Claude Code host plugin](docs/claude-plugin.md)
 
-## Getting help and contributing
+## Getting help
 
-See [support and contribution notes](docs/contributing.md). Run `bun run typecheck` and `bun run test` before submitting changes. CI runs these checks and builds the plugin without model credentials. Live-model experiments are separate, opt-in commands.
+Use the support links and reporting checklist in [Help and development](docs/contributing.md).
+
+## Contributing
+
+Run `bun run typecheck`, `bun run test`, and `bun run build:plugin`. CI validates the plugin on Ubuntu without model credentials. Maintainers and contribution guidance are in [Help and development](docs/contributing.md).
 
 ## License
 
-No project license has been specified yet.
+A license has not been selected. No license grant is implied.

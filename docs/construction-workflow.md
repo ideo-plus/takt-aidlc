@@ -1,5 +1,7 @@
 # TAKTでConstructionを進める
 
+> 履歴: 以下はCG単体への委譲に方針を絞る前の検討・実験です。現在の設計は[CGの動作](code-generation.md)、設定は[導入手順](getting-started.md)を参照してください。旧Inception委譲は`handoffStage: "inception-legacy"`の明示が必要です。
+
 ## 設計・レビュー・実装・検証を一つのWorkflowにした
 
 [aidlc-construction.yaml](../workflows/aidlc-construction.yaml)は、承認済みのInception文書から詳細設計を作り、設計レビュー、実装、テスト、コードレビュー、修正、完了報告まで進める。AI-DLC本体はparkのまま保持する。

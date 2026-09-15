@@ -14,8 +14,9 @@ export async function buildPlugin() {
   if (!built.success) throw new Error(built.logs.map(String).join('\n'));
   if (!existsSync(join(output, 'scripts/handoff.js'))) throw new Error('連携CLIが生成されませんでした');
   cpSync(join(root, 'src/construction/construction-gate.ts'), join(output, 'scripts/construction-gate.ts'));
+  cpSync(join(root, 'src/code-generation/cg-gate.ts'), join(output, 'scripts/cg-gate.ts'));
   cpSync(join(root, 'workflows'), join(output, 'workflows'), { recursive: true });
-  const sourceFiles = ['src/handoff/cli.ts', 'src/handoff/bridge.ts', 'src/handoff/io.ts', 'src/construction/runtime.ts', 'src/construction/construction-gate.ts', 'workflows/aidlc-construction.yaml', 'plugins/claude/.claude-plugin/plugin.json', 'plugins/claude/hooks/hooks.json'];
+  const sourceFiles = ['src/handoff/cli.ts', 'src/handoff/bridge.ts', 'src/handoff/io.ts', 'src/construction/runtime.ts', 'src/construction/construction-gate.ts', 'src/code-generation/context.ts', 'src/code-generation/runner.ts', 'src/code-generation/cg-gate.ts', 'workflows/aidlc-code-generation.yaml', 'workflows/aidlc-construction.yaml', 'plugins/claude/.claude-plugin/plugin.json', 'plugins/claude/hooks/hooks.json'];
   writeJson(join(output, 'build-info.json'), {
     version: JSON.parse(readFileSync(join(output, '.claude-plugin/plugin.json'), 'utf8')).version,
     aidlcVersion: '2.8.2', bunVersion: Bun.version,

@@ -21,6 +21,7 @@ if (withTests) writeFileSync(join(directory, 'verify.ts'), readFileSync(join(imp
 if (construction) writeFileSync(join(directory, 'workflow.yaml'), readFileSync(join(repo, 'workflows/aidlc-construction.yaml'), 'utf8'));
 writeJson(join(directory, 'config.json'), {
   enabled: true,
+  handoffStage: 'inception-legacy',
   artifacts: [
     `${record}/inception/requirements-analysis/requirements.md`,
     `${record}/inception/units-generation/unit-of-work.md`,
