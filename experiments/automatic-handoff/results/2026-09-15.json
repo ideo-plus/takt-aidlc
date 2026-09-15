@@ -1,0 +1,27 @@
+{
+  "verdict": "VERIFIED",
+  "upstream": "AI-DLC v2.8.2 / 355903d6dc8eb07d3c77180be5d40ed679d6a40f",
+  "provider": "claude",
+  "trigger": "synthetic approved boundary and hook payload; real hook handler",
+  "originalSourceUnchanged": true,
+  "originalRequirementsUnchanged": true,
+  "parked": true,
+  "output": "export const answer = 42;\n",
+  "verification": {
+    "code": 0,
+    "timedOut": false,
+    "stdout": "受入条件を満たしました\n",
+    "stderr": ""
+  },
+  "status": {
+    "state": "verified",
+    "attempts": 1,
+    "parkStateHash": "7c0cde982aebf04fb3ba67c9c9d042e53992994b42a3170e079d714b1c56cec9"
+  },
+  "rawEvidenceDirectory": ".experiments/automatic/2026-09-15T05-18-37.504Z-56687",
+  "limitations": [
+    "承認後の状態とフック入力は合成データ。人が通常のAI-DLCフローで承認する入口は未検証。",
+    "TAKTとClaude Code、parkコマンド、受入検証は実物を実行した。",
+    "Construction全体ではなく、answerを41から42へ変更する小さなWorkflowを使用した。"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "verdict": "NOT_VERIFIED_UNASSISTED",
+  "recordedAt": "2026-09-15T09:27:52.628801+00:00",
+  "reason": "Compound approval command appended stderr redirection and echo, so strict hook matcher missed it. Operator instructed exact-command retry after original approval had already executed. Retry launched TAKT successfully, but this is not unassisted.",
+  "handoffId": "ed5a659eafc3b23a8c2f7bc9",
+  "handoffState": "verified",
+  "operatorRecoveryAfterApproval": true,
+  "evidenceDirectory": ".experiments/native-recheck/2026-09-15T09-11-12.744Z",
+  "observationCorrection": "Initial UI interpretation claimed compound command had been denied; transcript proves it succeeded. Corrected in conversation and provenance file."
+}

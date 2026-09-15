@@ -1,0 +1,22 @@
+{
+  "verdict": "VERIFIED",
+  "sessionStartHook": {
+    "name": "SessionStart:startup",
+    "code": 0,
+    "outcome": "success"
+  },
+  "configUnchanged": true,
+  "result": "`aidlc` のバージョンは **2.8.2**(ランタイムも2.8.2)でした。",
+  "limitations": [
+    "確認対象はプラグインの読み込みと起動通知。通常のAI-DLCでの最終承認からの通し確認は別途必要。"
+  ],
+  "plugin": [
+    {
+      "name": "takt-aidlc",
+      "version": "0.1.0",
+      "source": "takt-aidlc@inline"
+    }
+  ],
+  "rawEvidenceDirectory": ".experiments/plugin-load/2026-09-15T06-50-42.173Z",
+  "registeredHookCount": 3
+}

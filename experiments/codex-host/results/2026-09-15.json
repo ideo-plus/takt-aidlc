@@ -1,0 +1,41 @@
+{
+  "scope": "Real Codex host and native AI-DLC hooks; synthetic Intent/entry; TAKT mock worker",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "max",
+  "hostExitCode": 0,
+  "hostTimedOut": false,
+  "runIds": [
+    "b7c1ab56cd318f0dfc8cb06e"
+  ],
+  "state": "verified",
+  "originalSource": "export const answer = 41;\n",
+  "date": "2026-09-15",
+  "verdict": "VERIFIED",
+  "versions": {
+    "codex": "0.154.0",
+    "aidlc": "2.8.2",
+    "takt": "0.65.0",
+    "bun": "1.3.13"
+  },
+  "hostCommands": [
+    "aidlc engine orchestrate next",
+    "aidlc engine orchestrate continue <native-token>"
+  ],
+  "hostCommandCount": 2,
+  "hostFinalMessage": "CG単体をTAKTへ委譲し、AI-DLCはpark済みです。CGは重複実行しません。",
+  "workerProvider": "mock",
+  "workerAttempts": 1,
+  "originalInputsUnchanged": true,
+  "planSource": ".codex/aidlc-common/stages/construction/code-generation.md",
+  "buildExitCode": 0,
+  "testExitCode": 0,
+  "priorFailure": {
+    "state": "not-started",
+    "cause": "Codex combined the native diagnostic stderr and JSON output; strict whole-output JSON parsing failed.",
+    "fix": "Allow only the known aidlc-orchestrate diagnostic lines before one JSON payload."
+  },
+  "limitations": [
+    "Synthetic Intent and CG-entry state; not a full real Inception journey.",
+    "TAKT used mock responses; live model CG completion remains unverified."
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "date": "2026-09-15",
+  "verdict": "VERIFIED",
+  "upstreamRevision": "355903d6dc8eb07d3c77180be5d40ed679d6a40f",
+  "versions": {
+    "bun": "1.3.13",
+    "takt": "0.65.0",
+    "claude": "2.1.270 (Claude Code)"
+  },
+  "rawEvidenceDirectory": ".experiments/runs/2026-09-15T04-03-57.865Z-98984",
+  "offline": [
+    {
+      "name": "active-codegen-write",
+      "layer": "real-hook/subprocess; Write applied by experiment host only on exit 0",
+      "exitCode": 2,
+      "sourceChanged": false
+    },
+    {
+      "name": "parked-codegen-write",
+      "layer": "real-hook/subprocess; Write applied by experiment host only on exit 0",
+      "exitCode": 2,
+      "sourceChanged": false
+    },
+    {
+      "name": "parked-codegen-read",
+      "layer": "real-hook/subprocess; Write applied by experiment host only on exit 0",
+      "exitCode": 0,
+      "sourceChanged": false
+    },
+    {
+      "name": "parked-codegen-bash",
+      "layer": "real-hook/subprocess; Write applied by experiment host only on exit 0",
+      "exitCode": 2,
+      "sourceChanged": false
+    },
+    {
+      "name": "parked-codegen-upstream-write",
+      "layer": "real-hook/subprocess; Write applied by experiment host only on exit 0",
+      "exitCode": 2,
+      "sourceChanged": false
+    },
+    {
+      "name": "parked-codegen-plan-write",
+      "layer": "real-hook/subprocess; Write applied by experiment host only on exit 0",
+      "exitCode": 2,
+      "sourceChanged": false
+    },
+    {
+      "name": "parked-inception-source-write",
+      "layer": "real-hook/subprocess; Write applied by experiment host only on exit 0",
+      "exitCode": 0,
+      "sourceChanged": true
+    },
+    {
+      "name": "autonomous-park",
+      "layer": "real-engine/subprocess",
+      "exitCode": 0,
+      "directiveKind": "error",
+      "sourceChanged": false
+    },
+    {
+      "name": "separated-with-inherited-hook",
+      "layer": "real-hook/subprocess",
+      "exitCode": 2
+    },
+    {
+      "name": "takt-separated-mock",
+      "layer": "real-TAKT-CLI/mock-provider",
+      "exitCode": 0,
+      "sourceChanged": true,
+      "inputUnchanged": true,
+      "originalStateUnchanged": true,
+      "originalRequirementsUnchanged": true
+    }
+  ],
+  "live": {
+    "baseline": {
+      "code": 0,
+      "timeout": false,
+      "elapsedMs": 11826,
+      "source": "export const answer = 41;\n",
+      "inputUnchanged": true,
+      "originalStateUnchanged": true,
+      "originalRequirementsUnchanged": true
+    },
+    "treatment": {
+      "code": 0,
+      "timeout": false,
+      "elapsedMs": 7877,
+      "source": "export const answer = 42;\n",
+      "inputUnchanged": true,
+      "originalStateUnchanged": true,
+      "originalRequirementsUnchanged": true
+    }
+  },
+  "hookEvents": [
+    {
+      "tool": "Read",
+      "exitCode": 0
+    },
+    {
+      "tool": "Read",
+      "exitCode": 0
+    },
+    {
+      "tool": "Edit",
+      "exitCode": 2
+    }
+  ],
+  "preRunOriginalHashes": {
+    "state": "818720eb91ec2237b32f2db785bf23daf96c42b222b3f831d0b8b5ddae9dccc9",
+    "requirements": "283cdd9ea110acaaac2b0e301d5e648e8e17691b5709bba5d09a9c3e61723248"
+  },
+  "limitations": [
+    "選択したPlan Approval Guardのみを登録。AI-DLCの全フック構成の互換試験ではない。",
+    "合成した未承認のCode Generation状態。実際のInception承認からの自動引き継ぎは未実装。",
+    "各ケース1回の実モデル試験。モデル出力は再現ごとに変わり得る。",
+    "監査・フック動作確認ファイル全体の不変性を検証したものではない。",
+    "実験用Workflowは編集の試行終了を成功条件とするため、拒否されてもTAKTの終了コードは0になる。"
+  ]
+}
