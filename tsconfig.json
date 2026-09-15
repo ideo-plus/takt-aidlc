@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [
+      "bun-types"
+    ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "scripts/**/*.ts",
+    "tests/**/*.ts",
+    "experiments/automatic-handoff/**/*.ts",
+    "experiments/native-session/**/*.ts",
+    "experiments/plugin-load/**/*.ts",
+    "experiments/construction/**/*.ts"
+  ]
+}

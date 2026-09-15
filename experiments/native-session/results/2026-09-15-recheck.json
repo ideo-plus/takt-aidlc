@@ -1,0 +1,42 @@
+{
+  "verdict": "VERIFIED",
+  "scope": "Native Delivery Planning re-entry from copied, genuinely approved Inception artifacts; fresh live approval and automatic plugin handoff",
+  "freshInceptionFromScratch": false,
+  "operatorRecoveryAfterApproval": false,
+  "replayedHookEvent": false,
+  "preApprovalAssistance": [
+    "Existing user decisions relayed through native UI",
+    "Bundled read-only review-brief tool invoked directly because native dispatch failed"
+  ],
+  "sessionId": "77b4e18e-b186-4d67-8179-3c8a65ee0e4f",
+  "approvalToolUseId": "toolu_01RmiUqwbfkznj3GLvAw8CPC",
+  "approvalCommand": "aidlc engine orchestrate report --stage delivery-planning --result approved --user-input \"Approve\"",
+  "rejectedApprovalAttempts": [],
+  "approvalResponse": {
+    "kind": "done",
+    "reason": "Committed approve for \"delivery-planning\" (scope: classic). State advanced; run next to continue."
+  },
+  "postApprovalCommands": [],
+  "handoffId": "31b6e77267cc7d90c22fbe4f",
+  "state": "verified",
+  "attempts": 1,
+  "provider": "claude",
+  "disableBedrock": true,
+  "taktExitCode": 0,
+  "verification": {
+    "code": 0,
+    "timedOut": false,
+    "stdout": "bun test v1.3.13 (bf2e2cec)\n受入条件を確認: answer === 42、テスト成功、行カバレッジ 1/1\n",
+    "stderr": "\nsrc/value.test.ts:\n(pass) answer > is 42\n(pass) answer > is a number [0.05ms]\n(pass) answer > has not regressed to the old value 41\n\n 3 pass\n 0 fail\n 3 expect() calls\nRan 3 tests across 1 file. [5.00ms]\n"
+  },
+  "originalSource": "export const answer = 41;",
+  "outputSource": "export const answer = 42;",
+  "originalInputsAndSnapshotUnchanged": true,
+  "copiedInputArtifactsUnchanged": true,
+  "parkStateUnchanged": true,
+  "sourceExperimentStateUnchanged": true,
+  "pluginHashUnchangedSinceFinalApproval": true,
+  "automaticMerge": false,
+  "evidenceDirectory": ".experiments/native-recheck/2026-09-15T09-28-11.704Z",
+  "workspace": ".experiments/native-recheck/2026-09-15T09-28-11.704Z/project/aidlc/takt-handoff/runs/31b6e77267cc7d90c22fbe4f/attempts/1/work"
+}

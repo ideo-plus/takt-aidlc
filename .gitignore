@@ -1,0 +1,6 @@
+.experiments/
+node_modules/
+.takt-aidlc/
+aidlc/takt-handoff/
+dist/
+.takt/
