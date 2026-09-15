@@ -87,7 +87,7 @@ See [CG verification results](experiments/code-generation/RESULTS.md) for mock a
 
 The [live Codex host test](experiments/codex-host/RESULTS.md) passed with a Luna Max host, native AI-DLC hooks, and a TAKT mock worker, including build and tests. This is separate from completing all CG steps with a live model worker.
 
-[Construction verification](experiments/construction-phase/RESULTS.md) uses synthetic inputs and mock workers to cover multiple units, design revisions, CG corrections, full verification, and CI generation. A complete live-model run remains unverified.
+[Construction verification](experiments/construction-phase/RESULTS.md) uses synthetic inputs and mock workers to cover multiple units, design revisions, CG corrections, full verification, and CI generation. The [Luna Max live trial](experiments/construction-phase/LIVE-2026-09-16.md) completed two design stages within its one-hour budget and did not reach CG. Full live completion remains unverified.
 
 ## Documentation
 

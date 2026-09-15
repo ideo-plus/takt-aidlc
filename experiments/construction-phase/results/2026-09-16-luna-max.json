@@ -1,0 +1,98 @@
+{
+  "observedAt": "2026-09-15T16:33:52.073Z",
+  "runId": "b231d32c073e0c1eb5769874",
+  "scope": "Construction full phase",
+  "input": "synthetic Inception and approval boundary",
+  "provider": "codex",
+  "model": "gpt-5.6-luna",
+  "reasoningEffort": "max",
+  "state": "failed",
+  "reason": "Error: Constructionの時間上限に到達しました",
+  "completedSteps": [
+    {
+      "unit": "answer-value-update",
+      "stage": "functional-design"
+    },
+    {
+      "unit": "answer-value-update",
+      "stage": "nfr-requirements"
+    }
+  ],
+  "steps": [
+    {
+      "startedAt": "2026-09-15T15:32:58.060Z",
+      "endedAt": "2026-09-15T15:51:30.060Z",
+      "elapsedSeconds": 1112,
+      "reviews": [
+        "approved"
+      ],
+      "name": "1-answer-value-update-functional-design",
+      "code": 0,
+      "timedOut": false,
+      "outputLimitExceeded": false,
+      "outputTruncated": true,
+      "stdoutBytes": 1340735,
+      "qualityGateFailures": 0
+    },
+    {
+      "startedAt": "2026-09-15T15:51:31.257Z",
+      "endedAt": "2026-09-15T16:22:17.134Z",
+      "elapsedSeconds": 1845.877,
+      "reviews": [
+        "changes_requested",
+        "approved"
+      ],
+      "name": "2-answer-value-update-nfr-requirements",
+      "code": 0,
+      "timedOut": false,
+      "outputLimitExceeded": false,
+      "outputTruncated": true,
+      "stdoutBytes": 1865521,
+      "qualityGateFailures": 0
+    },
+    {
+      "startedAt": "2026-09-15T16:22:18.319Z",
+      "endedAt": "2026-09-15T16:32:57.500Z",
+      "elapsedSeconds": 639.181,
+      "reviews": [],
+      "name": "3-answer-value-update-nfr-design",
+      "code": null,
+      "timedOut": true,
+      "outputLimitExceeded": false,
+      "outputTruncated": true,
+      "stdoutBytes": 2731412,
+      "qualityGateFailures": 0
+    }
+  ],
+  "tests": {},
+  "originalInputsUnchanged": true,
+  "fullLiveCompletion": false,
+  "limitations": [
+    "This does not verify a fresh native Inception or host approval session.",
+    "Generated CI jobs are not executed on GitHub by this experiment."
+  ],
+  "localDate": "2026-09-16",
+  "verdict": "NOT VERIFIED",
+  "plannedStages": 7,
+  "completedStageCount": 2,
+  "notReached": [
+    "infrastructure-design",
+    "code-generation",
+    "build-and-test",
+    "ci-pipeline"
+  ],
+  "priorAttempts": [
+    {
+      "runId": "79e9f27095bbd822dc327cba",
+      "outcome": "stopped for adapter fix",
+      "cause": "CG IDs were incorrectly required by Functional Design; the same artifact passed the native sensor."
+    },
+    {
+      "runId": "ab9c242100d6bcbf88718d97",
+      "outcome": "failed on output limit",
+      "cause": "TAKT stdout exceeded the original 2,000,000-character in-memory limit; this was mislabeled as timeout."
+    }
+  ],
+  "reviewFinding": "The NFR document specified LCOV measurement while naming a script that emitted only text coverage. The model corrected the document to use the existing LCOV-producing unit script; the second review approved it.",
+  "interpretation": "This one-unit, all-seven-stage configuration with Luna Max spent the one-hour budget in design and review. It does not establish live CG, build/test, or CI generation completion."
+}

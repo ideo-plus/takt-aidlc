@@ -87,7 +87,7 @@ mockと実モデルの結果は[CG検証記録](experiments/code-generation/RESU
 
 [Codexホストの実機試験](experiments/codex-host/RESULTS.md)では、Luna Maxホストと本家フックからTAKT mockへ委譲し、ビルド・テスト成功まで確認しました。実モデルのCG全工程完走とは区別しています。
 
-[Construction全体版の検証](experiments/construction-phase/RESULTS.md)では、合成入力とmockワーカーで複数Unit・設計差し戻し・CG修正・全体検証・CI生成を確認します。実モデルでの全工程完走は未確認です。
+[Construction全体版の検証](experiments/construction-phase/RESULTS.md)では、合成入力とmockワーカーで複数Unit・設計差し戻し・CG修正・全体検証・CI生成を確認します。[Luna Maxでの実モデル試験](experiments/construction-phase/LIVE-2026-09-16.md)は1時間で設計2工程まで完了し、CG以降には未到達でした。全工程完走は未確認です。
 
 ## ドキュメント
 

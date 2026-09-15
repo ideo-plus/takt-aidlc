@@ -14,7 +14,43 @@ export function liveReport(run: string) {
           const path = join(base, name, "takt.json");
           const r = existsSync(path) ? readJson<any>(path) : null;
           const q = join(base, name, "work/.takt/quality-gates/logs");
+          const runs = join(base, name, "work/.takt/runs");
+          let events: any[] = [];
+          if (existsSync(runs)) {
+            const dir = join(runs, readdirSync(runs)[0], "logs");
+            const file = readdirSync(dir).find((n) => n.endsWith(".jsonl"));
+            if (file)
+              events = readFileSync(join(dir, file), "utf8")
+                .trim()
+                .split("\n")
+                .flatMap((line) => {
+                  try {
+                    return [JSON.parse(line)];
+                  } catch {
+                    return [];
+                  }
+                });
+          }
+          const startedAt = events.find(
+            (e) => e.type === "workflow_start",
+          )?.startTime;
+          const endedAt =
+            events.findLast((e) => e.type === "workflow_complete")?.endTime ??
+            (r ? statSync(path).mtime.toISOString() : null);
+          const ledger = join(base, name, "control/stage-ledger.json");
+          const reviews = existsSync(ledger)
+            ? readJson<any[]>(ledger)
+                .filter((r) => r.phase === "review")
+                .map((r) => r.verdict)
+            : [];
           return {
+            startedAt,
+            endedAt,
+            elapsedSeconds:
+              startedAt && endedAt
+                ? (Date.parse(endedAt) - Date.parse(startedAt)) / 1000
+                : null,
+            reviews,
             name,
             code: r?.code,
             timedOut: r?.timedOut ?? false,
@@ -68,6 +104,9 @@ export function liveReport(run: string) {
     reasoningEffort: m.config.codexReasoningEffort,
     state: status.state,
     reason: status.reason,
+    completedSteps: (status.steps ?? [])
+      .filter((s: any) => s.state === "verified")
+      .map((s: any) => ({ unit: s.unit, stage: s.stage })),
     steps,
     tests,
     originalInputsUnchanged: unchanged,
