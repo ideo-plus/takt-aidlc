@@ -108,4 +108,4 @@ Run `bun run typecheck`, `bun run test`, and `bun run build:plugin`. CI validate
 
 ## License
 
-A license has not been selected. No license grant is implied.
+Licensed under the [MIT License](LICENSE).

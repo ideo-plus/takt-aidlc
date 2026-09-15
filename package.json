@@ -1,6 +1,7 @@
 {
   "name": "takt-aidlc",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "test": "bun scripts/test-runtime.ts && bun test tests/handoff.test.ts tests/plugin.test.ts tests/environment.test.ts tests/construction.test.ts tests/code-generation.test.ts tests/codex-plugin.test.ts tests/construction-phase.test.ts tests/construction-live-input.test.ts tests/command-output.test.ts",

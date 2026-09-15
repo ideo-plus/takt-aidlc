@@ -108,4 +108,4 @@ mockと実モデルの結果は[CG検証記録](experiments/code-generation/RESU
 
 ## ライセンス
 
-ライセンスは未選定です。利用許諾を表明するものではありません。
+[MITライセンス](LICENSE)で公開しています。

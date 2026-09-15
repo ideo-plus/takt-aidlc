@@ -15,6 +15,7 @@ export async function buildPlugin() {
     // このビルド専用の生成先だけを置き換える。
     rmSync(target, { recursive: true, force: true }); mkdirSync(target, { recursive: true });
     for (const directory of [manifestDir, 'hooks']) cpSync(join(root, source, directory), join(target, directory), { recursive: true });
+    cpSync(join(root, 'LICENSE'), join(target, 'LICENSE'));
     const built = await Bun.build({ entrypoints: [join(root, 'src/handoff/cli.ts')], target: 'bun', format: 'esm', outdir: join(target, 'scripts'), naming: 'handoff.js' });
     if (!built.success) throw new Error(built.logs.map(String).join('\n'));
     if (!existsSync(join(target, 'scripts/handoff.js'))) throw new Error('連携CLIが生成されませんでした');
@@ -23,7 +24,7 @@ export async function buildPlugin() {
     cpSync(join(root, 'src/construction-phase/stage-gate.ts'), join(target, 'scripts/stage-gate.ts'));
     cpSync(join(root, 'src/code-generation/cg-gate.ts'), join(target, 'scripts/cg-gate.ts'));
     cpSync(join(root, 'workflows'), join(target, 'workflows'), { recursive: true });
-    const inputs = [...sourceFiles, `${source}/${manifestDir}/plugin.json`, `${source}/hooks/hooks.json`];
+    const inputs = [...sourceFiles, 'LICENSE', `${source}/${manifestDir}/plugin.json`, `${source}/hooks/hooks.json`];
     writeJson(join(target, 'build-info.json'), {
       version: JSON.parse(readFileSync(join(target, manifestDir, 'plugin.json'), 'utf8')).version,
       aidlcVersion: '2.8.2', bunVersion: Bun.version,
