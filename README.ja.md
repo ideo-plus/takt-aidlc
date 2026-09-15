@@ -1,12 +1,24 @@
 # takt-aidlc
 
-[English](README.md) · [導入手順](docs/getting-started.md) · [CGの動作](docs/code-generation.md)
+[English](README.md) · [導入手順](docs/getting-started.md) · [委譲モード](docs/delegation-modes.md)
 
-AI-DLCの**Code Generation（CG）ステージをTAKTへ委譲**する実験的な連携です。Claude CodeのホストプラグインがCGへの遷移を検出してAI-DLCをparkし、別の作業領域で計画・レビュー・実装・検証を実行します。AI-DLC本体へのパッチは不要です。
+AI-DLCの作業をホストプラグインからTAKTへ委譲する実験的な連携です。**Claude Code／Codexの両ホスト**と、**CGステージ単体／Constructionフェーズ全体の2モード**を選べる構成を目指しています。AI-DLCをparkし、別の作業領域でTAKTを実行します。AI-DLC本体へのパッチは不要です。
 
-対象は **AI-DLC 2.8.2 / TAKT 0.65.0**。TAKTの実行にはClaudeとCodexを選択でき、**Luna Max**も指定できます。
+対象は **AI-DLC 2.8.2 / TAKT 0.65.0**。ホスト・委譲範囲・TAKTワーカーは別の選択です。**実装済みの範囲と今後の対応は、次の表で区別しています。**
 
-## 特徴
+## 設計方針と実装状況
+
+| 選択するもの | 選択肢 | 現在の状態 |
+|---|---|---|
+| AI-DLCのホスト | Claude Code | ホストプラグインを実装済み。`dist/claude/`を生成 |
+| AI-DLCのホスト | Codex | 設計・ランタイム調査済み。`dist/codex/`は追加予定で、まだ生成されない |
+| 委譲範囲 | CGステージ単体 | Workflow・原文注入・ビルド／テスト／センサーの検証を実装済み |
+| 委譲範囲 | Constructionフェーズ全体 | 設計から検証までの試作あり。共通CG処理と品質条件への統一はこれから |
+| TAKTワーカー | Claude／Codex | CG実行で両方に対応。CodexはLuna Max（`gpt-5.6-luna`・推論強度`max`）を指定可能 |
+
+両モードともTAKT内はHOTLとし、対話承認を挟まず、ビルド・テスト・適用するセンサーの成功を必須にする方針です。Construction全体版でも同じCG処理を使います。[委譲モード](docs/delegation-modes.md)と[Codexホストの対応計画](docs/codex-host-plan.md)を参照してください。
+
+## 実装済みのCG機能
 
 - 本家CG定義、Intent、Unit設計、規約、担当エージェントの知識、センサー定義の原文をTAKTのインストラクションへ渡します。
 - CG内は**HOTL（人が監督し、実行中の対話承認を挟まない方式）**です。技術レビューと修正を自動で繰り返し、解決不能な矛盾は`blocked`で終了します。
@@ -25,9 +37,11 @@ bun run test
 bun run build:plugin
 ```
 
-テスト時にAI-DLCランタイムを`.experiments/cache/`へ準備します。配布用プラグインは`dist/claude/`へ生成されます。
+テスト時にAI-DLCランタイムを`.experiments/cache/`へ準備します。現行ビルドではClaude Code用プラグインを`dist/claude/`へ生成します。Codexホスト用の配布物はまだ含まれません。
 
 ## 使い方
+
+### 現行のホスト連携：Claude Code＋CG
 
 [導入手順](docs/getting-started.md)に従って、CGに入る前に対象プロジェクトの入力・ソース・ビルドとテストのスクリプト・センサーを設定します。そのプロジェクトから通常のAI-DLCセッションを起動します。
 
@@ -35,9 +49,11 @@ bun run build:plugin
 claude --plugin-dir /absolute/path/to/takt-aidlc/dist/claude
 ```
 
-ホストはClaude Codeです。`provider: "codex"`はTAKT内の実行をCodexに切り替えます。プラグインを読み込むだけでは委譲は有効になりません。
+このコマンドは実装済みのClaude Codeホストを使います。`provider: "codex"`はTAKTワーカーの選択で、AI-DLCホストの切り替えではありません。Codexホストの導入手順は`dist/codex/`の実装時に追加します。プラグインを読み込むだけでは委譲は有効になりません。
 
-Codex CLIの認証後、独立した合成入力でLuna Maxを試せます。
+### Codexワーカーを試す
+
+Codex CLIの認証後、独立した合成入力でLuna Maxを試せます。この実験には、起動中のClaudeホストは不要です。
 
 ```sh
 bun run experiment:cg -- --live --provider codex --model gpt-5.6-luna --reasoning-effort max
@@ -47,12 +63,14 @@ bun run experiment:cg -- --live --provider codex --model gpt-5.6-luna --reasonin
 
 ## 対応範囲と検証結果
 
-現在の対象はCG単体、`test-after`、現在の1 Unit・1作業領域、単一の監査シャードです。人間の計画承認は自動の技術レビューへ置き換えます。AI-DLC本体の完了処理や承認の監査記録は再現しません。**`verified`になっても、本家CGの完了や元のプロジェクトへのコード取り込みは自動実行しません。**
+実装済みのCGは`test-after`、現在の1 Unit・1作業領域、単一の監査シャードを対象とします。人間の計画承認は自動の技術レビューへ置き換えます。AI-DLC本体の完了処理や承認の監査記録は再現しません。**`verified`になっても、本家CGの完了や元のプロジェクトへのコード取り込みは自動実行しません。**
 
-mockと実モデルの結果は[CG検証記録](experiments/code-generation/RESULTS.md)を参照してください。以前の[Inception引き継ぎ](experiments/native-session/STATUS.md)と[Construction全体](experiments/construction/RESULTS.md)の試験は、別の構成の履歴です。
+mockと実モデルの結果は[CG検証記録](experiments/code-generation/RESULTS.md)を参照してください。以前の[Inception引き継ぎ](experiments/native-session/STATUS.md)と[Construction全体](experiments/construction/RESULTS.md)の試験は、別の構成の検証結果です。Codexホストや、品質条件を統一したConstruction全体版の完成を示すものではありません。
 
 ## ドキュメント
 
+- [CG単体／Construction全体の委譲モード](docs/delegation-modes.md)
+- [Codexホストの設計と残作業](docs/codex-host-plan.md)
 - [導入と設定](docs/getting-started.md)
 - [CGの動作・センサー・制約](docs/code-generation.md)
 - [Claude Codeホストプラグイン](docs/claude-plugin.md)
