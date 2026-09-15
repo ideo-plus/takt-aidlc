@@ -86,8 +86,10 @@ CG単体の入口確認と、固定入力から動く`executeCgWorkspace`を分�
 
 - `required-sections`: 2つ以上のH2と、存在する独自テンプレートの見出しを確認する。
 - `upstream-coverage`: 固定した上流成果物の確認一覧に欠落がないことを確認する。
-- `traceability`: 対象Unitの要求IDが揃い、対応先がこの工程の成果物として存在することを確認する。
+- `traceability`: 本家の`aidlc engine sensor-traceability`で検証する。Functional DesignはFR/ACからBRへの対応と孤立ルール、NFR工程は工程に応じたNFRのIDを確認する。CGの直前には、設計で追加されたBR・NFRの詳細IDも再解決する。
 - `linter`／`type-check`: TS/JSのコード例があれば、`stageSensorScripts`の対応するスクリプトが必要。終了コード0とJSONの`pass: true`を要求する。
+
+本家センサーには、元のpark状態とレビュー済みの上流成果物を専用ディレクトリへ投影して渡す。これは検査用のコピーであり、元のAI-DLCの状態を進めたり承認記録を作ったりしない。
 
 設計用のスクリプトには`AIDLC_ARTIFACTS_DIR`でその工程の成果物ディレクトリを渡す。TS/JSのコード例がなく、スクリプトも未設定の場合は`not_applicable`と理由を記録する。CGのアプリケーションコードの検査とは別に扱う。
 
@@ -123,3 +125,17 @@ bun /absolute/path/to/plugin/scripts/handoff.js phase-status /absolute/path/to/p
 - Unitは依存順に直列実行する。工程の時間上限と最大ステップ数を設ける。
 - 設計とCGの差し戻しは各Workflow内で修正する。Build and Testで実測の失敗がある場合は、`repair_required`と所有Unitを返し、共通CGで一度修正して再検証する。修正後も失敗する場合や入力から所有者を決められない場合は停止する。
 - ソースは通常ファイルを列挙する。`node_modules`と`.venv`は一時的な依存として差分の対象から除く。途中再開、ロックの自動回収、OSレベルの完全な隔離は未実装。
+
+## 実モデルの試験
+
+```sh
+bun run experiment:construction-phase -- --live
+```
+
+Codexの認証が必要。Luna Max（gpt-5.6-luna、max）で1 Unit・全7工程を実行し、上限は1時間。専用の合成入力と合成承認境界を使い、TAKTワーカーにはmockを使わない。`--repairs`との併用はできない。
+
+進捗は次で確認できる。
+
+```sh
+bun experiments/construction-phase/inspect.ts /absolute/path/to/phase-runs/<run-id>
+```

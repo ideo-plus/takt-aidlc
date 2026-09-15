@@ -109,6 +109,44 @@ export async function phaseFixture(
   }
   writeJson(join(f.project, control, "config.json"), config);
   const context = await phaseContext(f.project, config);
+  const frIds = context.cg[f.unit].requirementIds.filter((id) =>
+    id.startsWith("FR"),
+  );
+  const nfrIds = context.cg[f.unit].requirementIds.filter((id) =>
+    /^NFR\d+$/.test(id),
+  );
+  const brIds = frIds.map((_, i) => `BR1.${i + 1}`);
+  const detailedNfr = nfrIds.map((id) => `${id}.1`);
+  const expandedCgIds = [
+    ...context.cg[f.unit].requirementIds,
+    ...brIds,
+    ...detailedNfr,
+  ];
+  const baseScenario = readJson<any[]>(
+    join(f.project, control, "scenario.json"),
+  );
+  for (const response of baseScenario) {
+    if (response.content?.startsWith("{")) {
+      const report = JSON.parse(response.content);
+      if (report.testingContractHash) {
+        report.steps[0].requirementIds = expandedCgIds;
+        response.content = JSON.stringify(report);
+      }
+    }
+    for (const w of response.file_writes ?? [])
+      if (w.path === "cg/traceability.json") {
+        const trace = JSON.parse(w.content);
+        trace.upstream_ids = expandedCgIds;
+        trace.coverage = expandedCgIds.map((id) => ({
+          id,
+          status: "OK",
+          target: "src/value.test.ts",
+        }));
+        w.content = JSON.stringify(trace);
+      }
+  }
+  writeJson(join(f.project, control, "scenario.json"), baseScenario);
+
   if (options.twoUnits) {
     const scenario = readJson<any[]>(join(f.project, control, "scenario.json"));
     // 成功経路だけを使い、consumerが先行Unitのコードへ実際に依存する。
@@ -129,7 +167,7 @@ export async function phaseFixture(
     });
     plan.testingContractHash =
       context.cg["answer-consumer"].testingContract.contract_sha256;
-    plan.steps[0].requirementIds = context.cg["answer-consumer"].requirementIds;
+    plan.steps[0].requirementIds = expandedCgIds;
     const original = scenario.filter((r) => r.file_writes).at(-1);
     const writes = original.file_writes.map((w: any) => ({
       path: w.path.replace("src/value", "src/consumer"),
@@ -211,13 +249,14 @@ export async function phaseFixture(
             ? "test-results.md"
             : `${n}.md`,
       );
-    const ids = unit
-      ? context.cg[unit].requirementIds
-      : [
-          ...new Set(
-            Object.values(context.cg).flatMap((c) => c.requirementIds),
-          ),
-        ];
+    const ids =
+      stage.slug === "functional-design"
+        ? frIds
+        : stage.slug === "nfr-requirements"
+          ? nfrIds
+          : ["nfr-design", "infrastructure-design"].includes(stage.slug)
+            ? detailedNfr
+            : expandedCgIds;
     const artifacts = Object.fromEntries(
       required.map((n) => [
         n,
@@ -228,12 +267,22 @@ export async function phaseFixture(
               coverage: ids.map((id) => ({
                 id,
                 status: "OK",
-                target: required.find((n) => n.endsWith(".md")),
+                target:
+                  stage.slug === "functional-design"
+                    ? brIds[ids.indexOf(id)]
+                    : required.find((n) => n.endsWith(".md")),
               })),
             })
           : `# ${n}\n\n## 定義\n合成成果物: ${stage.slug} / ${unit ?? "all"}\n\n## 検証\n要求に対応し、固定のビルド・テストで確認する。\n`,
       ]),
     );
+    for (const name of Object.keys(artifacts))
+      if (name.endsWith(".md")) {
+        if (stage.slug === "functional-design" && name === "rules.md")
+          artifacts[name] += "\n" + brIds.join("\n") + "\n";
+        if (["nfr-requirements", "nfr-design"].includes(stage.slug))
+          artifacts[name] += "\n" + detailedNfr.join("\n") + "\n";
+      }
     const draft = {
       verdict:
         options.blocked && stage.slug === "functional-design"

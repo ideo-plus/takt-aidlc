@@ -41,3 +41,9 @@ bun run experiment:construction-phase -- --codex --repairs
 このコマンドはCodex用の本家ランタイムを入力に使い、合成承認とTAKT mockで実行する。実モデルの認証は不要。ログは`.experiments/`へ保存する。
 
 設定と制約は[Construction導入手順](../../docs/construction-phase.md)を参照。元のAI-DLCへの結果取り込みとOperationの自動開始は未実装である。
+
+## 実モデル試験で見つかった検証処理の差
+
+Luna Maxが作ったFunctional Designは本家traceabilityセンサーで合格したが、当初の連携側ゲートではNFRのID不足として失敗した。原因はCG用の要求ID集合を設計工程にも使っていたことと、BRへの対応先を単なるファイル名に限定していたことだった。
+
+工程ごとのID解決と本家センサーによる検証へ修正した。CGに渡すIDも、レビュー済みの設計から再解決する。元のAI-DLC記録には書き込まず、専用の投影先で検査する。最初のLuna成果物を回帰テストに残し、合格と孤立BRの検出を確認している。実モデル試行の最終結果は別途記録する。

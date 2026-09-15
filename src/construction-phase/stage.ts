@@ -1,4 +1,9 @@
 import {
+  seedTraceProject,
+  resolveTraceIds,
+  nativeTraceSource,
+} from "./native-trace";
+import {
   chmodSync,
   copyFileSync,
   mkdirSync,
@@ -106,15 +111,33 @@ export async function executeStage(args: {
       ["test", c.phaseVerifyScript],
     ].map(([id, p]) => [id, { path: fileInside(store, p), hash: files[p] }]),
   );
+  const requirementIds =
+    unit && stage.sensors.includes("traceability")
+      ? resolveTraceIds(store, cg.record, unit, stage.slug)
+      : cg.requirementIds;
+  const traceProject = join(control, "trace-project");
+  const metadata = seedTraceProject(
+    traceProject,
+    cg.record,
+    readFileSync(join(store, cg.record, "aidlc-state.md"), "utf8"),
+  );
+  const traceInputs = [...metadata];
+  const currentStageDir = `${cg.record}/construction/${unit ? unit + "/" : ""}${stage.slug}/`;
+  for (const path of artifacts.filter((p) => !p.startsWith(currentStageDir))) {
+    copy(path, join(traceProject, path));
+    traceInputs.push(path);
+  }
   const data = {
     workspace,
+    traceProject,
+    record: cg.record,
     inputs,
     initialSources: sources(workspace),
     stage,
     unit,
     required,
     upstreamArtifacts: artifacts,
-    requirementIds: cg.requirementIds,
+    requirementIds,
     units: args.units,
     sensorScripts,
     checks,
@@ -125,7 +148,7 @@ export async function executeStage(args: {
     unit,
     required,
     upstreamArtifacts: artifacts,
-    requirementIds: cg.requirementIds,
+    requirementIds,
     units: args.units,
     pipelinePaths: data.pipelinePaths,
     checks: { build: c.phaseBuildScript, test: c.phaseVerifyScript },
@@ -139,13 +162,18 @@ export async function executeStage(args: {
     join(control, "stage-gate.ts"),
   );
   copyFileSync(cgGateSource, join(control, "cg-gate.ts"));
+  copyFileSync(nativeTraceSource, join(control, "native-trace.ts"));
   const workflow = Bun.YAML.parse(
     readFileSync(fileInside(store, c.stageWorkflow), "utf8"),
   ) as any;
   const contract = `# Construction HOTLの実行契約\n現在の工程は${stage.slug}、Unitは${unit ?? "全Unit"}です。入力のIntent・本家工程定義・規約・知識・センサーを使います。対話承認、ウォーキングスケルトン後の承認、学びの質問、ネイティブの状態・監査記録の更新は行いません。技術レビューへ置き換え、入力から決められないことはblockedで終了してください。成果物の元のrecordパスはinput/projectの固定コピーへ対応します。ファイルは応答のartifacts/writesから検証ゲートが生成します。品質条件を弱めず、実測していない検査を成功と記録しないでください。\n`;
+  const bundlePaths = paths.filter(
+    (path) =>
+      path !== cg.stageFile && !/^\.(?:claude|codex)\/tools\//.test(path),
+  );
   const bundle =
     contract +
-    paths
+    bundlePaths
       .map(
         (p) =>
           `\n## Original source: ${p}\nSHA256: ${files[p]}\n${readFileSync(fileInside(store, p), "utf8")}\n`,
@@ -166,7 +194,7 @@ export async function executeStage(args: {
   writeFileSync(join(control, "workflow.yaml"), Bun.YAML.stringify(workflow));
   writeJson(
     join(control, "injection.json"),
-    paths.map((path) => ({ path, sha256: files[path] })),
+    bundlePaths.map((path) => ({ path, sha256: files[path] })),
   );
   const protectedFiles = snapshot(control, [
     "stage-context.json",
@@ -175,6 +203,8 @@ export async function executeStage(args: {
     "sources.md",
     "workflow.yaml",
     "injection.json",
+    "native-trace.ts",
+    ...traceInputs.map((p) => `trace-project/${p}`),
   ]);
   const key = `${unit ?? "all"}/${stage.slug}`;
   const scenario =

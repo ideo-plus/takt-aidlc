@@ -1,3 +1,4 @@
+import { seedTraceProject, resolveTraceIds } from "./native-trace";
 import {
   chmodSync,
   closeSync,
@@ -216,6 +217,12 @@ export async function executePhase(project: string, id: string) {
         mkdirSync(dirname(out), { recursive: true });
         copyFileSync(fileInside(join(run, "snapshot"), p), out);
       }
+      const metadata = seedTraceProject(
+        store,
+        m.record,
+        readFileSync(m.statePath, "utf8"),
+      );
+      for (const p of metadata) files[p] = digest(readFileSync(join(store, p)));
       verify();
       status.state = "running";
       status.attempts = 1;
@@ -308,6 +315,12 @@ export async function executePhase(project: string, id: string) {
         const nativeCg = m.context.cg[unit],
           cg = {
             ...nativeCg,
+            requirementIds: resolveTraceIds(
+              store,
+              m.record,
+              unit,
+              "code-generation",
+            ),
             files: [
               ...new Set([
                 ...nativeCg.files,

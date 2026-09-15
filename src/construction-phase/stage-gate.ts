@@ -1,3 +1,4 @@
+import { nativeTrace, resolveTraceIds } from "./native-trace";
 import assert from "node:assert/strict";
 import {
   existsSync,
@@ -163,14 +164,40 @@ export function stageGate(control: string, phase: string) {
         [...trace.upstream_ids].sort(),
         [...ctx.requirementIds].sort(),
       );
-      assert.deepEqual(
-        trace.coverage.map((x: any) => x.id).sort(),
-        [...ctx.requirementIds].sort(),
+      const targetDir = join(
+        ctx.traceProject,
+        ctx.record,
+        "construction",
+        ctx.unit,
+        ctx.stage.slug,
       );
-      for (const row of trace.coverage) {
-        assert.equal(row.status, "OK");
-        assert.ok(names.includes(row.target), "traceability対象がない");
-      }
+      rmSync(targetDir, { recursive: true, force: true });
+      mkdirSync(targetDir, { recursive: true });
+      for (const name of names)
+        writeFileSync(
+          join(targetDir, name),
+          readFileSync(join(artifactDir, name)),
+        );
+      const result = nativeTrace(
+        ctx.traceProject,
+        join(targetDir, "traceability.json"),
+        ctx.stage.slug,
+      );
+      save(join(root, "input/traceability-check.json"), result);
+      assert.equal(
+        result.pass,
+        true,
+        `本家traceability不合格: ${JSON.stringify(result)}`,
+      );
+      if (ctx.stage.slug === "nfr-requirements")
+        resolveTraceIds(ctx.traceProject, ctx.record, ctx.unit, "nfr-design");
+      if (ctx.stage.slug === "nfr-design")
+        resolveTraceIds(
+          ctx.traceProject,
+          ctx.record,
+          ctx.unit,
+          "infrastructure-design",
+        );
     }
     const writes = r.writes ?? {};
     for (const [p, content] of Object.entries(writes)) {
