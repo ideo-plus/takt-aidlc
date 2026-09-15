@@ -53,6 +53,10 @@ claude --plugin-dir /absolute/path/to/takt-aidlc/dist/claude
 
 Run `/aidlc` normally. Use the usual questions and approval gates through Inception and the required Construction design stages. TAKT starts only at CG entry.
 
+## Choose the delegation scope
+
+Use `delegationScope: "code-generation"` for CG only, or `delegationScope: "construction"` for the whole phase after Inception approval. Both hosts support both modes. See the [Construction guide](construction-phase.md) for phase and per-unit checks; the configuration below is for CG only.
+
 ## Configure CG delegation before CG entry
 
 Create `aidlc/takt-handoff/` in the target project and copy `dist/claude/workflows/aidlc-code-generation.yaml` to `aidlc/takt-handoff/workflow.yaml`. Add trusted Bun scripts for your application's build, unit tests, and applicable sensors. These scripts run from frozen copies with the generated workspace as their working directory.

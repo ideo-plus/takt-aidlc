@@ -1,0 +1,192 @@
+{
+  "date": "2026-09-15",
+  "scope": "Construction HOTL with shared CG",
+  "verdict": "VERIFIED for deterministic tests; live model completion unverified",
+  "versions": {
+    "aidlc": "2.8.2",
+    "takt": "0.65.0",
+    "bun": "1.3.13"
+  },
+  "cases": [
+    {
+      "name": "codex-context-two-units",
+      "runId": "7844efdc7e78e30d2fd89670",
+      "hostHarness": "codex",
+      "state": "verified",
+      "provider": "mock",
+      "approval": "synthetic fixture",
+      "steps": [
+        {
+          "unit": "answer-value-update",
+          "stage": "functional-design",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-value-update",
+          "stage": "nfr-requirements",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-value-update",
+          "stage": "nfr-design",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-value-update",
+          "stage": "infrastructure-design",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-value-update",
+          "stage": "code-generation",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-consumer",
+          "stage": "functional-design",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-consumer",
+          "stage": "nfr-requirements",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-consumer",
+          "stage": "nfr-design",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-consumer",
+          "stage": "infrastructure-design",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-consumer",
+          "stage": "code-generation",
+          "state": "verified"
+        },
+        {
+          "unit": null,
+          "stage": "build-and-test",
+          "state": "verified"
+        },
+        {
+          "unit": null,
+          "stage": "ci-pipeline",
+          "state": "verified"
+        }
+      ],
+      "finalBuildCode": 0,
+      "finalTestCode": 0,
+      "finalUnitCheckCodes": {
+        "answer-value-update": {
+          "build": 0,
+          "test": 0,
+          "type-check": 0
+        },
+        "answer-consumer": {
+          "build": 0,
+          "test": 0,
+          "type-check": 0
+        }
+      },
+      "originalInputsUnchanged": true
+    },
+    {
+      "name": "integration-repair",
+      "runId": "77fb8bc5d698d54d3e3479dc",
+      "hostHarness": "claude",
+      "state": "verified",
+      "provider": "mock",
+      "approval": "synthetic fixture",
+      "steps": [
+        {
+          "unit": "answer-value-update",
+          "stage": "functional-design",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-value-update",
+          "stage": "nfr-requirements",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-value-update",
+          "stage": "nfr-design",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-value-update",
+          "stage": "infrastructure-design",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-value-update",
+          "stage": "code-generation",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-consumer",
+          "stage": "functional-design",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-consumer",
+          "stage": "nfr-requirements",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-consumer",
+          "stage": "nfr-design",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-consumer",
+          "stage": "infrastructure-design",
+          "state": "verified"
+        },
+        {
+          "unit": "answer-consumer",
+          "stage": "code-generation",
+          "state": "verified"
+        },
+        {
+          "unit": null,
+          "stage": "build-and-test",
+          "state": "repair_required"
+        },
+        {
+          "unit": "answer-consumer",
+          "stage": "code-generation",
+          "state": "verified"
+        },
+        {
+          "unit": null,
+          "stage": "build-and-test",
+          "state": "verified"
+        },
+        {
+          "unit": null,
+          "stage": "ci-pipeline",
+          "state": "verified"
+        }
+      ],
+      "finalBuildCode": 0,
+      "finalTestCode": 0,
+      "finalUnitCheckCodes": {
+        "answer-value-update": {
+          "build": 0,
+          "test": 0,
+          "type-check": 0
+        },
+        "answer-consumer": {
+          "build": 0,
+          "test": 0,
+          "type-check": 0
+        }
+      },
+      "originalInputsUnchanged": true
+    }
+  ]
+}

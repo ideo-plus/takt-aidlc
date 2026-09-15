@@ -7,6 +7,7 @@ import { cleanEnvironment, digest, readJson, writeJson } from '../src/handoff/io
 import { fixture, repo, testRoot } from './handoff-fixture';
 import type { HookEvent, Status } from '../src/handoff/bridge';
 import { constructionFixture } from '../experiments/construction/fixture';
+import { phaseFixture } from '../experiments/construction-phase/fixture';
 import { cgFixture } from '../experiments/code-generation/fixture';
 
 let moved: string;
@@ -166,3 +167,14 @@ test('CG設定はInception承認で起動せず、CG入口から一度だけ自�
   expect(state.state).toBe('verified'); expect(state.attempts).toBe(1);
   expect(readFileSync(join(f.project, 'src/value.ts'), 'utf8')).toContain('41');
 }, 60000);
+
+
+test('Claude Codeの配布物もConstruction全体を委譲する',async()=>{
+  const f=await phaseFixture({blocked:true});
+  expect(invoke(f.project,'SessionStart',{}).stdout).toContain('Construction全体');
+  expect(invoke(f.project,'PreToolUse',{...f.event,hook_event_name:'PreToolUse'}).status).toBe(0);f.approve();
+  const r=invoke(f.project,'PostToolUse',f.event);expect(r.status).toBe(0);expect(r.stdout).toContain('Construction全体');
+  const {readdirSync}=await import('node:fs');const root=join(f.project,'aidlc/takt-handoff/phase-runs');const id=readdirSync(root).find(n=>/^[a-f0-9]{24}$/.test(n))!;
+  let status:any;const deadline=Date.now()+20000;do{status=readJson(join(root,id,'status.json'));if(status.state==='blocked'||status.state==='failed')break;await Bun.sleep(100);}while(Date.now()<deadline);
+  expect(status.state).toBe('blocked');
+},60000);

@@ -5,6 +5,7 @@ import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSy
 import { basename, dirname, join, relative } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
+export const cgGateSource = join(import.meta.dir, 'cg-gate.ts');
 export const hash = (data: string | Buffer) => createHash('sha256').update(data).digest('hex');
 const read = (path: string) => JSON.parse(readFileSync(path, 'utf8'));
 const save = (path: string, data: unknown) => { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, JSON.stringify(data, null, 2) + '\n'); };
@@ -13,8 +14,9 @@ export function sources(root: string): Record<string, string> {
   const found: Record<string, string> = {};
   const walk = (dir: string) => {
     for (const e of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (e.name === 'node_modules' || e.name === '.venv') continue;
       const path = join(dir, e.name), rel = relative(root, path);
-      if (/^(?:\.git|\.claude|\.takt|input|cg|coverage|\.handoff-coverage-[^/]+)(?:\/|$)/.test(rel)) continue;
+      if (/^(?:node_modules|\.venv|\.git|\.claude|\.takt|input|cg|coverage|\.handoff-coverage-[^/]+)(?:\/|$)/.test(rel)) continue;
       assert.ok(!e.isSymbolicLink(), `symlinkは対象外: ${rel}`);
       if (e.isDirectory()) walk(path);
       else if (e.isFile()) found[rel] = hash(readFileSync(path));
@@ -24,7 +26,8 @@ export function sources(root: string): Record<string, string> {
 }
 function sourcePath(root: string, path: unknown) {
   assert.ok(typeof path === 'string' && !path.startsWith('/') && !path.split('/').some(p => !p || p === '.' || p === '..'));
-  assert.ok(!/^(?:\.git|\.claude|\.codex|\.agents|\.takt|input|cg)(?:\/|$)/.test(path));
+  assert.ok(!path.split('/').some(p => p === 'node_modules' || p === '.venv'));
+  assert.ok(!/^(?:node_modules|\.venv|\.git|\.claude|\.codex|\.agents|\.takt|input|cg)(?:\/|$)/.test(path));
   const full = join(root, path);
   assert.ok(lstatSync(full).isFile() && realpathSync(full).startsWith(realpathSync(root) + '/'));
   return path;

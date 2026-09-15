@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { buildPlugin, codexOutput } from '../scripts/build-plugin';
 import { cleanEnvironment, digest, readJson, writeJson } from '../src/handoff/io';
 import { codexCommand, codexStdout, codexDirective } from '../src/hosts/codex';
+import { phaseFixture } from '../experiments/construction-phase/fixture';
 import { cgFixture } from '../experiments/code-generation/fixture';
 import { repo, testRoot } from './handoff-fixture';
 
@@ -99,3 +100,15 @@ test('観測したCodexのstdout文字列と既知のセッション前置きを
   expect(() => codexCommand(prefix + 'aidlc engine orchestrate next', 'wrong')).toThrow();
   expect(() => codexStdout({ stdout: '{}', interrupted: true, exit_code: 0 })).toThrow();
 });
+
+
+test('CodexのInception承認からConstructionを一度だけ委譲する',async()=>{
+  const f=await phaseFixture({host:'codex',blocked:true});
+  const event={...f.event,session_id:session,tool_input:{command:prefix+f.event.tool_input.command},tool_response:f.event.tool_response.stdout};
+  expect(invoke(f.project,'SessionStart',{...event,hook_event_name:'SessionStart'}).stdout).toContain('Construction全体');
+  expect(invoke(f.project,'PreToolUse',{...event,hook_event_name:'PreToolUse'}).status).toBe(0);f.approve();
+  for(let i=0;i<2;i++){const r=invoke(f.project,'PostToolUse',event);expect(r.status).toBe(0);expect(JSON.parse(r.stdout).continue).toBe(false);}
+  const root=join(f.project,'aidlc/takt-handoff/phase-runs');const ids=readdirSync(root).filter(n=>/^[a-f0-9]{24}$/.test(n));expect(ids).toHaveLength(1);
+  let status:any;const deadline=Date.now()+20000;do{status=readJson(join(root,ids[0],'status.json'));if(status.state==='blocked'||status.state==='failed')break;await Bun.sleep(100);}while(Date.now()<deadline);
+  expect(status.state).toBe('blocked');expect(status.attempts).toBe(1);
+},60000);

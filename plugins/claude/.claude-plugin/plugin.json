@@ -1,6 +1,8 @@
 {
   "name": "takt-aidlc",
-  "version": "0.1.0",
-  "author": { "name": "takt-aidlc contributors" },
-  "description": "AI-DLC v2.8.2のCGステージをTAKTのHOTLワークフローへ委譲するClaude Codeプラグイン。Claude/Codexワーカーに対応し、プロジェクトごとの明示的な設定が必要です。"
+  "version": "0.2.0",
+  "author": {
+    "name": "takt-aidlc contributors"
+  },
+  "description": "AI-DLCのCG単体／Construction全体をTAKTのHOTLワークフローへ委譲するホストプラグイン。"
 }

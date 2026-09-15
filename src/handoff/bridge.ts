@@ -2,6 +2,7 @@ import { chmodSync, closeSync, copyFileSync, existsSync, mkdirSync, openSync, re
 import { dirname, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cleanEnvironment, command, digest, fileInside, quote, readJson, requireSuccess, snapshot, unchanged, withoutBedrock, writeJson, type Snapshot } from './io';
+import { harnessDirectory, type HostHarness } from '../hosts/harness';
 import { prepareConstruction } from '../construction/runtime';
 
 export type Config = {
@@ -80,13 +81,13 @@ export function approvalCommandIssue(commandText: string, project: string) {
   if (!hasApproval) return null;
   return 'TAKT連携の最終承認は、aidlc engine orchestrate report --stage delivery-planning --result approved --user-input "Approve" の単一コマンドで実行してください。リダイレクト・echo・連結コマンド・追加オプションは付けないでください。この要求はまだ実行されていません。同じ承認に基づいてコマンド形式を直し、再実行してください。';
 }
-async function engineLibrary(project: string) {
-  const version = await import(pathToFileURL(fileInside(project, '.claude/tools/aidlc-version.ts')).href);
+async function engineLibrary(project: string, host: HostHarness = 'claude') {
+  const version = await import(pathToFileURL(fileInside(project, `${harnessDirectory(host)}/tools/aidlc-version.ts`)).href);
   if (version.AIDLC_VERSION !== '2.8.2') throw new Error('このPoCはAI-DLC v2.8.2専用です');
-  return import(pathToFileURL(fileInside(project, '.claude/tools/aidlc-lib.ts')).href);
+  return import(pathToFileURL(fileInside(project, `${harnessDirectory(host)}/tools/aidlc-lib.ts`)).href);
 }
-async function approvedBoundary(project: string) {
-  const lib = await engineLibrary(project);
+export async function approvedBoundary(project: string, host: HostHarness = 'claude') {
+  const lib = await engineLibrary(project, host);
   const statePath = lib.stateFilePath(project);
   const state = readFileSync(statePath, 'utf8');
   if (lib.getField(state, 'State Version') !== '8') throw new Error('AI-DLC v2.8.2のState Version 8だけに対応しています');

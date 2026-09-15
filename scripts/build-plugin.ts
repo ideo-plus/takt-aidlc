@@ -7,7 +7,7 @@ export const output = join(root, 'dist/claude');
 export const codexOutput = join(root, 'dist/codex/plugins/takt-aidlc');
 
 export async function buildPlugin() {
-  const sourceFiles = ['src/handoff/cli.ts', 'src/handoff/bridge.ts', 'src/handoff/io.ts', 'src/hosts/harness.ts', 'src/hosts/codex.ts', 'src/construction/runtime.ts', 'src/construction/construction-gate.ts', 'src/code-generation/context.ts', 'src/code-generation/runner.ts', 'src/code-generation/cg-gate.ts', 'workflows/aidlc-code-generation.yaml', 'workflows/aidlc-construction.yaml'];
+  const sourceFiles = ['src/handoff/cli.ts', 'src/handoff/bridge.ts', 'src/handoff/io.ts', 'src/handoff/provider.ts', 'src/construction-phase/context.ts', 'src/construction-phase/runner.ts', 'src/construction-phase/stage.ts', 'src/construction-phase/stage-gate.ts', 'src/construction-phase/cg-gate.ts', 'workflows/aidlc-construction-stage.yaml', 'src/hosts/harness.ts', 'src/hosts/codex.ts', 'src/construction/runtime.ts', 'src/construction/construction-gate.ts', 'src/code-generation/context.ts', 'src/code-generation/runner.ts', 'src/code-generation/cg-gate.ts', 'workflows/aidlc-code-generation.yaml', 'workflows/aidlc-construction.yaml'];
   for (const [target, source, manifestDir] of [
     [output, 'plugins/claude', '.claude-plugin'],
     [codexOutput, 'plugins/codex/takt-aidlc', '.codex-plugin'],
@@ -19,6 +19,7 @@ export async function buildPlugin() {
     if (!built.success) throw new Error(built.logs.map(String).join('\n'));
     if (!existsSync(join(target, 'scripts/handoff.js'))) throw new Error('連携CLIが生成されませんでした');
     cpSync(join(root, 'src/construction/construction-gate.ts'), join(target, 'scripts/construction-gate.ts'));
+    cpSync(join(root, 'src/construction-phase/stage-gate.ts'), join(target, 'scripts/stage-gate.ts'));
     cpSync(join(root, 'src/code-generation/cg-gate.ts'), join(target, 'scripts/cg-gate.ts'));
     cpSync(join(root, 'workflows'), join(target, 'workflows'), { recursive: true });
     const inputs = [...sourceFiles, `${source}/${manifestDir}/plugin.json`, `${source}/hooks/hooks.json`];
