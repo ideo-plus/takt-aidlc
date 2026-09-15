@@ -199,7 +199,7 @@ export async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOrigi
     const ctx = readJson<any>(join(control, 'context.json')); ctx.initialSources = sources(workspace); writeJson(join(control, 'context.json'), ctx);
     protectedControl['context.json'] = digest(readFileSync(join(control, 'context.json')));
     for (const args of [['init', '-q'], ['config', 'core.hooksPath', '/dev/null'], ['add', '.'], ['-c', 'user.name=TAKT CG', '-c', 'user.email=cg@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', 'chore: seed CG workspace']]) requireSuccess(await command(['git', ...args], workspace, env, 10000));
-    const result = await command(['takt', '--pipeline', '--skip-git', '--provider', cgConfig.provider, '--workflow', join(control, 'workflow.yaml'), '--task', 'AI-DLCのCG単体をHOTLで実行。inputのIntent・設計と、注入された本家CG/知識/センサー定義に従い、ビルド・テスト成功まで完了しないこと。'], workspace, env, cgConfig.timeoutMs);
+    const result = await command(['takt', '--pipeline', '--skip-git', '--provider', cgConfig.provider, '--workflow', join(control, 'workflow.yaml'), '--task', 'AI-DLCのCG単体をHOTLで実行。inputのIntent・設計と、注入された本家CG/知識/センサー定義に従い、ビルド・テスト成功まで完了しないこと。'], workspace, env, cgConfig.timeoutMs, {outputPrefix:join(attempt,'takt-output')});
     writeJson(join(attempt, 'takt.json'), result);
     verifyOriginal(); unchanged(workspace, inputs); unchanged(control, protectedControl);
     const evidence = await command([process.execPath, gate, 'result'], workspace, env, 10000); writeJson(join(attempt, 'cg-result.json'), evidence);

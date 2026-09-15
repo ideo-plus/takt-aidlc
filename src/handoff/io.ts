@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync, renameSync, lstatSync, realpathSync } from 'node:fs';
+import { openSync, closeSync, writeSync, mkdirSync, readFileSync, writeFileSync, renameSync, lstatSync, realpathSync } from 'node:fs';
 import { dirname, isAbsolute, join, sep } from 'node:path';
 import { spawn } from 'node:child_process';
+import { StringDecoder } from 'node:string_decoder';
 
 export function digest(value: string | Buffer) { return createHash('sha256').update(value).digest('hex'); }
 export function writeJson(path: string, value: unknown) {
@@ -44,19 +45,54 @@ export function withoutBedrock(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return result;
 }
 export function quote(value: string) { return "'" + value.replaceAll("'", "'\\''") + "'"; }
-export type CommandResult = { code: number | null; timedOut: boolean; stdout: string; stderr: string };
-export async function command(argv: string[], cwd: string, env: NodeJS.ProcessEnv, timeoutMs: number): Promise<CommandResult> {
+export type CommandResult = { code: number | null; timedOut: boolean; stdout: string; stderr: string; outputLimitExceeded?: boolean; outputTruncated?: boolean; stdoutFile?: string; stderrFile?: string };
+export async function command(argv: string[], cwd: string, env: NodeJS.ProcessEnv, timeoutMs: number, options: { outputPrefix?: string } = {}): Promise<CommandResult> {
   return new Promise((resolve, reject) => {
+    let outFd: number | undefined, errFd: number | undefined;
+    const stdoutFile = options.outputPrefix ? options.outputPrefix + '.stdout.log' : undefined;
+    const stderrFile = options.outputPrefix ? options.outputPrefix + '.stderr.log' : undefined;
+    const closeFiles = () => { if (outFd !== undefined) { closeSync(outFd); outFd = undefined; } if (errFd !== undefined) { closeSync(errFd); errFd = undefined; } };
+    try {
+      if (stdoutFile && stderrFile) { mkdirSync(dirname(stdoutFile), { recursive: true }); outFd = openSync(stdoutFile, 'w', 0o600); errFd = openSync(stderrFile, 'w', 0o600); }
+    } catch (e) { closeFiles(); reject(e); return; }
     const child = spawn(argv[0], argv.slice(1), { cwd, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = '', stderr = '', timedOut = false;
+    let stdout = '', stderr = '', timedOut = false, outputLimitExceeded = false, outputTruncated = false, bytes = 0;
+    const outDecoder = new StringDecoder('utf8'), errDecoder = new StringDecoder('utf8');
+    const captureLimit = options.outputPrefix ? 64000 : 2000000;
     const stop = () => { try { process.kill(-child.pid!, 'SIGKILL'); } catch {} };
     const timer = setTimeout(() => { timedOut = true; stop(); }, timeoutMs);
-    child.stdout.on('data', value => { stdout += value; if (stdout.length > 2_000_000) { timedOut = true; stop(); } });
-    child.stderr.on('data', value => { stderr += value; if (stderr.length > 2_000_000) { timedOut = true; stop(); } });
-    child.on('error', error => { clearTimeout(timer); reject(error); });
-    child.on('close', code => { clearTimeout(timer); resolve({ code, timedOut, stdout, stderr }); });
+    const capture = (which: 'stdout' | 'stderr', value: Buffer) => {
+      try {
+        bytes += value.length;
+        if (options.outputPrefix && bytes > 100_000_000) { outputLimitExceeded = true; stop(); return; }
+        const fd = which === 'stdout' ? outFd : errFd;
+        if (fd !== undefined) { let n = 0; while (n < value.length) n += writeSync(fd, value, n); }
+        const text = (which === 'stdout' ? outDecoder : errDecoder).write(value);
+        let buffer = (which === 'stdout' ? stdout : stderr) + text;
+        if (buffer.length > captureLimit) {
+          if (options.outputPrefix) { outputTruncated = true; buffer = buffer.slice(-captureLimit); }
+          else { outputLimitExceeded = true; buffer = buffer.slice(-captureLimit); stop(); }
+        }
+        if (which === 'stdout') stdout = buffer; else stderr = buffer;
+      } catch (e) { clearTimeout(timer); stop(); reject(e); }
+    };
+    child.stdout.on('data', value => capture('stdout', value));
+    child.stderr.on('data', value => capture('stderr', value));
+    child.on('error', error => { clearTimeout(timer); closeFiles(); reject(error); });
+    let closed = false, outEnded = false, errEnded = false, exitCode: number | null = null;
+    const finish = () => {
+      if (!closed || !outEnded || !errEnded) return;
+      clearTimeout(timer); closeFiles(); stdout += outDecoder.end(); stderr += errDecoder.end();
+      resolve({ code: exitCode, timedOut, stdout, stderr, ...(outputLimitExceeded ? { outputLimitExceeded } : {}), ...(stdoutFile ? { stdoutFile, stderrFile, outputTruncated } : {}) });
+    };
+    child.stdout.on('end', () => { outEnded = true; finish(); });
+    child.stderr.on('end', () => { errEnded = true; finish(); });
+    child.on('close', code => { closed = true; exitCode = code; finish(); });
   });
 }
 export function requireSuccess(result: CommandResult) {
-  if (result.code !== 0 || result.timedOut) throw new Error(`コマンド失敗: ${result.stderr || result.stdout}`);
+  if (result.code !== 0 || result.timedOut || result.outputLimitExceeded) {
+    const reason = result.timedOut ? '時間上限' : result.outputLimitExceeded ? '出力上限' : `終了コード ${result.code}`;
+    throw new Error(`コマンド失敗 (${reason}): ${(result.stderr || result.stdout).slice(-8000)}${result.stdoutFile ? '\n完全なログ: ' + result.stdoutFile : ''}`);
+  }
 }

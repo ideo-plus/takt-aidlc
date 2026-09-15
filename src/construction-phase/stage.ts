@@ -250,6 +250,7 @@ export async function executeStage(args: {
     workspace,
     env,
     timeout,
+    {outputPrefix:join(attempt,"takt-output")},
   );
   writeJson(join(attempt, "takt.json"), run);
   verify();
@@ -262,6 +263,7 @@ export async function executeStage(args: {
     10000,
   );
   writeJson(join(attempt, "result.json"), evidence);
+  if(evidence.code!==0)requireSuccess(run);
   requireSuccess(evidence);
   const result = JSON.parse(evidence.stdout);
   if (result.state === "verified") requireSuccess(run);

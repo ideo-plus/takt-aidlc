@@ -122,7 +122,7 @@ bun /absolute/path/to/plugin/scripts/handoff.js phase-status /absolute/path/to/p
 
 - AI-DLC 2.8.2、State Version 8、単一監査シャード、Inception完了直後を対象とする。
 - 有効なUnit依存DAG、CGとBuild and Testを含む工程選択、確定したTest Strategyと`test-after`が必要。ゼロUnitや、CGを省略する部分的なConstructionには対応しない。
-- Unitは依存順に直列実行する。工程の時間上限と最大ステップ数を設ける。
+- Unitは依存順に直列実行する。工程の時間上限と最大ステップ数を設ける。TAKTの詳細出力は各工程の`takt-output.stdout.log`／`takt-output.stderr.log`へ保存し、`takt.json`には末尾64,000文字を保持する。ログは1回のTAKT実行につき合計100MBを上限とし、超過と時間切れを区別する。
 - 設計とCGの差し戻しは各Workflow内で修正する。Build and Testで実測の失敗がある場合は、`repair_required`と所有Unitを返し、共通CGで一度修正して再検証する。修正後も失敗する場合や入力から所有者を決められない場合は停止する。
 - ソースは通常ファイルを列挙する。`node_modules`と`.venv`は一時的な依存として差分の対象から除く。途中再開、ロックの自動回収、OSレベルの完全な隔離は未実装。
 
