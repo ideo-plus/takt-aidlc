@@ -166,6 +166,9 @@ export async function executeStage(args: {
   copyFileSync(cgGateSource, join(control, "code-generation-gate.ts"));
   copyFileSync(nativeTraceSource, join(control, "native-trace.ts"));
   const { workflow, controlFiles: facetFiles } = materializeWorkflow(store, c.constructionWorkflow, control);
+  // 個別工程はレビューまで。全Unit完了後のsuperviseはphase runnerが一度呼ぶ。
+  workflow.steps = workflow.steps.filter((step: any) => step.name !== 'supervise');
+  for (const step of workflow.steps) for (const rule of step.rules ?? []) if (rule.next === 'supervise') rule.next = 'COMPLETE';
   const contract = `${stageContract}\n現在の工程は${stage.slug}、Unitは${unit ?? "全Unit"}です。\n`;
   const bundlePaths = paths.filter(
     (path) =>

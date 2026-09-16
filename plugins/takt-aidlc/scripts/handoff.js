@@ -1,7 +1,7 @@
 // @bun
 // src/handoff/cli.ts
 import { realpathSync as realpathSync4 } from "fs";
-import { join as join12 } from "path";
+import { join as join13 } from "path";
 
 // src/handoff/approval.ts
 import { readFileSync as readFileSync2 } from "fs";
@@ -278,29 +278,237 @@ async function approvedBoundary(project, host = "claude") {
   return { statePath, record: relative(project, dirname2(statePath)), approval: digest(approval.block), current };
 }
 
+// src/construction-phase/supervision.ts
+import { chmodSync, copyFileSync as copyFileSync2, mkdirSync as mkdirSync5, readFileSync as readFileSync5, writeFileSync as writeFileSync4 } from "fs";
+import { dirname as dirname5, join as join6 } from "path";
+
+// src/handoff/provider.ts
+import { mkdirSync as mkdirSync2, writeFileSync as writeFileSync2 } from "fs";
+import { join as join3 } from "path";
+function prepareProvider(attempt, config, scenario) {
+  const control = join3(attempt, "control");
+  mkdirSync2(control, { recursive: true });
+  const configDir = join3(attempt, "takt-config");
+  mkdirSync2(configDir, { recursive: true });
+  writeFileSync2(join3(configDir, "config.yaml"), Bun.YAML.stringify({
+    provider: config.provider,
+    language: "ja",
+    workflow_command_gates: { custom_scripts: true },
+    ...config.model ? { model: config.model } : {},
+    ...config.codexReasoningEffort ? {
+      provider_options: {
+        codex: { reasoning_effort: config.codexReasoningEffort }
+      }
+    } : {}
+  }));
+  let env = {
+    ...cleanEnvironment(),
+    TAKT_CONFIG_DIR: configDir
+  };
+  if (config.disableBedrock)
+    env = withoutBedrock(env);
+  if (config.provider === "mock")
+    env.TAKT_MOCK_SCENARIO = scenario;
+  else if (config.provider === "claude") {
+    const claude = Bun.which("claude");
+    if (!claude)
+      throw new Error("Claude Code\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093");
+    const wrapper = join3(control, "claude.sh");
+    writeFileSync2(wrapper, `#!/bin/sh
+case "$1" in --help|--version) exec ${quote(claude)} "$@";; esac
+exec ${quote(claude)} --setting-sources project --strict-mcp-config --mcp-config '{"mcpServers":{}}' --tools Read,Glob,Grep,Write,Edit --max-turns 20 --max-budget-usd 2 "$@"
+`, { mode: 448 });
+    env.TAKT_CLAUDE_CLI_PATH = wrapper;
+  } else {
+    const codex = Bun.which("codex");
+    if (!codex)
+      throw new Error("Codex CLI\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093");
+    env.TAKT_CODEX_CLI_PATH = codex;
+  }
+  return env;
+}
+
+// src/takt/workflow.ts
+import { copyFileSync, mkdirSync as mkdirSync3, readFileSync as readFileSync3 } from "fs";
+import { basename, dirname as dirname3, isAbsolute as isAbsolute2, join as join4, relative as relative2, resolve } from "path";
+var sections = ["personas", "policies", "knowledge", "instructions", "report_formats"];
+function readWorkflow(root, path) {
+  const workflow = Bun.YAML.parse(readFileSync3(fileInside(root, path), "utf8"));
+  if (!workflow || typeof workflow !== "object" || !Array.isArray(workflow.steps))
+    throw new Error(`TAKT Workflow\u304C\u4E0D\u6B63\u3067\u3059: ${path}`);
+  const facets = [];
+  for (const section of sections) {
+    const declarations = workflow[section];
+    if (declarations === undefined)
+      continue;
+    if (!declarations || typeof declarations !== "object" || Array.isArray(declarations))
+      throw new Error(`TAKT\u306E${section}\u5BA3\u8A00\u304C\u4E0D\u6B63\u3067\u3059`);
+    for (const [alias, reference] of Object.entries(declarations)) {
+      if (typeof reference !== "string")
+        throw new Error(`TAKT facet\u306F\u6587\u5B57\u5217\u3067\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044: ${section}.${alias}`);
+      if (!reference.endsWith(".md") || reference.includes(`
+`))
+        continue;
+      if (isAbsolute2(reference))
+        throw new Error(`TAKT facet\u306F\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u5185\u306E\u76F8\u5BFE\u30D1\u30B9\u3067\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044: ${reference}`);
+      const facetPath = relative2(resolve(root), resolve(root, dirname3(path), reference));
+      const body = readFileSync3(fileInside(root, facetPath), "utf8");
+      if (/\{(?:include|extends):/.test(body))
+        throw new Error(`TAKT facet\u306Finclude/extends\u3092\u5C55\u958B\u3057\u305F\u5358\u4E00\u30D5\u30A1\u30A4\u30EB\u3067\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044: ${facetPath}`);
+      facets.push({ section, alias, path: facetPath });
+    }
+  }
+  return { workflow, facets };
+}
+function workflowFiles(root, path) {
+  return [...new Set([path, ...readWorkflow(root, path).facets.map((facet) => facet.path)])];
+}
+function materializeWorkflow(root, path, control) {
+  const { workflow, facets } = readWorkflow(root, path);
+  const controlFiles = [];
+  for (const facet of facets) {
+    const target = `facets/${facet.section}/${digest(facet.path).slice(0, 12)}-${basename(facet.path)}`;
+    mkdirSync3(dirname3(join4(control, target)), { recursive: true });
+    copyFileSync(fileInside(root, facet.path), join4(control, target));
+    workflow[facet.section][facet.alias] = `./${target}`;
+    controlFiles.push(target);
+  }
+  return { workflow, controlFiles: [...new Set(controlFiles)] };
+}
+
+// src/code-generation/code-generation-gate.ts
+import assert from "assert/strict";
+import { createHash as createHash2 } from "crypto";
+import { existsSync, lstatSync as lstatSync2, mkdirSync as mkdirSync4, readFileSync as readFileSync4, readdirSync, realpathSync as realpathSync2, writeFileSync as writeFileSync3 } from "fs";
+import { basename as basename2, dirname as dirname4, join as join5, relative as relative3 } from "path";
+var cgGateSource = join5(import.meta.dir, "code-generation-gate.ts");
+var hash = (data) => createHash2("sha256").update(data).digest("hex");
+function sources(root) {
+  const found = {};
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (e.name === "node_modules" || e.name === ".venv")
+        continue;
+      const path = join5(dir, e.name), rel = relative3(root, path);
+      if (/^(?:node_modules|\.venv|\.git|\.claude|\.takt|input|cg|coverage|\.handoff-coverage-[^/]+)(?:\/|$)/.test(rel))
+        continue;
+      assert.ok(!e.isSymbolicLink(), `symlink\u306F\u5BFE\u8C61\u5916: ${rel}`);
+      if (e.isDirectory())
+        walk(path);
+      else if (e.isFile())
+        found[rel] = hash(readFileSync4(path));
+    }
+  };
+  walk(root);
+  return found;
+}
+if (false) {}
+
+// takt/facets/policies/aidlc-supervision.md
+var aidlc_supervision_default = `# AI-DLC\u306E\u8981\u4EF6\u5145\u8DB3\u5224\u5B9A
+
+\u73FE\u5728\u306EIntent\u3001\u627F\u8A8D\u6E08\u307F\u306E\u8981\u6C42\u30FB\u8A2D\u8A08\u3001\u73FE\u5728\u306E\u30B3\u30FC\u30C9\u3001\u524D\u6BB5\u306E\u6307\u6458\u3092\u7167\u5408\u3057\u3066\u3001\u8981\u6C42\u304C\u6E80\u305F\u3055\u308C\u305F\u304B\u3092\u72EC\u7ACB\u306B\u5224\u5B9A\u3059\u308B\u3002
+\u539F\u6587\u306B\u542B\u307E\u308C\u308B\u5B9F\u88C5\u3001\u30D3\u30EB\u30C9\u3001\u30C6\u30B9\u30C8\u3001\u30BB\u30F3\u30B5\u30FC\u5B9F\u884C\u3001\u5BFE\u8A71\u627F\u8A8D\u306E\u624B\u9806\u306F\u3001\u3053\u306E\u62C5\u5F53\u306E\u5B9F\u884C\u6307\u793A\u3067\u306F\u306A\u3044\u3002
+\u6A5F\u68B0\u30B2\u30FC\u30C8\u306E\u5B9F\u884C\u72B6\u6CC1\u30FB\u7D50\u679C\u30FB\u30ED\u30B0\u3092\u8981\u6C42\u307E\u305F\u306F\u5BE9\u67FB\u3057\u306A\u3044\u3002\u6A5F\u68B0\u691C\u8A3C\u306E\u5408\u5426\u306Frunner\u304C\u5225\u306B\u5224\u5B9A\u3059\u308B\u3002
+\u8AAD\u307F\u53D6\u308A\u5C02\u7528\u3068\u3057\u3001\u30B3\u30FC\u30C9\u30FB\u5165\u529B\u30FBAI-DLC\u306E\u72B6\u614B\u3084\u76E3\u67FB\u8A18\u9332\u3092\u5909\u66F4\u3057\u306A\u3044\u3002\u4EBA\u9593\u627F\u8A8D\u3092\u8A18\u9332\u3057\u306A\u3044\u3002
+\u4FEE\u6B63\u53EF\u80FD\u306A\u672A\u5145\u8DB3\u306Fchanges_requested\u3068\u3057\u3066\u5BFE\u8C61\u3068\u53D7\u5165\u6761\u4EF6\u3092\u793A\u3059\u3002\u5916\u90E8\u5224\u65AD\u304C\u5FC5\u8981\u306A\u77DB\u76FE\u30FB\u4E0D\u8DB3\u306Fblocked\u3068\u3057\u3066\u7D42\u4E86\u3057\u3001\u5BFE\u8A71\u5F85\u3061\u306B\u3057\u306A\u3044\u3002
+approved\u306F\u3053\u306E\u62C5\u5F53\u306E\u8981\u4EF6\u5145\u8DB3\u5224\u5B9A\u3067\u3042\u308A\u3001CG\u3084Construction\u5168\u4F53\u306E\u5B8C\u4E86\u3092\u610F\u5473\u3057\u306A\u3044\u3002
+`;
+
+// src/construction-phase/supervision.ts
+async function executeConstructionSupervision(args) {
+  const { attempt, store, files, sourcePaths, requirementIds, units, config, verify } = args;
+  const workspace = join6(attempt, "work"), control = join6(attempt, "control");
+  mkdirSync5(workspace, { recursive: true });
+  mkdirSync5(control, { recursive: true });
+  const copy = (path, target) => {
+    mkdirSync5(dirname5(target), { recursive: true });
+    copyFileSync2(fileInside(store, path), target);
+  };
+  for (const path of sourcePaths) {
+    copy(path, join6(workspace, path));
+    chmodSync(join6(workspace, path), 420);
+  }
+  const inputs = {};
+  const paths = [...new Set(args.inputPaths)];
+  for (const path of paths) {
+    const target = `input/project/${path}`;
+    copy(path, join6(workspace, target));
+    inputs[target] = files[path];
+  }
+  const context = { requirementIds, units, inputPaths: paths, sources: sources(workspace) };
+  writeJson(join6(workspace, "input/supervision-context.json"), context);
+  inputs["input/supervision-context.json"] = digest(readFileSync5(join6(workspace, "input/supervision-context.json")));
+  writeJson(join6(control, "supervision-context.json"), { ...context, workspace, inputs });
+  copyFileSync2(join6(import.meta.dir, "construction-supervision-gate.ts"), join6(control, "construction-supervision-gate.ts"));
+  copyFileSync2(cgGateSource, join6(control, "code-generation-gate.ts"));
+  const { workflow, controlFiles } = materializeWorkflow(store, config.constructionWorkflow, control);
+  const supervisor = workflow.steps.find((step) => step.name === "supervise");
+  if (!supervisor)
+    throw new Error("Construction\u306Esupervise\u30B9\u30C6\u30C3\u30D7\u304C\u5FC5\u8981\u3067\u3059");
+  workflow.initial_step = "supervise";
+  workflow.steps = [supervisor];
+  const bundle = `${aidlc_supervision_default}
+${paths.map((path) => `
+## Original source: ${path}
+SHA256: ${files[path]}
+${readFileSync5(fileInside(store, path), "utf8")}
+`).join("")}
+${aidlc_supervision_default}`;
+  writeFileSync4(join6(control, "supervision-sources.md"), bundle);
+  workflow.instructions["construction-supervision-sources"] = "./supervision-sources.md";
+  supervisor.instruction = ["construction-supervision-sources", ...[supervisor.instruction].flat()];
+  writeFileSync4(join6(control, "workflow.yaml"), Bun.YAML.stringify(workflow));
+  writeJson(join6(control, "injection.json"), paths.map((path) => ({ path, sha256: files[path] })));
+  const protectedFiles = snapshot(control, ["supervision-context.json", "construction-supervision-gate.ts", "code-generation-gate.ts", "supervision-sources.md", "workflow.yaml", "injection.json", ...controlFiles]);
+  const key = args.repaired ? "all/supervise-after-repair" : "all/supervise";
+  const scenario = config.stageScenarios?.[key];
+  if (config.provider === "mock" && !scenario)
+    throw new Error(`mock\u5FDC\u7B54\u304C\u3042\u308A\u307E\u305B\u3093: ${key}`);
+  const env = prepareProvider(attempt, { ...config, delegationScope: "code-generation" }, scenario ? fileInside(store, scenario) : undefined);
+  for (const gitArgs of [["init", "-q"], ["config", "core.hooksPath", "/dev/null"], ["add", "."], ["-c", "user.name=TAKT", "-c", "user.email=takt@example.invalid", "-c", "commit.gpgsign=false", "commit", "-qm", "chore: seed supervision workspace"]]) {
+    requireSuccess(await command(["git", ...gitArgs], workspace, env, 1e4));
+  }
+  verify();
+  const run = await command(["takt", "--pipeline", "--skip-git", "--provider", config.provider, "--workflow", join6(control, "workflow.yaml"), "--task", "Construction\u5168\u4F53\u306EIntent\u30FB\u53D7\u5165\u6761\u4EF6\u3068\u6700\u7D42\u30B3\u30FC\u30C9\u3092\u72EC\u7ACB\u306B\u7167\u5408\u3057\u3001\u8981\u4EF6\u5145\u8DB3\u3068Unit\u9593\u306E\u6574\u5408\u6027\u3092\u5224\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\u3002"], workspace, env, args.timeout, { outputPrefix: join6(attempt, "takt-output") });
+  writeJson(join6(attempt, "takt.json"), run);
+  if (run.timedOut || run.outputLimitExceeded)
+    requireSuccess(run);
+  verify();
+  unchanged(workspace, inputs);
+  unchanged(control, protectedFiles);
+  const checked = await command([process.execPath, join6(control, "construction-supervision-gate.ts")], workspace, cleanEnvironment(), 1e4);
+  writeJson(join6(attempt, "result.json"), checked);
+  requireSuccess(checked);
+  const result = JSON.parse(checked.stdout);
+  if (result.verdict === "approved")
+    requireSuccess(run);
+  return { ...result, workspace };
+}
+
 // src/construction-phase/native-trace.ts
 import {
-  mkdirSync as mkdirSync2,
+  mkdirSync as mkdirSync6,
   mkdtempSync,
   rmSync,
-  writeFileSync as writeFileSync2
+  writeFileSync as writeFileSync5
 } from "fs";
-import { dirname as dirname3, join as join3 } from "path";
+import { dirname as dirname6, join as join7 } from "path";
 import { spawnSync } from "child_process";
-var nativeTraceSource = join3(import.meta.dir, "native-trace.ts");
+var nativeTraceSource = join7(import.meta.dir, "native-trace.ts");
 function seedTraceProject(project, record, state) {
   const match = record.match(/^aidlc\/spaces\/([\w-]+)\/intents\/([\w-]+)$/);
   if (!match)
     throw new Error("traceability\u306Erecord\u304C\u4E0D\u6B63\u3067\u3059");
   const put = (path, text) => {
-    mkdirSync2(dirname3(path), { recursive: true });
-    writeFileSync2(path, text);
+    mkdirSync6(dirname6(path), { recursive: true });
+    writeFileSync5(path, text);
   };
-  put(join3(project, "aidlc/active-space"), match[1] + `
+  put(join7(project, "aidlc/active-space"), match[1] + `
 `);
-  put(join3(project, `aidlc/spaces/${match[1]}/intents/active-intent`), match[2] + `
+  put(join7(project, `aidlc/spaces/${match[1]}/intents/active-intent`), match[2] + `
 `);
-  put(join3(project, record, "aidlc-state.md"), state);
+  put(join7(project, record, "aidlc-state.md"), state);
   return [
     "aidlc/active-space",
     `aidlc/spaces/${match[1]}/intents/active-intent`,
@@ -335,13 +543,13 @@ function nativeTrace(project, output, stage) {
   return JSON.parse(r.stdout);
 }
 function resolveTraceIds(project, record, unit, stage) {
-  const base = join3(project, "aidlc/takt-handoff");
-  mkdirSync2(base, { recursive: true });
-  const dir = mkdtempSync(join3(base, "trace-probe-"));
+  const base = join7(project, "aidlc/takt-handoff");
+  mkdirSync6(base, { recursive: true });
+  const dir = mkdtempSync(join7(base, "trace-probe-"));
   try {
-    const path = join3(dir, "construction", unit, stage, "traceability.json");
-    mkdirSync2(dirname3(path), { recursive: true });
-    writeFileSync2(path, JSON.stringify({
+    const path = join7(dir, "construction", unit, stage, "traceability.json");
+    mkdirSync6(dirname6(path), { recursive: true });
+    writeFileSync5(path, JSON.stringify({
       stage,
       upstream_ids: ["__TAKT_PROBE__"],
       coverage: [
@@ -349,7 +557,7 @@ function resolveTraceIds(project, record, unit, stage) {
       ]
     }));
     const result = nativeTrace(project, path, stage);
-    const expectedPendingRules = `required upstream artifact is missing: ${join3(project, record, "construction", unit, "functional-design/rules.md")}`;
+    const expectedPendingRules = `required upstream artifact is missing: ${join7(project, record, "construction", unit, "functional-design/rules.md")}`;
     if (result.reason && !(stage === "functional-design" && result.reason === expectedPendingRules))
       throw new Error(`\u5DE5\u7A0B\u306E\u4E0A\u6D41ID\u3092\u89E3\u6C7A\u3067\u304D\u307E\u305B\u3093: ${result.reason}`);
     const ids = result.missing_from_upstream_ids;
@@ -363,39 +571,39 @@ function resolveTraceIds(project, record, unit, stage) {
 
 // src/construction-phase/runner.ts
 import {
-  chmodSync as chmodSync3,
+  chmodSync as chmodSync4,
   closeSync as closeSync3,
-  copyFileSync as copyFileSync4,
+  copyFileSync as copyFileSync5,
   existsSync as existsSync5,
-  mkdirSync as mkdirSync9,
+  mkdirSync as mkdirSync10,
   openSync as openSync3,
-  readFileSync as readFileSync10,
+  readFileSync as readFileSync11,
   unlinkSync as unlinkSync2
 } from "fs";
-import { dirname as dirname8, join as join11 } from "path";
+import { dirname as dirname9, join as join12 } from "path";
 import { spawn as spawn3 } from "child_process";
 
 // src/code-generation/runner.ts
 import { spawn as spawn2 } from "child_process";
-import { chmodSync, closeSync as closeSync2, copyFileSync as copyFileSync2, existsSync as existsSync3, mkdirSync as mkdirSync7, openSync as openSync2, readFileSync as readFileSync7, unlinkSync, writeFileSync as writeFileSync6 } from "fs";
-import { dirname as dirname6, join as join8 } from "path";
+import { chmodSync as chmodSync2, closeSync as closeSync2, copyFileSync as copyFileSync3, existsSync as existsSync3, mkdirSync as mkdirSync8, openSync as openSync2, readFileSync as readFileSync8, unlinkSync, writeFileSync as writeFileSync7 } from "fs";
+import { dirname as dirname7, join as join9 } from "path";
 import { pathToFileURL as pathToFileURL2 } from "url";
 
 // src/code-generation/context.ts
-import { existsSync, mkdirSync as mkdirSync3, mkdtempSync as mkdtempSync2, readFileSync as readFileSync4, readdirSync, rmSync as rmSync2, writeFileSync as writeFileSync3 } from "fs";
-import { join as join4 } from "path";
+import { existsSync as existsSync2, mkdirSync as mkdirSync7, mkdtempSync as mkdtempSync2, readFileSync as readFileSync7, readdirSync as readdirSync2, rmSync as rmSync2, writeFileSync as writeFileSync6 } from "fs";
+import { join as join8 } from "path";
 import { spawnSync as spawnSync2 } from "child_process";
 function intentRecord(project) {
-  const space = readFileSync4(join4(project, "aidlc/active-space"), "utf8").trim();
-  const intent = readFileSync4(join4(project, "aidlc/spaces", space, "intents/active-intent"), "utf8").trim();
+  const space = readFileSync7(join8(project, "aidlc/active-space"), "utf8").trim();
+  const intent = readFileSync7(join8(project, "aidlc/spaces", space, "intents/active-intent"), "utf8").trim();
   if (![space, intent].every((s) => /^[\w-]+$/.test(s)))
     throw new Error("\u4E0D\u6B63\u306AAI-DLC\u306E\u9078\u629E\u5B50\u3067\u3059");
   return { space, record: `aidlc/spaces/${space}/intents/${intent}` };
 }
 function markdownFiles(project, dir) {
-  if (!existsSync(join4(project, dir)))
+  if (!existsSync2(join8(project, dir)))
     return [];
-  return readdirSync(join4(project, dir), { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)).flatMap((entry) => {
+  return readdirSync2(join8(project, dir), { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)).flatMap((entry) => {
     if (entry.isSymbolicLink())
       throw new Error(`Context\u306Esymlink\u306F\u5BFE\u8C61\u5916\u3067\u3059: ${dir}/${entry.name}`);
     const path = `${dir}/${entry.name}`;
@@ -411,7 +619,7 @@ function collectCgContext(project, artifacts, unit, checks = {}, host = "claude"
     throw new Error("CG\u306E\u6210\u679C\u7269\u5165\u529B\u306F\u73FE\u5728\u306EIntent\u5185\u306B\u9650\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044");
   const intentFile = `${record}/project-description.json`;
   const stageFile = `${shell}/aidlc-common/stages/construction/code-generation.md`;
-  const stageText = readFileSync4(fileInside(project, stageFile), "utf8");
+  const stageText = readFileSync7(fileInside(project, stageFile), "utf8");
   const front = stageText.match(/^---\n([\s\S]*?)\n---/);
   if (!front)
     throw new Error("CG\u5B9A\u7FA9\u306Efrontmatter\u304C\u3042\u308A\u307E\u305B\u3093");
@@ -420,7 +628,7 @@ function collectCgContext(project, artifacts, unit, checks = {}, host = "claude"
     if (!["required-sections", "linter", "type-check", "traceability"].includes(id))
       throw new Error(`\u672A\u5BFE\u5FDC\u306ECG\u30BB\u30F3\u30B5\u30FC: ${id}`);
     const file = `${shell}/sensors/aidlc-${id}.md`;
-    const definition = readFileSync4(fileInside(project, file), "utf8");
+    const definition = readFileSync7(fileInside(project, file), "utf8");
     const command2 = definition.match(/^command:\s*(.+)$/m)?.[1];
     if (!command2)
       throw new Error(`\u30BB\u30F3\u30B5\u30FC\u306Ecommand\u304C\u3042\u308A\u307E\u305B\u3093: ${id}`);
@@ -432,7 +640,7 @@ function collectCgContext(project, artifacts, unit, checks = {}, host = "claude"
   const unitDesigns = ["functional-design", "nfr-requirements", "nfr-design", "infrastructure-design"].flatMap((name) => markdownFiles(project, `${designRoot}/${name}`));
   const templates = Object.fromEntries(["code-generation-plan", "unit-test-instructions", "code-summary"].flatMap((name) => {
     const path = `aidlc/spaces/${space}/memory/templates/${name}.md`;
-    return existsSync(join4(project, path)) ? [[`${name}.md`, path]] : [];
+    return existsSync2(join8(project, path)) ? [[`${name}.md`, path]] : [];
   }));
   const common = [
     ...artifacts,
@@ -447,7 +655,7 @@ function collectCgContext(project, artifacts, unit, checks = {}, host = "claude"
     ...markdownFiles(project, `aidlc/spaces/${space}/knowledge/aidlc-shared`)
   ];
   const phaseRules = `aidlc/spaces/${space}/memory/phases/construction.md`;
-  if (existsSync(join4(project, phaseRules)))
+  if (existsSync2(join8(project, phaseRules)))
     common.push(phaseRules);
   const forRole = (role) => [
     `${shell}/agents/${role}.md`,
@@ -458,6 +666,7 @@ function collectCgContext(project, artifacts, unit, checks = {}, host = "claude"
     plan: [...common, ...forRole("aidlc-developer-agent")],
     implement: [...common, ...forRole("aidlc-developer-agent")],
     review: [...common, ...forRole("aidlc-architecture-reviewer-agent"), ...forRole("aidlc-quality-agent")],
+    supervise: [...common, ...forRole("aidlc-quality-agent")],
     report: [...common, ...forRole("aidlc-developer-agent")]
   };
   const traceabilityTool = `${shell}/tools/aidlc-sensor-traceability.ts`;
@@ -473,15 +682,15 @@ function collectCgContext(project, artifacts, unit, checks = {}, host = "claude"
   const testingContract = JSON.parse(match[1]);
   if (testingContract.methodology !== "test-after")
     throw new Error(`CG\u521D\u7248\u306Ftest-after\u306E\u307F\u5BFE\u5FDC\u3057\u3066\u3044\u307E\u3059\u3002${testingContract.methodology}\u3092\u5225\u306E\u9806\u5E8F\u3078\u5909\u66F4\u3057\u3066\u5B9F\u884C\u3059\u308B\u3053\u3068\u306F\u3067\u304D\u307E\u305B\u3093`);
-  const tempRoot = join4(project, "aidlc/takt-handoff");
-  mkdirSync3(tempRoot, { recursive: true });
-  const probeDir = mkdtempSync2(join4(tempRoot, "trace-probe-"));
+  const tempRoot = join8(project, "aidlc/takt-handoff");
+  mkdirSync7(tempRoot, { recursive: true });
+  const probeDir = mkdtempSync2(join8(tempRoot, "trace-probe-"));
   let requirementIds;
   try {
-    const outputDir = join4(probeDir, "construction", ...unit ? [unit] : [], "code-generation");
-    mkdirSync3(outputDir, { recursive: true });
-    const probe = join4(outputDir, "traceability.json");
-    writeFileSync3(probe, JSON.stringify({ stage: "code-generation", upstream_ids: ["__TAKT_PROBE__"], coverage: [{ id: "__TAKT_PROBE__", status: "N/A", target: "read-only ID probe" }] }));
+    const outputDir = join8(probeDir, "construction", ...unit ? [unit] : [], "code-generation");
+    mkdirSync7(outputDir, { recursive: true });
+    const probe = join8(outputDir, "traceability.json");
+    writeFileSync6(probe, JSON.stringify({ stage: "code-generation", upstream_ids: ["__TAKT_PROBE__"], coverage: [{ id: "__TAKT_PROBE__", status: "N/A", target: "read-only ID probe" }] }));
     const resolved = spawnSync2(process.execPath, [fileInside(project, traceabilityTool), "--output-path", probe, "--stage-slug", "code-generation"], { cwd: project, env: { ...cleanEnvironment(), AIDLC_PROJECT_DIR: project }, encoding: "utf8", timeout: 15000, maxBuffer: 1024 * 1024 });
     if (resolved.status !== 0)
       throw new Error(`\u672C\u5BB6traceability\u306E\u5165\u529B\u89E3\u6C7A\u306B\u5931\u6557: ${resolved.stderr}`);
@@ -510,132 +719,10 @@ Testing Contract\u306E\u65B9\u6CD5\u30FB\u9806\u5E8F\u30FB\u54C1\u8CEA\u76EE\u6A
 AI-DLC\u539F\u6587\u306B\u3042\u308BBash\u7B49\u306E\u6A29\u9650\u306F\u5143\u306E\u62C5\u5F53\u8005\u306E\u8AAC\u660E\u3067\u3059\u3002\u73FE\u5728\u8A31\u53EF\u3055\u308C\u305F\u30C4\u30FC\u30EB\u3060\u3051\u3092\u4F7F\u3063\u3066\u304F\u3060\u3055\u3044\u3002
 `;
 
-// src/takt/workflow.ts
-import { copyFileSync, mkdirSync as mkdirSync4, readFileSync as readFileSync5 } from "fs";
-import { basename, dirname as dirname4, isAbsolute as isAbsolute2, join as join5, relative as relative2, resolve } from "path";
-var sections = ["personas", "policies", "knowledge", "instructions", "report_formats"];
-function readWorkflow(root, path) {
-  const workflow = Bun.YAML.parse(readFileSync5(fileInside(root, path), "utf8"));
-  if (!workflow || typeof workflow !== "object" || !Array.isArray(workflow.steps))
-    throw new Error(`TAKT Workflow\u304C\u4E0D\u6B63\u3067\u3059: ${path}`);
-  const facets = [];
-  for (const section of sections) {
-    const declarations = workflow[section];
-    if (declarations === undefined)
-      continue;
-    if (!declarations || typeof declarations !== "object" || Array.isArray(declarations))
-      throw new Error(`TAKT\u306E${section}\u5BA3\u8A00\u304C\u4E0D\u6B63\u3067\u3059`);
-    for (const [alias, reference] of Object.entries(declarations)) {
-      if (typeof reference !== "string")
-        throw new Error(`TAKT facet\u306F\u6587\u5B57\u5217\u3067\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044: ${section}.${alias}`);
-      if (!reference.endsWith(".md") || reference.includes(`
-`))
-        continue;
-      if (isAbsolute2(reference))
-        throw new Error(`TAKT facet\u306F\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u5185\u306E\u76F8\u5BFE\u30D1\u30B9\u3067\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044: ${reference}`);
-      const facetPath = relative2(resolve(root), resolve(root, dirname4(path), reference));
-      const body = readFileSync5(fileInside(root, facetPath), "utf8");
-      if (/\{(?:include|extends):/.test(body))
-        throw new Error(`TAKT facet\u306Finclude/extends\u3092\u5C55\u958B\u3057\u305F\u5358\u4E00\u30D5\u30A1\u30A4\u30EB\u3067\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044: ${facetPath}`);
-      facets.push({ section, alias, path: facetPath });
-    }
-  }
-  return { workflow, facets };
-}
-function workflowFiles(root, path) {
-  return [...new Set([path, ...readWorkflow(root, path).facets.map((facet) => facet.path)])];
-}
-function materializeWorkflow(root, path, control) {
-  const { workflow, facets } = readWorkflow(root, path);
-  const controlFiles = [];
-  for (const facet of facets) {
-    const target = `facets/${facet.section}/${digest(facet.path).slice(0, 12)}-${basename(facet.path)}`;
-    mkdirSync4(dirname4(join5(control, target)), { recursive: true });
-    copyFileSync(fileInside(root, facet.path), join5(control, target));
-    workflow[facet.section][facet.alias] = `./${target}`;
-    controlFiles.push(target);
-  }
-  return { workflow, controlFiles: [...new Set(controlFiles)] };
-}
-
-// src/handoff/provider.ts
-import { mkdirSync as mkdirSync5, writeFileSync as writeFileSync4 } from "fs";
-import { join as join6 } from "path";
-function prepareProvider(attempt, config, scenario) {
-  const control = join6(attempt, "control");
-  mkdirSync5(control, { recursive: true });
-  const configDir = join6(attempt, "takt-config");
-  mkdirSync5(configDir, { recursive: true });
-  writeFileSync4(join6(configDir, "config.yaml"), Bun.YAML.stringify({
-    provider: config.provider,
-    language: "ja",
-    workflow_command_gates: { custom_scripts: true },
-    ...config.model ? { model: config.model } : {},
-    ...config.codexReasoningEffort ? {
-      provider_options: {
-        codex: { reasoning_effort: config.codexReasoningEffort }
-      }
-    } : {}
-  }));
-  let env = {
-    ...cleanEnvironment(),
-    TAKT_CONFIG_DIR: configDir
-  };
-  if (config.disableBedrock)
-    env = withoutBedrock(env);
-  if (config.provider === "mock")
-    env.TAKT_MOCK_SCENARIO = scenario;
-  else if (config.provider === "claude") {
-    const claude = Bun.which("claude");
-    if (!claude)
-      throw new Error("Claude Code\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093");
-    const wrapper = join6(control, "claude.sh");
-    writeFileSync4(wrapper, `#!/bin/sh
-case "$1" in --help|--version) exec ${quote(claude)} "$@";; esac
-exec ${quote(claude)} --setting-sources project --strict-mcp-config --mcp-config '{"mcpServers":{}}' --tools Read,Glob,Grep,Write,Edit --max-turns 20 --max-budget-usd 2 "$@"
-`, { mode: 448 });
-    env.TAKT_CLAUDE_CLI_PATH = wrapper;
-  } else {
-    const codex = Bun.which("codex");
-    if (!codex)
-      throw new Error("Codex CLI\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093");
-    env.TAKT_CODEX_CLI_PATH = codex;
-  }
-  return env;
-}
-
-// src/code-generation/code-generation-gate.ts
-import assert from "assert/strict";
-import { createHash as createHash2 } from "crypto";
-import { existsSync as existsSync2, lstatSync as lstatSync2, mkdirSync as mkdirSync6, readFileSync as readFileSync6, readdirSync as readdirSync2, realpathSync as realpathSync2, writeFileSync as writeFileSync5 } from "fs";
-import { basename as basename2, dirname as dirname5, join as join7, relative as relative3 } from "path";
-var cgGateSource = join7(import.meta.dir, "code-generation-gate.ts");
-var hash = (data) => createHash2("sha256").update(data).digest("hex");
-function sources(root) {
-  const found = {};
-  const walk = (dir) => {
-    for (const e of readdirSync2(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-      if (e.name === "node_modules" || e.name === ".venv")
-        continue;
-      const path = join7(dir, e.name), rel = relative3(root, path);
-      if (/^(?:node_modules|\.venv|\.git|\.claude|\.takt|input|cg|coverage|\.handoff-coverage-[^/]+)(?:\/|$)/.test(rel))
-        continue;
-      assert.ok(!e.isSymbolicLink(), `symlink\u306F\u5BFE\u8C61\u5916: ${rel}`);
-      if (e.isDirectory())
-        walk(path);
-      else if (e.isFile())
-        found[rel] = hash(readFileSync6(path));
-    }
-  };
-  walk(root);
-  return found;
-}
-if (false) {}
-
 // src/code-generation/runner.ts
-var cgStorage = (project) => join8(project, "aidlc/takt-handoff");
+var cgStorage = (project) => join9(project, "aidlc/takt-handoff");
 function cgEnabled(project) {
-  const p = join8(cgStorage(project), "config.json");
+  const p = join9(cgStorage(project), "config.json");
   if (!existsSync3(p))
     return false;
   const c = readJson(p);
@@ -660,13 +747,16 @@ function loadConfig(project) {
       throw new Error(`\u5236\u5FA1\u9818\u57DF\u3092\u30BD\u30FC\u30B9\u306B\u3067\u304D\u307E\u305B\u3093: ${p}`);
   for (const key of ["workflow", "buildScript", "verifyScript"])
     fileInside(project, c[key]);
+  const workflow = Bun.YAML.parse(readFileSync8(fileInside(project, c.workflow), "utf8"));
+  if (!workflow.steps?.some((step) => step.name === "supervise"))
+    throw new Error("CG\u306Esupervise\u30B9\u30C6\u30C3\u30D7\u304C\u5FC5\u8981\u3067\u3059");
   for (const id of ["linter", "type-check"]) {
     if (c.sensorScripts?.[id])
       fileInside(project, c.sensorScripts[id]);
     else if (!c.sensorExceptions?.[id]?.reason || !c.sensorExceptions[id]?.source)
       throw new Error(`${id}\u306E\u691C\u67FB\u30B9\u30AF\u30EA\u30D7\u30C8\u3001\u307E\u305F\u306F\u6839\u62E0\u4ED8\u304D\u306E\u9069\u7528\u5916\u8A2D\u5B9A\u304C\u5FC5\u8981\u3067\u3059`);
   }
-  return { c, configHash: digest(readFileSync7(configPath)) };
+  return { c, configHash: digest(readFileSync8(configPath)) };
 }
 function isCgEntryCommand(text, project) {
   const words = [];
@@ -697,8 +787,8 @@ async function prepareCg(project, directive) {
     throw new Error("\u5358\u72ECrunner\u306EAI-DLC\u72B6\u614B\u306FCG\u81EA\u52D5\u5F15\u304D\u7D99\u304E\u306E\u5BFE\u8C61\u5916\u3067\u3059");
   const { c, configHash } = loadConfig(project);
   const cg = collectCgContext(project, c.artifacts, typeof directive.unit === "string" ? directive.unit : null, { build: c.buildScript, test: c.verifyScript, ...c.sensorScripts }, hostHarness(c.hostHarness));
-  const statePath = join8(project, cg.record, "aidlc-state.md");
-  const state = readFileSync7(statePath, "utf8");
+  const statePath = join9(project, cg.record, "aidlc-state.md");
+  const state = readFileSync8(statePath, "utf8");
   if (!/\*\*State Version\*\*:\s*8\b/.test(state) || !/\*\*Current Stage\*\*:\s*code-generation\b/.test(state) || !/\*\*Status\*\*:\s*Running\b/.test(state))
     throw new Error("AI-DLC 2.8.2\u306ECG\u5165\u53E3\u3067\u306F\u3042\u308A\u307E\u305B\u3093");
   if (/\*\*Construction Autonomy Mode\*\*:\s*autonomous\b/.test(state))
@@ -717,40 +807,40 @@ async function prepareCg(project, directive) {
     throw new Error("\u73FE\u5728\u306ECG\u958B\u59CB\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093");
   const entryHash = digest(start.block.trim());
   const id = digest(JSON.stringify({ entryHash, unit: cg.unit, files, configHash })).slice(0, 24);
-  const base = join8(cgStorage(project), "cg-runs");
-  mkdirSync7(base, { recursive: true });
-  const run = join8(base, id);
-  mkdirSync7(run, { recursive: true });
-  const lock = join8(base, "prepare.lock");
+  const base = join9(cgStorage(project), "cg-runs");
+  mkdirSync8(base, { recursive: true });
+  const run = join9(base, id);
+  mkdirSync8(run, { recursive: true });
+  const lock = join9(base, "prepare.lock");
   const fd = openSync2(lock, "wx");
   closeSync2(fd);
   try {
-    if (existsSync3(join8(run, "manifest.json"))) {
-      const previous = readJson(join8(run, "status.json"));
-      if (previous.stateHash !== digest(readFileSync7(statePath)))
+    if (existsSync3(join9(run, "manifest.json"))) {
+      const previous = readJson(join9(run, "status.json"));
+      if (previous.stateHash !== digest(readFileSync8(statePath)))
         throw new Error("\u65E2\u5B58CG\u5B9F\u884C\u5F8C\u306BAI-DLC\u72B6\u614B\u304C\u5909\u5316\u3057\u3066\u3044\u307E\u3059");
       return { id, run, status: previous };
     }
     for (const path of Object.keys(files)) {
-      const target = join8(run, "snapshot", path);
-      mkdirSync7(dirname6(target), { recursive: true });
-      copyFileSync2(fileInside(project, path), target);
-      chmodSync(target, 292);
+      const target = join9(run, "snapshot", path);
+      mkdirSync8(dirname7(target), { recursive: true });
+      copyFileSync3(fileInside(project, path), target);
+      chmodSync2(target, 292);
     }
-    writeJson(join8(run, "manifest.json"), { id, config: c, configHash, files, cg, statePath, entryHash });
-    writeJson(join8(run, "directive.json"), directive);
+    writeJson(join9(run, "manifest.json"), { id, config: c, configHash, files, cg, statePath, entryHash });
+    writeJson(join9(run, "directive.json"), directive);
     unchanged(project, files);
     const parked = await command(["aidlc", "engine", "orchestrate", "park", "--project-dir", project], project, cleanEnvironment(), 1e4);
-    writeJson(join8(run, "park.json"), parked);
+    writeJson(join9(run, "park.json"), parked);
     requireSuccess(parked);
     if (JSON.parse(parked.stdout).kind !== "parked")
       throw new Error("CG\u306Epark\u304C\u62D2\u5426\u3055\u308C\u307E\u3057\u305F");
-    const status = { state: "parked", attempts: 0, stateHash: digest(readFileSync7(statePath)) };
-    writeJson(join8(run, "status.json"), status);
+    const status = { state: "parked", attempts: 0, stateHash: digest(readFileSync8(statePath)) };
+    writeJson(join9(run, "status.json"), status);
     return { id, run, status };
   } catch (error) {
-    if (existsSync3(join8(run, "manifest.json")) && !existsSync3(join8(run, "status.json"))) {
-      writeJson(join8(run, "status.json"), { state: "failed", attempts: 0, stateHash: digest(readFileSync7(statePath)), error: String(error) });
+    if (existsSync3(join9(run, "manifest.json")) && !existsSync3(join9(run, "status.json"))) {
+      writeJson(join9(run, "status.json"), { state: "failed", attempts: 0, stateHash: digest(readFileSync8(statePath)), error: String(error) });
     }
     throw error;
   } finally {
@@ -760,15 +850,15 @@ async function prepareCg(project, directive) {
 async function executeCg(project, id) {
   if (!/^[a-f0-9]{24}$/.test(id))
     throw new Error("\u4E0D\u6B63\u306ACG run ID\u3067\u3059");
-  const run = join8(cgStorage(project), "cg-runs", id);
-  const m = readJson(join8(run, "manifest.json"));
-  const statusPath = join8(run, "status.json");
+  const run = join9(cgStorage(project), "cg-runs", id);
+  const m = readJson(join9(run, "manifest.json"));
+  const statusPath = join9(run, "status.json");
   const status = readJson(statusPath);
   if (status.state === "verified")
     return status;
   if (status.state !== "parked")
     throw new Error(`CG\u3092\u958B\u59CB\u3067\u304D\u307E\u305B\u3093: ${status.state}`);
-  const lock = join8(run, "execute.lock");
+  const lock = join9(run, "execute.lock");
   const fd = openSync2(lock, "wx");
   closeSync2(fd);
   try {
@@ -776,17 +866,17 @@ async function executeCg(project, id) {
       if (loadConfig(project).configHash !== m.configHash)
         throw new Error("CG\u8A2D\u5B9A\u304C\u5909\u5316\u3057\u307E\u3057\u305F");
       unchanged(project, m.files);
-      unchanged(join8(run, "snapshot"), m.files);
-      if (digest(readFileSync7(m.statePath)) !== status.stateHash)
+      unchanged(join9(run, "snapshot"), m.files);
+      if (digest(readFileSync8(m.statePath)) !== status.stateHash)
         throw new Error("AI-DLC\u72B6\u614B\u304C\u5909\u5316\u3057\u307E\u3057\u305F");
     };
     verifyOriginal();
     status.state = "running";
     status.attempts++;
-    const attempt = join8(run, "attempts", String(status.attempts));
-    status.workspace = join8(attempt, "work");
+    const attempt = join9(run, "attempts", String(status.attempts));
+    status.workspace = join9(attempt, "work");
     writeJson(statusPath, status);
-    const result = await executeCgWorkspace({ attempt, snapshotRoot: join8(run, "snapshot"), m, verifyOriginal });
+    const result = await executeCgWorkspace({ attempt, snapshotRoot: join9(run, "snapshot"), m, verifyOriginal });
     Object.assign(status, result);
   } catch (error) {
     status.state = "failed";
@@ -798,32 +888,32 @@ async function executeCg(project, id) {
   return status;
 }
 async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOriginal }) {
-  const workspace = join8(attempt, "work"), control = join8(attempt, "control");
-  mkdirSync7(control, { recursive: true });
-  mkdirSync7(join8(workspace, "cg"), { recursive: true });
+  const workspace = join9(attempt, "work"), control = join9(attempt, "control");
+  mkdirSync8(control, { recursive: true });
+  mkdirSync8(join9(workspace, "cg"), { recursive: true });
   const inputs = {};
   for (const path of m.config.sources) {
-    const target = join8(workspace, path);
-    mkdirSync7(dirname6(target), { recursive: true });
-    copyFileSync2(fileInside(snapshotRoot, path), target);
-    chmodSync(target, 420);
+    const target = join9(workspace, path);
+    mkdirSync8(dirname7(target), { recursive: true });
+    copyFileSync3(fileInside(snapshotRoot, path), target);
+    chmodSync2(target, 420);
   }
   for (const path of m.cg.files) {
-    const rel = `input/project/${path}`, target = join8(workspace, rel);
-    mkdirSync7(dirname6(target), { recursive: true });
-    copyFileSync2(fileInside(snapshotRoot, path), target);
-    chmodSync(target, 292);
+    const rel = `input/project/${path}`, target = join9(workspace, rel);
+    mkdirSync8(dirname7(target), { recursive: true });
+    copyFileSync3(fileInside(snapshotRoot, path), target);
+    chmodSync2(target, 292);
     inputs[rel] = m.files[path];
   }
-  writeJson(join8(workspace, "input/context.json"), m.cg);
-  inputs["input/context.json"] = digest(readFileSync7(join8(workspace, "input/context.json")));
-  writeJson(join8(workspace, "input/manifest.json"), { stage: "code-generation", mode: "hotl", files: inputs, unit: m.cg.unit });
-  inputs["input/manifest.json"] = digest(readFileSync7(join8(workspace, "input/manifest.json")));
-  const gate = join8(control, "code-generation-gate.ts");
-  copyFileSync2(join8(import.meta.dir, "code-generation-gate.ts"), gate);
+  writeJson(join9(workspace, "input/context.json"), m.cg);
+  inputs["input/context.json"] = digest(readFileSync8(join9(workspace, "input/context.json")));
+  writeJson(join9(workspace, "input/manifest.json"), { stage: "code-generation", mode: "hotl", files: inputs, unit: m.cg.unit });
+  inputs["input/manifest.json"] = digest(readFileSync8(join9(workspace, "input/manifest.json")));
+  const gate = join9(control, "code-generation-gate.ts");
+  copyFileSync3(join9(import.meta.dir, "code-generation-gate.ts"), gate);
   const frozen = (path) => fileInside(snapshotRoot, path);
   const cgConfig = m.config;
-  writeJson(join8(control, "context.json"), {
+  writeJson(join9(control, "context.json"), {
     workspace,
     inputs,
     cg: m.cg,
@@ -836,7 +926,7 @@ async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOriginal }) 
     sensorExceptions: cgConfig.sensorExceptions ?? {}
   });
   const { workflow, controlFiles: facetFiles } = materializeWorkflow(snapshotRoot, cgConfig.workflow, control);
-  const roleFor = { plan: "plan", "plan-review": "review", implement: "implement", fix: "implement", "code-review": "review", finish: "report" };
+  const roleFor = { plan: "plan", "plan-review": "review", implement: "implement", fix: "implement", "code-review": "review", supervise: "supervise", finish: "report" };
   const injection = {};
   const bundleFiles = [];
   workflow.instructions ??= {};
@@ -847,16 +937,17 @@ async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOriginal }) 
 Copy: input/project/${path}
 SHA256: ${m.files[path]}
 
-${readFileSync7(frozen(path), "utf8")}`).join(`
+${readFileSync8(frozen(path), "utf8")}`).join(`
 `);
-    const content = `${code_generation_hotl_default}
+    const contract = role === "supervise" ? aidlc_supervision_default : code_generation_hotl_default;
+    const content = `${contract}
 ${originals}
 ## Frozen Testing Contract
 ${m.cg.testingContractText}
-${code_generation_hotl_default}`;
+${contract}`;
     const bundle = `context/${role}.md`;
-    mkdirSync7(join8(control, "context"), { recursive: true });
-    writeFileSync6(join8(control, bundle), content);
+    mkdirSync8(join9(control, "context"), { recursive: true });
+    writeFileSync7(join9(control, bundle), content);
     bundleFiles.push(bundle);
     workflow.instructions[`code-generation-source-${role}`] = bundle;
   }
@@ -865,33 +956,33 @@ ${code_generation_hotl_default}`;
     if (!role)
       throw new Error(`CG\u5916\u306E\u5DE5\u7A0B: ${step.name}`);
     const paths = [...new Set(m.cg.roles[role])];
-    step.instruction = [`code-generation-source-${role}`, code_generation_hotl_default, ...[step.instruction].flat()];
-    injection[step.name] = { sources: paths.map((path) => ({ path, sha256: m.files[path] })), sourceBundleHash: digest(readFileSync7(join8(control, `context/${role}.md`))) };
+    step.instruction = [`code-generation-source-${role}`, role === "supervise" ? aidlc_supervision_default : code_generation_hotl_default, ...[step.instruction].flat()];
+    injection[step.name] = { sources: paths.map((path) => ({ path, sha256: m.files[path] })), sourceBundleHash: digest(readFileSync8(join9(control, `context/${role}.md`))) };
   }
-  writeFileSync6(join8(control, "workflow.yaml"), Bun.YAML.stringify(workflow));
-  writeJson(join8(control, "injection.json"), injection);
+  writeFileSync7(join9(control, "workflow.yaml"), Bun.YAML.stringify(workflow));
+  writeJson(join9(control, "injection.json"), injection);
   const protectedControl = snapshot(control, ["code-generation-gate.ts", "context.json", "workflow.yaml", "injection.json", ...bundleFiles, ...facetFiles]);
   const env = prepareProvider(attempt, cgConfig, cgConfig.mockScenario ? frozen(cgConfig.mockScenario) : undefined);
-  writeJson(join8(workspace, ".claude/settings.json"), { permissions: { deny: ["Edit(input/**)", "Write(input/**)", "Edit(.claude/**)", "Write(.claude/**)", "Edit(.kiro/**)", "Write(.kiro/**)"] } });
-  const ignore = join8(workspace, ".gitignore");
-  writeFileSync6(ignore, `${existsSync3(ignore) ? readFileSync7(ignore, "utf8") : ""}
+  writeJson(join9(workspace, ".claude/settings.json"), { permissions: { deny: ["Edit(input/**)", "Write(input/**)", "Edit(.claude/**)", "Write(.claude/**)", "Edit(.kiro/**)", "Write(.kiro/**)"] } });
+  const ignore = join9(workspace, ".gitignore");
+  writeFileSync7(ignore, `${existsSync3(ignore) ? readFileSync8(ignore, "utf8") : ""}
 .claude/
 .takt/
 cg/
 `);
-  const ctx = readJson(join8(control, "context.json"));
+  const ctx = readJson(join9(control, "context.json"));
   ctx.initialSources = sources(workspace);
-  writeJson(join8(control, "context.json"), ctx);
-  protectedControl["context.json"] = digest(readFileSync7(join8(control, "context.json")));
+  writeJson(join9(control, "context.json"), ctx);
+  protectedControl["context.json"] = digest(readFileSync8(join9(control, "context.json")));
   for (const args of [["init", "-q"], ["config", "core.hooksPath", "/dev/null"], ["add", "."], ["-c", "user.name=TAKT CG", "-c", "user.email=cg@example.invalid", "-c", "commit.gpgsign=false", "commit", "-qm", "chore: seed CG workspace"]])
     requireSuccess(await command(["git", ...args], workspace, env, 1e4));
-  const result = await command(["takt", "--pipeline", "--skip-git", "--provider", cgConfig.provider, "--workflow", join8(control, "workflow.yaml"), "--task", "AI-DLC\u306ECG\u5358\u4F53\u3092HOTL\u3067\u5B9F\u884C\u3002input\u306EIntent\u30FB\u8A2D\u8A08\u3068\u3001\u6CE8\u5165\u3055\u308C\u305F\u672C\u5BB6CG/\u77E5\u8B58/\u30BB\u30F3\u30B5\u30FC\u5B9A\u7FA9\u306B\u5F93\u3044\u3001\u30D3\u30EB\u30C9\u30FB\u30C6\u30B9\u30C8\u6210\u529F\u307E\u3067\u5B8C\u4E86\u3057\u306A\u3044\u3053\u3068\u3002"], workspace, env, cgConfig.timeoutMs, { outputPrefix: join8(attempt, "takt-output") });
-  writeJson(join8(attempt, "takt.json"), result);
+  const result = await command(["takt", "--pipeline", "--skip-git", "--provider", cgConfig.provider, "--workflow", join9(control, "workflow.yaml"), "--task", "AI-DLC\u306ECG\u5358\u4F53\u3092HOTL\u3067\u5B9F\u884C\u3002input\u306EIntent\u30FB\u8A2D\u8A08\u3068\u3001\u6CE8\u5165\u3055\u308C\u305F\u672C\u5BB6CG/\u77E5\u8B58/\u30BB\u30F3\u30B5\u30FC\u5B9A\u7FA9\u306B\u5F93\u3044\u3001\u30D3\u30EB\u30C9\u30FB\u30C6\u30B9\u30C8\u6210\u529F\u307E\u3067\u5B8C\u4E86\u3057\u306A\u3044\u3053\u3068\u3002"], workspace, env, cgConfig.timeoutMs, { outputPrefix: join9(attempt, "takt-output") });
+  writeJson(join9(attempt, "takt.json"), result);
   verifyOriginal();
   unchanged(workspace, inputs);
   unchanged(control, protectedControl);
   const evidence = await command([process.execPath, gate, "result"], workspace, env, 1e4);
-  writeJson(join8(attempt, "cg-result.json"), evidence);
+  writeJson(join9(attempt, "cg-result.json"), evidence);
   if (evidence.code === 0) {
     const result2 = JSON.parse(evidence.stdout);
     if (result2.state === "blocked")
@@ -901,7 +992,7 @@ cg/
   requireSuccess(evidence);
   for (const [name, script] of [["build", cgConfig.buildScript], ["test", cgConfig.verifyScript]]) {
     const check = await command([process.execPath, frozen(script)], workspace, env, 60000);
-    writeJson(join8(attempt, `final-${name}.json`), check);
+    writeJson(join9(attempt, `final-${name}.json`), check);
     requireSuccess(check);
   }
   verifyOriginal();
@@ -911,7 +1002,7 @@ cg/
   return { state: "verified", workspace, result: JSON.parse(evidence.stdout) };
 }
 function spawnCg(project, id, run, cli) {
-  const log = openSync2(join8(run, "worker.log"), "a", 384);
+  const log = openSync2(join9(run, "worker.log"), "a", 384);
   const child = spawn2(process.execPath, [cli, "cg-work", project, id], { cwd: project, env: cleanEnvironment(), detached: true, stdio: ["ignore", log, log] });
   child.on("error", (error) => console.error(error.message));
   child.unref();
@@ -919,12 +1010,12 @@ function spawnCg(project, id, run, cli) {
 }
 
 // src/construction-phase/context.ts
-import { readFileSync as readFileSync8, readdirSync as readdirSync3, existsSync as existsSync4 } from "fs";
-import { join as join9 } from "path";
+import { readFileSync as readFileSync9, readdirSync as readdirSync3, existsSync as existsSync4 } from "fs";
+import { join as join10 } from "path";
 import { pathToFileURL as pathToFileURL3 } from "url";
-var phaseStorage = (project) => join9(project, "aidlc/takt-handoff");
+var phaseStorage = (project) => join10(project, "aidlc/takt-handoff");
 function phaseEnabled(project) {
-  const path = join9(phaseStorage(project), "config.json");
+  const path = join10(phaseStorage(project), "config.json");
   if (!existsSync4(path))
     return false;
   const c = readJson(path);
@@ -957,12 +1048,17 @@ function phaseConfig(project) {
     "phaseVerifyScript"
   ])
     fileInside(project, c[key]);
-  return { c, configHash: digest(readFileSync8(path)) };
+  for (const path2 of [c.workflow, c.constructionWorkflow]) {
+    const workflow = Bun.YAML.parse(readFileSync9(fileInside(project, path2), "utf8"));
+    if (!workflow.steps?.some((step) => step.name === "supervise"))
+      throw new Error(`supervise\u30B9\u30C6\u30C3\u30D7\u304C\u5FC5\u8981\u3067\u3059: ${path2}`);
+  }
+  return { c, configHash: digest(readFileSync9(path)) };
 }
 function filesBelow(project, dir) {
-  if (!existsSync4(join9(project, dir)))
+  if (!existsSync4(join10(project, dir)))
     return [];
-  return readdirSync3(join9(project, dir), { withFileTypes: true }).flatMap((e) => {
+  return readdirSync3(join10(project, dir), { withFileTypes: true }).flatMap((e) => {
     if (e.isSymbolicLink())
       throw new Error(`symlink\u306F\u5BFE\u8C61\u5916: ${dir}/${e.name}`);
     const p = `${dir}/${e.name}`;
@@ -973,12 +1069,12 @@ async function phaseContext(project, c) {
   const { record, space } = intentRecord(project), shell = harnessDirectory(hostHarness(c.hostHarness));
   const lib = await import(pathToFileURL3(fileInside(project, `${shell}/tools/aidlc-lib.ts`)).href);
   const dependency = `${record}/inception/units-generation/unit-of-work-dependency.md`;
-  const dag = lib.parseBoltDag(readFileSync8(fileInside(project, dependency), "utf8"));
+  const dag = lib.parseBoltDag(readFileSync9(fileInside(project, dependency), "utf8"));
   if (!dag.ok)
     throw new Error(`Unit\u4F9D\u5B58\u95A2\u4FC2\u304C\u4E0D\u6B63: ${dag.detail}`);
   if (dag.units.some((u) => !/^[\w-]+$/.test(u.name)))
     throw new Error("Unit\u540D\u304C\u4E0D\u6B63\u3067\u3059");
-  const state = readFileSync8(fileInside(project, `${record}/aidlc-state.md`), "utf8");
+  const state = readFileSync9(fileInside(project, `${record}/aidlc-state.md`), "utf8");
   const progress = lib.parseCheckboxes(state);
   const testStrategy = lib.getField(state, "Test Strategy").toLowerCase();
   if (!["minimal", "standard", "comprehensive"].includes(testStrategy))
@@ -1006,7 +1102,7 @@ async function phaseContext(project, c) {
       continue;
     }
     const file = `${shell}/aidlc-common/stages/construction/${node.slug}.md`;
-    const body = readFileSync8(fileInside(project, file), "utf8");
+    const body = readFileSync9(fileInside(project, file), "utf8");
     const definition = Bun.YAML.parse(body.match(/^---\n([\s\S]*?)\n---/)[1]);
     const roles = [
       ...new Set([
@@ -1035,7 +1131,7 @@ async function phaseContext(project, c) {
     const templates = {};
     for (const name of definition.produces ?? []) {
       const path = `aidlc/spaces/${space}/memory/templates/${name}.md`;
-      if (existsSync4(join9(project, path))) {
+      if (existsSync4(join10(project, path))) {
         templates[`${name === "build-test-results" ? "test-results" : name}.md`] = path;
         files.push(path);
       }
@@ -1115,13 +1211,13 @@ function stageApplies(stage, kind) {
 
 // src/construction-phase/stage.ts
 import {
-  chmodSync as chmodSync2,
-  copyFileSync as copyFileSync3,
-  mkdirSync as mkdirSync8,
-  readFileSync as readFileSync9,
-  writeFileSync as writeFileSync7
+  chmodSync as chmodSync3,
+  copyFileSync as copyFileSync4,
+  mkdirSync as mkdirSync9,
+  readFileSync as readFileSync10,
+  writeFileSync as writeFileSync8
 } from "fs";
-import { dirname as dirname7, join as join10 } from "path";
+import { dirname as dirname8, join as join11 } from "path";
 
 // takt/facets/policies/construction-hotl.md
 var construction_hotl_default = `# Construction HOTL\u306E\u5B9F\u884C\u5951\u7D04
@@ -1150,16 +1246,16 @@ async function executeStage(args) {
     verify,
     timeout
   } = args;
-  const workspace = join10(attempt, "work"), control = join10(attempt, "control");
-  mkdirSync8(control, { recursive: true });
-  mkdirSync8(workspace, { recursive: true });
+  const workspace = join11(attempt, "work"), control = join11(attempt, "control");
+  mkdirSync9(control, { recursive: true });
+  mkdirSync9(workspace, { recursive: true });
   const copy = (path, target) => {
-    mkdirSync8(dirname7(target), { recursive: true });
-    copyFileSync3(fileInside(store, path), target);
+    mkdirSync9(dirname8(target), { recursive: true });
+    copyFileSync4(fileInside(store, path), target);
   };
   for (const path of sourcePaths) {
-    copy(path, join10(workspace, path));
-    chmodSync2(join10(workspace, path), 420);
+    copy(path, join11(workspace, path));
+    chmodSync3(join11(workspace, path), 420);
   }
   const paths = [
     ...new Set([
@@ -1174,7 +1270,7 @@ async function executeStage(args) {
   const inputs = {};
   for (const path of paths) {
     const rel = `input/project/${path}`;
-    copy(path, join10(workspace, rel));
+    copy(path, join11(workspace, rel));
     inputs[rel] = files[path];
   }
   const required = stage.produces.filter((name) => !kind || !stage.produces_kinds?.[name] || stage.produces_kinds[name].includes(kind)).map((name) => name === "traceability" ? "traceability.json" : name === "build-test-results" ? "test-results.md" : `${name}.md`);
@@ -1187,12 +1283,12 @@ async function executeStage(args) {
     ["test", c.phaseVerifyScript]
   ].map(([id, p]) => [id, { path: fileInside(store, p), hash: files[p] }]));
   const requirementIds = unit && stage.sensors.includes("traceability") ? resolveTraceIds(store, cg.record, unit, stage.slug) : cg.requirementIds;
-  const traceProject = join10(control, "trace-project");
-  const metadata = seedTraceProject(traceProject, cg.record, readFileSync9(join10(store, cg.record, "aidlc-state.md"), "utf8"));
+  const traceProject = join11(control, "trace-project");
+  const metadata = seedTraceProject(traceProject, cg.record, readFileSync10(join11(store, cg.record, "aidlc-state.md"), "utf8"));
   const traceInputs = [...metadata];
   const currentStageDir = `${cg.record}/construction/${unit ? unit + "/" : ""}${stage.slug}/`;
   for (const path of artifacts.filter((p) => !p.startsWith(currentStageDir))) {
-    copy(path, join10(traceProject, path));
+    copy(path, join11(traceProject, path));
     traceInputs.push(path);
   }
   const data = {
@@ -1211,7 +1307,7 @@ async function executeStage(args) {
     checks,
     pipelinePaths: stage.slug === "ci-pipeline" ? c.pipelinePaths ?? [] : []
   };
-  writeJson(join10(workspace, "input/construction-context.json"), {
+  writeJson(join11(workspace, "input/construction-context.json"), {
     stage,
     unit,
     required,
@@ -1221,12 +1317,17 @@ async function executeStage(args) {
     pipelinePaths: data.pipelinePaths,
     checks: { build: c.phaseBuildScript, test: c.phaseVerifyScript }
   });
-  inputs["input/construction-context.json"] = digest(readFileSync9(join10(workspace, "input/construction-context.json")));
-  writeJson(join10(control, "construction-context.json"), data);
-  copyFileSync3(join10(import.meta.dir, "construction-gate.ts"), join10(control, "construction-gate.ts"));
-  copyFileSync3(cgGateSource, join10(control, "code-generation-gate.ts"));
-  copyFileSync3(nativeTraceSource, join10(control, "native-trace.ts"));
+  inputs["input/construction-context.json"] = digest(readFileSync10(join11(workspace, "input/construction-context.json")));
+  writeJson(join11(control, "construction-context.json"), data);
+  copyFileSync4(join11(import.meta.dir, "construction-gate.ts"), join11(control, "construction-gate.ts"));
+  copyFileSync4(cgGateSource, join11(control, "code-generation-gate.ts"));
+  copyFileSync4(nativeTraceSource, join11(control, "native-trace.ts"));
   const { workflow, controlFiles: facetFiles } = materializeWorkflow(store, c.constructionWorkflow, control);
+  workflow.steps = workflow.steps.filter((step) => step.name !== "supervise");
+  for (const step of workflow.steps)
+    for (const rule of step.rules ?? [])
+      if (rule.next === "supervise")
+        rule.next = "COMPLETE";
   const contract = `${construction_hotl_default}
 \u73FE\u5728\u306E\u5DE5\u7A0B\u306F${stage.slug}\u3001Unit\u306F${unit ?? "\u5168Unit"}\u3067\u3059\u3002
 `;
@@ -1234,11 +1335,11 @@ async function executeStage(args) {
   const bundle = contract + bundlePaths.map((p) => `
 ## Original source: ${p}
 SHA256: ${files[p]}
-${readFileSync9(fileInside(store, p), "utf8")}
+${readFileSync10(fileInside(store, p), "utf8")}
 `).join("") + `
 ${cg.testingContractText}
 ` + contract;
-  writeFileSync7(join10(control, "sources.md"), bundle);
+  writeFileSync8(join11(control, "sources.md"), bundle);
   workflow.instructions = {
     ...workflow.instructions ?? {},
     upstream: "sources.md"
@@ -1248,8 +1349,8 @@ ${cg.testingContractText}
       throw new Error("\u5DE5\u7A0BWorkflow\u304C\u4E0D\u6B63\u3067\u3059");
     step.instruction = ["upstream", contract, ...[step.instruction].flat()];
   }
-  writeFileSync7(join10(control, "workflow.yaml"), Bun.YAML.stringify(workflow));
-  writeJson(join10(control, "injection.json"), bundlePaths.map((path) => ({ path, sha256: files[path] })));
+  writeFileSync8(join11(control, "workflow.yaml"), Bun.YAML.stringify(workflow));
+  writeJson(join11(control, "injection.json"), bundlePaths.map((path) => ({ path, sha256: files[path] })));
   const protectedFiles = snapshot(control, [
     "construction-context.json",
     "construction-gate.ts",
@@ -1291,16 +1392,16 @@ ${cg.testingContractText}
     "--provider",
     c.provider,
     "--workflow",
-    join10(control, "workflow.yaml"),
+    join11(control, "workflow.yaml"),
     "--task",
     `Construction\u306E${stage.slug}\u3092HOTL\u3067\u5B9F\u884C\u3057\u3001\u6210\u679C\u7269\u3068\u691C\u8A3C\u7D50\u679C\u3092\u6280\u8853\u30EC\u30D3\u30E5\u30FC\u3059\u308B`
-  ], workspace, env, timeout, { outputPrefix: join10(attempt, "takt-output") });
-  writeJson(join10(attempt, "takt.json"), run);
+  ], workspace, env, timeout, { outputPrefix: join11(attempt, "takt-output") });
+  writeJson(join11(attempt, "takt.json"), run);
   verify();
   unchanged(workspace, inputs);
   unchanged(control, protectedFiles);
-  const evidence = await command([process.execPath, join10(control, "construction-gate.ts"), "result"], workspace, env, 1e4);
-  writeJson(join10(attempt, "result.json"), evidence);
+  const evidence = await command([process.execPath, join11(control, "construction-gate.ts"), "result"], workspace, env, 1e4);
+  writeJson(join11(attempt, "result.json"), evidence);
   if (evidence.code !== 0)
     requireSuccess(run);
   requireSuccess(evidence);
@@ -1314,7 +1415,7 @@ ${cg.testingContractText}
 function pendingPath(project, event) {
   if (!event.session_id || !event.tool_use_id || event.cwd !== project)
     throw new Error("Construction\u30A4\u30D9\u30F3\u30C8\u306E\u8B58\u5225\u5B50\u307E\u305F\u306F\u4F5C\u696D\u9818\u57DF\u304C\u4E0D\u6B63\u3067\u3059");
-  return join11(phaseStorage(project), "phase-pending", digest(event.session_id + ":" + event.tool_use_id) + ".json");
+  return join12(phaseStorage(project), "phase-pending", digest(event.session_id + ":" + event.tool_use_id) + ".json");
 }
 async function capturePhase(project, event) {
   if (!phaseEnabled(project))
@@ -1353,47 +1454,47 @@ async function preparePhase(project, event) {
   unchanged(project, pending.files);
   const boundary = await approvedBoundary(project, hostHarness(c.hostHarness));
   const id = digest(`${boundary.record}:${boundary.approval}:construction`).slice(0, 24);
-  const base = join11(phaseStorage(project), "phase-runs"), run = join11(base, id);
-  mkdirSync9(run, { recursive: true });
-  const lock = join11(base, "prepare.lock");
+  const base = join12(phaseStorage(project), "phase-runs"), run = join12(base, id);
+  mkdirSync10(run, { recursive: true });
+  const lock = join12(base, "prepare.lock");
   closeSync3(openSync3(lock, "wx"));
   try {
-    if (existsSync5(join11(run, "manifest.json"))) {
-      const m = readJson(join11(run, "manifest.json")), status2 = readJson(join11(run, "status.json"));
-      if (m.configHash !== configHash || JSON.stringify(m.files) !== JSON.stringify(pending.files) || status2.stateHash !== digest(readFileSync10(boundary.statePath)))
+    if (existsSync5(join12(run, "manifest.json"))) {
+      const m = readJson(join12(run, "manifest.json")), status2 = readJson(join12(run, "status.json"));
+      if (m.configHash !== configHash || JSON.stringify(m.files) !== JSON.stringify(pending.files) || status2.stateHash !== digest(readFileSync11(boundary.statePath)))
         throw new Error("\u540C\u3058\u627F\u8A8D\u306B\u5BFE\u3059\u308BConstruction\u5165\u529B\u30FB\u72B6\u614B\u304C\u5909\u5316\u3057\u307E\u3057\u305F");
       return { id, run, status: status2 };
     }
     for (const p of Object.keys(pending.files)) {
-      const out = join11(run, "snapshot", p);
-      mkdirSync9(dirname8(out), { recursive: true });
-      copyFileSync4(fileInside(project, p), out);
-      chmodSync3(out, 292);
+      const out = join12(run, "snapshot", p);
+      mkdirSync10(dirname9(out), { recursive: true });
+      copyFileSync5(fileInside(project, p), out);
+      chmodSync4(out, 292);
     }
-    writeJson(join11(run, "manifest.json"), {
+    writeJson(join12(run, "manifest.json"), {
       ...pending,
       ...boundary,
       id,
       config: c
     });
     const parked = await command(["aidlc", "engine", "orchestrate", "park", "--project-dir", project], project, cleanEnvironment(), 1e4);
-    writeJson(join11(run, "park.json"), parked);
+    writeJson(join12(run, "park.json"), parked);
     requireSuccess(parked);
     if (JSON.parse(parked.stdout).kind !== "parked")
       throw new Error("Construction\u306Epark\u304C\u62D2\u5426\u3055\u308C\u307E\u3057\u305F");
     const status = {
       state: "parked",
       attempts: 0,
-      stateHash: digest(readFileSync10(boundary.statePath))
+      stateHash: digest(readFileSync11(boundary.statePath))
     };
-    writeJson(join11(run, "status.json"), status);
+    writeJson(join12(run, "status.json"), status);
     return { id, run, status };
   } catch (e) {
-    if (!existsSync5(join11(run, "status.json")))
-      writeJson(join11(run, "status.json"), {
+    if (!existsSync5(join12(run, "status.json")))
+      writeJson(join12(run, "status.json"), {
         state: "failed",
         attempts: 0,
-        stateHash: digest(readFileSync10(boundary.statePath)),
+        stateHash: digest(readFileSync11(boundary.statePath)),
         reason: String(e)
       });
     throw e;
@@ -1404,11 +1505,11 @@ async function preparePhase(project, event) {
 async function executePhase(project, id) {
   if (!/^[a-f0-9]{24}$/.test(id))
     throw new Error("Construction run ID\u304C\u4E0D\u6B63\u3067\u3059");
-  const run = join11(phaseStorage(project), "phase-runs", id), statusPath = join11(run, "status.json");
-  const lock = join11(run, "execute.lock");
+  const run = join12(phaseStorage(project), "phase-runs", id), statusPath = join12(run, "status.json");
+  const lock = join12(run, "execute.lock");
   closeSync3(openSync3(lock, "wx"));
   try {
-    const m = readJson(join11(run, "manifest.json")), status = readJson(statusPath);
+    const m = readJson(join12(run, "manifest.json")), status = readJson(statusPath);
     if (status.state === "verified")
       return status;
     if (status.state !== "parked")
@@ -1420,28 +1521,28 @@ async function executePhase(project, id) {
         throw new Error("Construction\u306E\u6642\u9593\u4E0A\u9650\u306B\u5230\u9054\u3057\u307E\u3057\u305F");
       return n;
     };
-    const base = join11(run, "attempts", "1"), store = join11(base, "store");
-    mkdirSync9(store, { recursive: true });
+    const base = join12(run, "attempts", "1"), store = join12(base, "store");
+    mkdirSync10(store, { recursive: true });
     const files = { ...m.files };
     const verify = () => {
       remaining();
       if (phaseConfig(project).configHash !== m.configHash)
         throw new Error("Construction\u8A2D\u5B9A\u304C\u5909\u5316\u3057\u307E\u3057\u305F");
       unchanged(project, m.files);
-      unchanged(join11(run, "snapshot"), m.files);
+      unchanged(join12(run, "snapshot"), m.files);
       unchanged(store, files);
-      if (digest(readFileSync10(m.statePath)) !== status.stateHash)
+      if (digest(readFileSync11(m.statePath)) !== status.stateHash)
         throw new Error("\u5143\u306EAI-DLC\u72B6\u614B\u304C\u5909\u5316\u3057\u307E\u3057\u305F");
     };
     try {
       for (const p of Object.keys(files)) {
-        const out = join11(store, p);
-        mkdirSync9(dirname8(out), { recursive: true });
-        copyFileSync4(fileInside(join11(run, "snapshot"), p), out);
+        const out = join12(store, p);
+        mkdirSync10(dirname9(out), { recursive: true });
+        copyFileSync5(fileInside(join12(run, "snapshot"), p), out);
       }
-      const metadata = seedTraceProject(store, m.record, readFileSync10(m.statePath, "utf8"));
+      const metadata = seedTraceProject(store, m.record, readFileSync11(m.statePath, "utf8"));
       for (const p of metadata)
-        files[p] = digest(readFileSync10(join11(store, p)));
+        files[p] = digest(readFileSync11(join12(store, p)));
       verify();
       status.state = "running";
       status.attempts = 1;
@@ -1449,17 +1550,17 @@ async function executePhase(project, id) {
       writeJson(statusPath, status);
       let sourcePaths = [...m.config.sources], artifacts = [...m.context.artifacts];
       const publish = (root, p, target) => {
-        const out = join11(store, target);
-        mkdirSync9(dirname8(out), { recursive: true });
+        const out = join12(store, target);
+        mkdirSync10(dirname9(out), { recursive: true });
         if (existsSync5(out))
-          chmodSync3(out, 420);
-        copyFileSync4(fileInside(root, p), out);
-        chmodSync3(out, 292);
-        files[target] = digest(readFileSync10(out));
+          chmodSync4(out, 420);
+        copyFileSync5(fileInside(root, p), out);
+        chmodSync4(out, 292);
+        files[target] = digest(readFileSync11(out));
       };
       let repairRequest;
       const stageRun = async (stage, unit, repaired = false) => {
-        const key = unit ?? "all", attempt = join11(base, `${status.steps.length + 1}-${key}-${stage.slug}`);
+        const key = unit ?? "all", attempt = join12(base, `${status.steps.length + 1}-${key}-${stage.slug}`);
         const cg = unit ? m.context.cg[unit] : {
           ...m.context.cg[m.context.order[0]],
           unit: null,
@@ -1512,8 +1613,8 @@ async function executePhase(project, id) {
         }
         return true;
       };
-      const cgRun = async (unit, repair = false) => {
-        const attempt = join11(base, `${status.steps.length + 1}-${unit}-code-generation`);
+      const cgRun = async (unit, repair) => {
+        const attempt = join12(base, `${status.steps.length + 1}-${unit}-code-generation`);
         const nativeCg = m.context.cg[unit], cg = {
           ...nativeCg,
           requirementIds: resolveTraceIds(store, m.record, unit, "code-generation"),
@@ -1538,15 +1639,14 @@ async function executePhase(project, id) {
           ]))
         };
         const check = m.config.unitChecks?.[unit] ?? m.config;
+        const repairScenario = repair ? m.config.stageScenarios?.[`${unit}/code-generation-${repair === "supervise" ? "supervision-" : ""}repair`] : undefined;
         const config = {
           ...m.config,
           ...check,
           delegationScope: "code-generation",
           sources: sourcePaths,
           timeoutMs: remaining(),
-          ...repair && m.config.stageScenarios?.[`${unit}/code-generation-repair`] ? {
-            mockScenario: m.config.stageScenarios[`${unit}/code-generation-repair`]
-          } : {}
+          ...repairScenario ? { mockScenario: repairScenario } : {}
         };
         const result = await executeCgWorkspace({
           attempt,
@@ -1571,7 +1671,7 @@ async function executePhase(project, id) {
         for (const p of sourcePaths)
           if (!(p in next)) {
             delete files[p];
-            unlinkSync2(join11(store, p));
+            unlinkSync2(join12(store, p));
           }
         for (const p of Object.keys(next))
           publish(result.workspace, p, p);
@@ -1580,6 +1680,7 @@ async function executePhase(project, id) {
           "code-generation-plan.md",
           "unit-test-instructions.md",
           "code-summary.md",
+          "supervision.json",
           "traceability.json",
           "source-manifest.json",
           "sensors.json",
@@ -1605,38 +1706,101 @@ async function executePhase(project, id) {
           return status;
         }
       }
-      for (const stage of m.context.stages.filter((s) => ["build-and-test", "ci-pipeline"].includes(s.slug))) {
-        if (!await stageRun(stage, null)) {
-          if (!repairRequest) {
-            writeJson(statusPath, status);
-            return status;
-          }
-          const request = repairRequest;
-          repairRequest = undefined;
-          const path = `${m.record}/construction/build-and-test/repair-request.json`;
-          writeJson(join11(store, path), request);
-          files[path] = digest(readFileSync10(join11(store, path)));
-          artifacts.push(path);
-          if (!await cgRun(request.unit, true)) {
-            writeJson(statusPath, status);
-            return status;
-          }
-          if (!await stageRun(stage, null, true)) {
-            if (repairRequest)
+      let buildRepairUsed = false;
+      const runGlobalStages = async (afterSupervision = false) => {
+        for (const stage of m.context.stages.filter((s) => ["build-and-test", "ci-pipeline"].includes(s.slug))) {
+          if (!await stageRun(stage, null, afterSupervision)) {
+            if (!repairRequest) {
+              writeJson(statusPath, status);
+              return false;
+            }
+            if (buildRepairUsed)
               throw new Error("\u5168\u4F53\u691C\u8A3C\u304B\u3089\u306ECG\u4FEE\u6B63\u4E0A\u9650\u306B\u5230\u9054\u3057\u307E\u3057\u305F");
+            buildRepairUsed = true;
+            const request = repairRequest;
+            repairRequest = undefined;
+            const path = `${m.record}/construction/build-and-test/repair-request.json`;
+            writeJson(join12(store, path), request);
+            files[path] = digest(readFileSync11(join12(store, path)));
+            artifacts.push(path);
+            if (!await cgRun(request.unit, "build")) {
+              writeJson(statusPath, status);
+              return false;
+            }
+            if (!await stageRun(stage, null, true)) {
+              if (repairRequest)
+                throw new Error("\u5168\u4F53\u691C\u8A3C\u304B\u3089\u306ECG\u4FEE\u6B63\u4E0A\u9650\u306B\u5230\u9054\u3057\u307E\u3057\u305F");
+              writeJson(statusPath, status);
+              return false;
+            }
+          }
+        }
+        return true;
+      };
+      if (!await runGlobalStages()) {
+        writeJson(statusPath, status);
+        return status;
+      }
+      let supervisedSourceHash;
+      for (let round = 0;round < 2; round++) {
+        const attempt = join12(base, `${status.steps.length + 1}-all-supervise`);
+        const result = await executeConstructionSupervision({
+          attempt,
+          store,
+          files,
+          sourcePaths,
+          units: m.context.order,
+          config: m.config,
+          repaired: round > 0,
+          timeout: remaining(),
+          verify,
+          requirementIds: [...new Set(m.context.order.flatMap((unit) => resolveTraceIds(store, m.record, unit, "code-generation")))],
+          inputPaths: [...new Set([
+            ...m.context.artifacts,
+            ...Object.values(m.context.cg).flatMap((cg) => [cg.intentFile, ...cg.files.filter((path2) => /\/memory\/.*\.md$/.test(path2))]),
+            ...artifacts.filter((path2) => !/\/(?:build|test|sensors)\.json$|\/test-results\.md$/.test(path2))
+          ])]
+        });
+        status.steps.push({ unit: null, stage: "supervise", state: result.verdict, attempt });
+        status.workspace = result.workspace;
+        writeJson(statusPath, status);
+        if (result.verdict === "blocked") {
+          status.state = "blocked";
+          status.reason = result.reason;
+          writeJson(statusPath, status);
+          return status;
+        }
+        if (result.verdict === "approved") {
+          supervisedSourceHash = result.sourceHash;
+          break;
+        }
+        if (round === 1)
+          throw new Error("Construction\u306Esupervise\u4FEE\u6B63\u4E0A\u9650\u306B\u5230\u9054\u3057\u307E\u3057\u305F");
+        const path = `${m.record}/construction/supervision/repair-request.json`;
+        writeJson(join12(store, path), result);
+        files[path] = digest(readFileSync11(join12(store, path)));
+        artifacts.push(path);
+        for (const unit of m.context.order.filter((unit2) => result.repairUnits.includes(unit2))) {
+          if (!await cgRun(unit, "supervise")) {
             writeJson(statusPath, status);
             return status;
           }
         }
+        if (!await runGlobalStages(true)) {
+          writeJson(statusPath, status);
+          return status;
+        }
       }
-      const workspace = join11(base, "result");
-      mkdirSync9(workspace, { recursive: true });
+      const workspace = join12(base, "result");
+      mkdirSync10(workspace, { recursive: true });
       for (const p of sourcePaths) {
-        const out = join11(workspace, p);
-        mkdirSync9(dirname8(out), { recursive: true });
-        copyFileSync4(fileInside(store, p), out);
+        const out = join12(workspace, p);
+        mkdirSync10(dirname9(out), { recursive: true });
+        copyFileSync5(fileInside(store, p), out);
       }
       const finalBefore = sources(workspace);
+      if (digest(JSON.stringify(finalBefore)) !== supervisedSourceHash)
+        throw new Error("supervise\u5BFE\u8C61\u3068\u6700\u7D42\u30B3\u30FC\u30C9\u304C\u4E0D\u4E00\u81F4\u3067\u3059");
       const unitChecks = {};
       for (const unit of m.context.order) {
         const check = m.config.unitChecks?.[unit] ?? m.config;
@@ -1649,7 +1813,7 @@ async function executePhase(project, id) {
           const r = await command([process.execPath, fileInside(store, p)], workspace, cleanEnvironment(), Math.min(60000, remaining()));
           checks[name] = r;
           unitChecks[unit] = checks;
-          writeJson(join11(base, "final-unit-checks.json"), unitChecks);
+          writeJson(join12(base, "final-unit-checks.json"), unitChecks);
           requireSuccess(r);
           if (name === "linter" || name === "type-check") {
             if (JSON.parse(r.stdout).pass !== true)
@@ -1662,7 +1826,7 @@ async function executePhase(project, id) {
         ["test", m.config.phaseVerifyScript]
       ]) {
         const r = await command([process.execPath, fileInside(store, p)], workspace, cleanEnvironment(), Math.min(60000, remaining()));
-        writeJson(join11(base, `final-${name}.json`), r);
+        writeJson(join12(base, `final-${name}.json`), r);
         requireSuccess(r);
       }
       if (JSON.stringify(sources(workspace)) !== JSON.stringify(finalBefore))
@@ -1670,7 +1834,7 @@ async function executePhase(project, id) {
       verify();
       status.state = "verified";
       status.workspace = workspace;
-      writeJson(join11(base, "result.json"), {
+      writeJson(join12(base, "result.json"), {
         scope: "construction",
         mode: "hotl",
         units: m.context.order,
@@ -1690,7 +1854,7 @@ async function executePhase(project, id) {
   }
 }
 function spawnPhase(project, id, run, cli) {
-  const log = openSync3(join11(run, "worker.log"), "a", 384);
+  const log = openSync3(join12(run, "worker.log"), "a", 384);
   const child = spawn3(process.execPath, [cli, "phase-work", project, id], {
     cwd: project,
     env: cleanEnvironment(),
@@ -1751,7 +1915,7 @@ try {
   if (isCodex && (typeof raw.cwd !== "string" || realpathSync4(raw.cwd) !== realpathSync4(process.cwd()) || realpathSync4(raw.cwd) !== project))
     throw new Error("Codex\u30A4\u30D9\u30F3\u30C8\u306E\u4F5C\u696D\u9818\u57DF\u304C\u4E00\u81F4\u3057\u307E\u305B\u3093");
   if (["session", "plugin-hook", "codex-session", "codex-hook"].includes(mode) && (cgEnabled(project) || phaseEnabled(project))) {
-    const configuredHost = hostHarness(readJson(join12(cgStorage(project), "config.json")).hostHarness);
+    const configuredHost = hostHarness(readJson(join13(cgStorage(project), "config.json")).hostHarness);
     if (configuredHost !== (isCodex ? "codex" : "claude"))
       process.exit(0);
   }
@@ -1780,7 +1944,7 @@ try {
         if (handoff) {
           if (handoff.status.state === "parked")
             spawnCg(project, handoff.id, handoff.run, import.meta.path);
-          console.log(JSON.stringify({ ...isCodex ? { continue: false, stopReason: "CG\u306FTAKT\u3078\u59D4\u8B72\u6E08\u307F\u3067\u3059\u3002\u5143\u306ECG\u6307\u793A\u3092\u5B9F\u884C\u305B\u305A\u3001\u3053\u306E\u30BF\u30FC\u30F3\u3092\u7D42\u4E86\u3057\u3066\u304F\u3060\u3055\u3044\u3002" } : {}, hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: `CG\u5358\u4F53\u3092TAKT\u3078\u59D4\u8B72\u3057AI-DLC\u306Fpark\u6E08\u307F\u3067\u3059\u3002CG run ID: ${handoff.id}\u3002\u3053\u306E\u30BF\u30FC\u30F3\u3092\u7D42\u4E86\u3057\u3001CG\u3092\u91CD\u8907\u5B9F\u884C\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002\u7D50\u679C: ${join12(handoff.run, "status.json")}\u3002TAKT\u306E\u5B8C\u4E86\u306FAI-DLC\u5074\u306E\u5B8C\u4E86\u8A18\u9332\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u5F8C\u7D9A\u5DE5\u7A0B\u3078\u306E\u53D7\u3051\u5165\u308C\u306FAI-DLC\u5074\u3067\u6271\u3063\u3066\u304F\u3060\u3055\u3044\u3002` } }));
+          console.log(JSON.stringify({ ...isCodex ? { continue: false, stopReason: "CG\u306FTAKT\u3078\u59D4\u8B72\u6E08\u307F\u3067\u3059\u3002\u5143\u306ECG\u6307\u793A\u3092\u5B9F\u884C\u305B\u305A\u3001\u3053\u306E\u30BF\u30FC\u30F3\u3092\u7D42\u4E86\u3057\u3066\u304F\u3060\u3055\u3044\u3002" } : {}, hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: `CG\u5358\u4F53\u3092TAKT\u3078\u59D4\u8B72\u3057AI-DLC\u306Fpark\u6E08\u307F\u3067\u3059\u3002CG run ID: ${handoff.id}\u3002\u3053\u306E\u30BF\u30FC\u30F3\u3092\u7D42\u4E86\u3057\u3001CG\u3092\u91CD\u8907\u5B9F\u884C\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002\u7D50\u679C: ${join13(handoff.run, "status.json")}\u3002TAKT\u306E\u5B8C\u4E86\u306FAI-DLC\u5074\u306E\u5B8C\u4E86\u8A18\u9332\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u5F8C\u7D9A\u5DE5\u7A0B\u3078\u306E\u53D7\u3051\u5165\u308C\u306FAI-DLC\u5074\u3067\u6271\u3063\u3066\u304F\u3060\u3055\u3044\u3002` } }));
         }
       }
       process.exit(0);
@@ -1801,7 +1965,7 @@ try {
         if (handoff) {
           if (handoff.status.state === "parked")
             spawnPhase(project, handoff.id, handoff.run, import.meta.path);
-          console.log(JSON.stringify({ ...isCodex ? { continue: false, stopReason: "Construction\u306FTAKT\u3078\u59D4\u8B72\u6E08\u307F\u3067\u3059\u3002\u30BF\u30FC\u30F3\u3092\u7D42\u4E86\u3057\u3066\u304F\u3060\u3055\u3044\u3002" } : {}, hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: `Construction\u5168\u4F53\u3092TAKT\u3078\u59D4\u8B72\u3057AI-DLC\u306Fpark\u6E08\u307F\u3067\u3059\u3002run ID: ${handoff.id}\u3002\u3053\u306E\u30BF\u30FC\u30F3\u3092\u7D42\u4E86\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u7D50\u679C: ${join12(handoff.run, "status.json")}\u3002\u30CD\u30A4\u30C6\u30A3\u30D6\u306E\u5DE5\u7A0B\u5B8C\u4E86\u3084\u627F\u8A8D\u8A18\u9332\u306F\u4F5C\u6210\u3057\u307E\u305B\u3093\u3002` } }));
+          console.log(JSON.stringify({ ...isCodex ? { continue: false, stopReason: "Construction\u306FTAKT\u3078\u59D4\u8B72\u6E08\u307F\u3067\u3059\u3002\u30BF\u30FC\u30F3\u3092\u7D42\u4E86\u3057\u3066\u304F\u3060\u3055\u3044\u3002" } : {}, hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: `Construction\u5168\u4F53\u3092TAKT\u3078\u59D4\u8B72\u3057AI-DLC\u306Fpark\u6E08\u307F\u3067\u3059\u3002run ID: ${handoff.id}\u3002\u3053\u306E\u30BF\u30FC\u30F3\u3092\u7D42\u4E86\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u7D50\u679C: ${join13(handoff.run, "status.json")}\u3002\u30CD\u30A4\u30C6\u30A3\u30D6\u306E\u5DE5\u7A0B\u5B8C\u4E86\u3084\u627F\u8A8D\u8A18\u9332\u306F\u4F5C\u6210\u3057\u307E\u305B\u3093\u3002` } }));
         }
       }
       process.exit(0);
@@ -1814,7 +1978,7 @@ try {
   } else if (mode === "phase-status") {
     if (!/^[a-f0-9]{24}$/.test(id ?? ""))
       throw new Error("Construction run ID\u304C\u5FC5\u8981\u3067\u3059");
-    console.log(JSON.stringify(readJson(join12(phaseStorage(project), "phase-runs", id, "status.json")), null, 2));
+    console.log(JSON.stringify(readJson(join13(phaseStorage(project), "phase-runs", id, "status.json")), null, 2));
   } else if (mode === "cg-work") {
     const result = await executeCg(project, id);
     console.log(JSON.stringify(result));
@@ -1823,7 +1987,7 @@ try {
   } else if (mode === "cg-status") {
     if (!/^[a-f0-9]{24}$/.test(id ?? ""))
       throw new Error("CG run ID\u304C\u5FC5\u8981\u3067\u3059");
-    console.log(JSON.stringify(readJson(join12(cgStorage(project), "cg-runs", id, "status.json")), null, 2));
+    console.log(JSON.stringify(readJson(join13(cgStorage(project), "cg-runs", id, "status.json")), null, 2));
   } else {
     throw new Error("usage: bun handoff.js session|plugin-hook|codex-session|codex-hook|cg-work|cg-status|phase-work|phase-status <project> [id]");
   }

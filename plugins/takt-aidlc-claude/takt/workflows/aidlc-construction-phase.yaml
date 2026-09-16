@@ -4,15 +4,18 @@ max_steps: 8
 policies:
   aidlc-verification: ../facets/policies/aidlc-verification.md
   construction-hotl: ../facets/policies/construction-hotl.md
+  aidlc-supervision: ../facets/policies/aidlc-supervision.md
 knowledge:
   aidlc-frozen-inputs: ../facets/knowledge/aidlc-frozen-inputs.md
   construction-artifacts: ../facets/knowledge/construction-artifacts.md
 instructions:
   construction-draft: ../facets/instructions/construction-draft.md
   construction-review: ../facets/instructions/construction-review.md
+  construction-supervise: ../facets/instructions/construction-supervise.md
 report_formats:
   construction-draft: ../facets/output-contracts/construction-draft.md
   construction-review: ../facets/output-contracts/construction-review.md
+  construction-supervise: ../facets/output-contracts/construction-supervise.md
 steps:
   - name: draft
     session_key: construction-author
@@ -65,8 +68,37 @@ steps:
         timeout_ms: 130000
     rules:
       - condition: レビューがapproved
-        next: COMPLETE
+        next: supervise
       - condition: レビューがchanges_requested
         next: draft
       - condition: レビューがblocked
+        next: ABORT
+  - name: supervise
+    session_key: construction-supervisor
+    edit: false
+    persona: supervisor
+    policy:
+      - contract-change
+      - evidence-based-judgment
+      - aidlc-supervision
+    knowledge:
+      - aidlc-frozen-inputs
+    pass_previous_response: false
+    instruction:
+      - supervise
+      - construction-supervise
+    output_contracts:
+      report:
+        - name: 04-construction-supervision.json
+          format: construction-supervise
+    quality_gates:
+      - type: command
+        command: bun ../control/construction-supervision-gate.ts
+        timeout_ms: 130000
+    rules:
+      - condition: 要件充足がapproved
+        next: COMPLETE
+      - condition: 修正可能な未充足がchanges_requested
+        next: ABORT
+      - condition: 外部判断が必要でblocked
         next: ABORT

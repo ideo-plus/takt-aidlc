@@ -100,19 +100,30 @@ export function cgGate(control: string, phase: string) {
     assert.equal(r.traceHash, hash(readFileSync(join(root, 'cg/traceability.json'))));
     assert.equal(r.manifestHash, hash(readFileSync(join(root, 'cg/source-manifest.json'))));
   };
+  const checkSupervised = () => {
+    checkReviewed();
+    const r = latest('supervise');
+    assert.equal(r?.verdict, 'approved', '要件充足の最終判定が未承認');
+    assert.ok(ledger.indexOf(r) > ledger.indexOf(latest('code-review')), '最新レビュー後のsuperviseが必要');
+    assert.equal(r.sourceHash, sourceHash, 'supervise後にソースが変化');
+    assert.equal(r.reviewHash, reportHash('03-code-generation-code-review.json'));
+    assert.equal(r.reportHash, reportHash('04-code-generation-supervision.json'));
+    assert.equal(r.supervisionHash, hash(readFileSync(join(root, 'cg/supervision.json'))));
+  };
   if (phase === 'result') {
     const blocked = join(root, 'cg/blocked.json');
     if (existsSync(blocked)) return { ...read(blocked), state: 'blocked', reportsDir };
-    for (const name of ['01-code-generation-plan.json', '02-code-generation-plan-review.json', '03-code-generation-code-review.json']) {
+    for (const name of ['01-code-generation-plan.json', '02-code-generation-plan-review.json', '03-code-generation-code-review.json', '04-code-generation-supervision.json']) {
       if (existsSync(join(reportsDir, name)) && report(name).verdict === 'blocked') return { state: 'blocked', reason: report(name).reason, reportsDir };
     }
-    checkReviewed();
+    checkSupervised();
     assert.equal(latest('finish')?.sourceHash, sourceHash);
-    assert.equal(latest('finish')?.reportHash, reportHash('04-code-generation-summary.json'));
+    assert.equal(latest('finish')?.reportHash, reportHash('05-code-generation-summary.json'));
     assert.equal(latest('finish')?.summaryHash, hash(readFileSync(join(root, 'cg/code-summary.md'))));
     return { state: 'complete', reportsDir, sourceHash, checks: ledger.length, scope: 'code-generation', mode: 'hotl' };
   }
-  const blockerReport: Record<string, string> = { plan: '01-code-generation-plan.json', 'plan-review': '02-code-generation-plan-review.json', 'code-review': '03-code-generation-code-review.json' };
+  const blockerReport: Record<string, string> = { plan: '01-code-generation-plan.json', 'plan-review': '02-code-generation-plan-review.json', 'code-review': '03-code-generation-code-review.json', supervise: '04-code-generation-supervision.json' };
+  if (phase === 'supervise') checkReviewed();
   const blocker = blockerReport[phase] ? report(blockerReport[phase]) : existsSync(join(root, 'cg/blocked.json')) ? { ...read(join(root, 'cg/blocked.json')), verdict: 'blocked' } : null;
   if (blocker?.verdict === 'blocked') {
     assert.ok(typeof blocker.reason === 'string' && blocker.reason.trim(), '停止理由がありません');
@@ -157,6 +168,25 @@ export function cgGate(control: string, phase: string) {
     verdict = r.verdict; binding = { planHash: reportHash('01-code-generation-plan.json'), reportHash: reportHash(name) };
     if (phase === 'plan-review') Object.assign(binding, { planMarkdownHash: latest('plan').planMarkdownHash, instructionsHash: latest('plan').instructionsHash });
     if (phase === 'code-review') Object.assign(binding, { traceHash: hash(readFileSync(join(root, 'cg/traceability.json'))), manifestHash: hash(readFileSync(join(root, 'cg/source-manifest.json'))) });
+  } else if (phase === 'supervise') {
+    const r = report('04-code-generation-supervision.json');
+    assert.ok(['approved', 'changes_requested'].includes(r.verdict));
+    assert.ok(r.intentAssessment?.trim() && Array.isArray(r.requirements) && Array.isArray(r.findings));
+    assert.deepEqual(r.requirements.map((row: any) => row.id).sort(), [...ctx.cg.requirementIds].sort(), 'superviseに要求の抜け・重複がある');
+    for (const row of r.requirements) {
+      assert.ok(['met', 'unmet', 'undetermined'].includes(row.status));
+      assert.ok(Array.isArray(row.evidence) && row.evidence.length > 0);
+      for (const evidence of row.evidence) { sourcePath(root, evidence.path); assert.ok(evidence.reason?.trim()); }
+    }
+    for (const finding of r.findings) {
+      assert.ok(finding.id?.trim() && finding.reason?.trim() && finding.fix?.trim());
+      assert.ok(Array.isArray(finding.requirementIds) && finding.requirementIds.length && finding.requirementIds.every((id: string) => ctx.cg.requirementIds.includes(id)));
+    }
+    if (r.verdict === 'approved') { assert.ok(r.requirements.every((row: any) => row.status === 'met')); assert.equal(r.findings.length, 0); }
+    else assert.ok(r.findings.length > 0, '差し戻しの指摘がない');
+    save(join(root, 'cg/supervision.json'), r);
+    verdict = r.verdict;
+    binding = { reportHash: reportHash('04-code-generation-supervision.json'), supervisionHash: hash(readFileSync(join(root, 'cg/supervision.json'))), reviewHash: reportHash('03-code-generation-code-review.json') };
   } else if (phase === 'implement' || phase === 'fix') {
     checkPlan(); checkTraceability();
     for (const [check, script, expected] of [['build', ctx.buildScript, ctx.buildHash], ['test', ctx.verifyScript, ctx.verifyHash]]) {
@@ -186,13 +216,13 @@ export function cgGate(control: string, phase: string) {
     ledger.push({ phase: 'sensors', verdict: 'passed', results, sourceHash: hash(JSON.stringify(sources(root))) }); save(ledgerPath, ledger);
     save(join(root, 'cg/sensors.json'), results);
   } else if (phase === 'finish') {
-    checkReviewed(); const r = report('04-code-generation-summary.json');
+    checkSupervised(); const r = report('05-code-generation-summary.json');
     assert.equal(r.verdict, 'complete'); assert.ok(r.summary?.trim());
     assert.deepEqual([...r.notReproduced].sort(), ['human-approval', 'aidlc-lifecycle'].sort());
     writeFileSync(join(root, 'cg/code-summary.md'), r.summaryMarkdown ?? `# Code Summary\n\n## Changes and Verification\n\n${r.summary}\n\n## Deviations\n${r.notReproduced.join('\n')}\n`);
     checkSections('cg/code-summary.md');
     writeFileSync(join(root, 'cg/code-generation-plan.md'), readFileSync(join(root, 'cg/code-generation-plan.md'), 'utf8').replace(/^(\s*[-*+]\s+)\[ \]/gm, '$1[x]'));
-    binding = { reportHash: reportHash('04-code-generation-summary.json'), summaryHash: hash(readFileSync(join(root, 'cg/code-summary.md'))) };
+    binding = { reportHash: reportHash('05-code-generation-summary.json'), summaryHash: hash(readFileSync(join(root, 'cg/code-summary.md'))) };
   } else throw new Error(`Unknown CG phase: ${phase}`);
   ledger.push({ phase, verdict, sourceHash: hash(JSON.stringify(sources(root))), ...binding }); save(ledgerPath, ledger);
   save(join(root, 'cg/progress.json'), ledger);

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cgFixture } from "../code-generation/fixture";
+import { cgFixture, supervisionReport } from "../code-generation/fixture";
 import {
   phaseContext,
   stageApplies,
@@ -16,6 +16,9 @@ export async function phaseFixture(
     blocked?: boolean;
     failFinal?: boolean;
     integrationRepair?: boolean;
+    supervisionRepair?: boolean;
+    supervisionBlocked?: boolean;
+    supervisionRejectAgain?: boolean;
   } = {},
 ) {
   const f = await cgFixture({
@@ -102,6 +105,7 @@ export async function phaseFixture(
       },
     };
   }
+  if (options.supervisionRepair) writeJson(join(f.project, record, 'project-description.json'), 'Construction全体のIntent: answerは42を返し、最終コードでは値を6 * 7の式で定義する。CIを生成する。');
   writeJson(join(f.project, control, "config.json"), config);
   const context = await phaseContext(f.project, config);
   const frIds = context.cg[f.unit].requirementIds.filter((id) =>
@@ -123,6 +127,10 @@ export async function phaseFixture(
   for (const response of baseScenario) {
     if (response.content?.startsWith("{")) {
       const report = JSON.parse(response.content);
+      if (report.requirements) {
+        report.requirements = supervisionReport(expandedCgIds).requirements;
+        response.content = JSON.stringify(report);
+      }
       if (report.testingContractHash) {
         report.steps[0].requirementIds = expandedCgIds;
         response.content = JSON.stringify(report);
@@ -191,6 +199,9 @@ export async function phaseFixture(
       judge,
       { content: "確認" },
       { content: JSON.stringify(approved) },
+      judge,
+      { content: '要件充足の独立判定' },
+      { content: JSON.stringify(supervisionReport(expandedCgIds, 'src/consumer.ts')) },
       judge,
       { content: "完了" },
       {
@@ -385,6 +396,7 @@ export async function phaseFixture(
         "code-generation-plan.md",
         "unit-test-instructions.md",
         "code-summary.md",
+        "supervision.json",
         "traceability.json",
         "source-manifest.json",
         "sensors.json",
@@ -398,6 +410,41 @@ export async function phaseFixture(
   ))
     stageScenario(stage, null);
   writeJson(join(f.project, control, "config.json"), config);
+  const supervision = { ...supervisionReport(expandedCgIds), units: context.order.map(unit => ({ unit, status: 'met', assessment: '担当要件とUnit間接続を確認' })), repairUnits: [] as string[] };
+  const rejected = { ...supervision, requirements: supervision.requirements.map((row, i) => ({ ...row, status: i === 0 ? 'unmet' : 'met' })), verdict: 'changes_requested', repairUnits: [f.unit], findings: [{ id: 'PHASE1', requirementIds: [expandedCgIds[0]], reason: 'Intentの6 * 7の式がコードにない', fix: '所有Unitの公開値の定義を修正する' }] };
+  const supervisionScenario = (value: unknown, choice: number) => [{ content: 'フェーズ全体の要件充足を独立に判定' }, { content: JSON.stringify(value) }, { content: '', structured_output: { step: choice, reason: 'synthetic supervision fixture' } }];
+  config.stageScenarios!['all/supervise'] = `${control}/supervision.json`;
+  config.stageScenarios!['all/supervise-after-repair'] = `${control}/supervision-after-repair.json`;
+  writeJson(join(f.project, config.stageScenarios!['all/supervise']), supervisionScenario(options.supervisionBlocked ? { ...supervision, verdict: 'blocked', reason: '外部判断が必要' } : options.supervisionRepair ? rejected : supervision, options.supervisionBlocked ? 3 : options.supervisionRepair ? 2 : 1));
+  writeJson(join(f.project, config.stageScenarios!['all/supervise-after-repair']), supervisionScenario(options.supervisionRejectAgain ? rejected : supervision, options.supervisionRejectAgain ? 2 : 1));
+  if (options.supervisionRepair) {
+    const repair = structuredClone(baseScenario);
+    for (const row of repair) for (const write of row.file_writes ?? []) {
+      if (write.path === 'src/value.ts') write.content = 'export const answer = 6 * 7;\n';
+    }
+    // 修正時の差分は既存テストを含まない。
+    for (const row of repair) {
+      if (!row.file_writes) continue;
+      row.file_writes = row.file_writes.filter((w: any) => w.path !== 'src/value.test.ts');
+      for (const write of row.file_writes) if (write.path === 'cg/source-manifest.json') {
+        const manifest = JSON.parse(write.content); manifest.writes = [{ path: 'src/value.ts' }]; write.content = JSON.stringify(manifest);
+      }
+    }
+    config.stageScenarios![`${f.unit}/code-generation-supervision-repair`] = `${control}/supervision-code-repair.json`;
+    writeJson(join(f.project, config.stageScenarios![`${f.unit}/code-generation-supervision-repair`]), repair);
+    for (const stage of context.stages.filter(s => ['build-and-test', 'ci-pipeline'].includes(s.slug))) {
+      const key = `all/${stage.slug}`;
+      const original = config.stageScenarios![`${key}-after-repair`] ?? config.stageScenarios![key];
+      const scenario = readJson<any[]>(join(f.project, original));
+      const draft = JSON.parse(scenario[1].content);
+      draft.upstream = [...upstream, `${record}/construction/supervision/repair-request.json`];
+      scenario[1].content = JSON.stringify(draft);
+      const followup = `${control}/supervision-followup-${stage.slug}.json`;
+      config.stageScenarios![`${key}-after-repair`] = followup;
+      writeJson(join(f.project, followup), scenario);
+    }
+  }
+  writeJson(join(f.project, control, 'config.json'), config);
   const event = {
     ...f.event,
     tool_input: {

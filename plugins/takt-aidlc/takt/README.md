@@ -21,7 +21,7 @@ takt/
 YAMLにはステップ、遷移、編集権限、品質ゲート、利用するファセットの参照を置く。
 指示本文とレポート形式はMarkdownへ置き、役割にはTAKTの組み込みペルソナを使い、共有ルールと知識は複数のステップから参照する。
 TAKTのYAMLでは`policies`、`knowledge`、`instructions`、`report_formats`にローカルファイルを宣言し、ステップから別名で参照する。
-ペルソナは`planner`、`coder`、`architecture-reviewer`、`coding-reviewer`、`exec-assistant`を名前指定する。[選択理由と本家の参照先](facets/personas/README.md)を参照。
+ペルソナは`planner`、`coder`、`architecture-reviewer`、`coding-reviewer`、`supervisor`、`exec-assistant`を名前指定する。[選択理由と本家の参照先](facets/personas/README.md)を参照。
 `report_formats`が指すファイルの配置先は`facets/output-contracts/`。
 
 配布用YAMLは`takt/workflows/`に置き、`../facets/`を参照する。連携CLIは実行前にYAMLとローカルファセットを専用の制御領域へ配置し、相対参照を更新する。組み込みペルソナはTAKTが解決する。元のディレクトリ構成は変更しない。
@@ -32,6 +32,7 @@ TAKT 0.65.0の定義を複製せず、YAMLから名前で参照する。
 
 | 種別 | 採用する組み込み | 用途 |
 |---|---|---|
+| instruction | `supervise` | Intent・受入条件と前段指摘の解消状態の最終判定 |
 | instruction | `coding-review` | コード差分と契約・実在経路のレビュー |
 | instruction | `architecture-review` | 計画・設計・Construction成果物の構造レビュー |
 | policy | `evidence-based-judgment` | 要求・事実・提案・未確認の区別 |
@@ -43,6 +44,14 @@ TAKT 0.65.0の定義を複製せず、YAMLから名前で参照する。
 組み込みのAPPROVE／REJECTは、本連携のJSONではapproved／changes_requestedとして扱う。人間判断が必要な入力矛盾はblockedで停止する。
 
 参照元：[組み込みファセット](https://github.com/nrslib/takt/tree/v0.65.0/builtins/ja/facets)、[レビュー用の共通規則](https://github.com/nrslib/takt/blob/v0.65.0/builtins/ja/facets/partials/policies/review-common.md)。組み込みのinclude展開はTAKT自身が行う。ローカルファセットは単一ファイルに限定し、依存を固定する。
+
+## superviseの位置
+
+CGは`code-review → supervise → finish`とし、差し戻し時は`fix → code-review → supervise`へ戻る。
+Constructionは各工程の作成・レビューを終えた後、全Unitをまとめて`supervise`を実行する。個別工程の実行ではrunnerがdraft／review部分を使い、フェーズ最後の呼び出しではsupervise部分を使う。
+Constructionの差し戻しは所有UnitのCG、Build and Test、必要なCI工程、superviseの順で一度だけ再実行する。外部判断が必要ならblocked、修正が収束しなければfailedで終了する。
+
+supervisorは要件充足をコードから判定し、ビルド・テストの結果やログは審査しない。機械ゲートは別に必須とする。superviseの承認をソースとレポートのhashへ結び付け、後から変更されたコードには流用しない。
 
 ## AI-DLCの原文との関係
 

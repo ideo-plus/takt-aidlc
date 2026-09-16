@@ -106,6 +106,10 @@ export function phaseConfig(project: string) {
     "phaseVerifyScript",
   ] as const)
     fileInside(project, c[key]);
+  for (const path of [c.workflow, c.constructionWorkflow]) {
+    const workflow = Bun.YAML.parse(readFileSync(fileInside(project, path), 'utf8')) as any;
+    if (!workflow.steps?.some((step: any) => step.name === 'supervise')) throw new Error(`superviseステップが必要です: ${path}`);
+  }
   return { c, configHash: digest(readFileSync(path)) };
 }
 export function filesBelow(project: string, dir: string): string[] {

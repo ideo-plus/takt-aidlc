@@ -15,7 +15,9 @@ Inceptionの最終承認
   → 全UnitのBuild and Testと技術レビュー
       → 必要なら所有UnitのCGへ一度戻して修正・再検証
   → 必要なCI Pipelineの生成と技術レビュー
-  → 最終ソースで全Unitの検査と全体ビルド・テストを再実行
+  → superviseでIntent全体・Unit間の連携・要求充足を判定
+      → 必要なら所有UnitのCGと全体工程を一度やり直して再判定
+  → 承認した同じソースで全Unitの検査と全体ビルド・テストを再実行
 ```
 
 設計工程とCI工程は、元のStage Progressで実行対象になっているものを使う。`[S]`または`SKIP`の工程は実行しない。Unit種別による成果物の適用範囲も反映する。テスト手順の必須ファイルはMinimal／Standard／Comprehensiveに合わせる。
@@ -95,6 +97,17 @@ CGには`takt/workflows/aidlc-code-generation-stage.yaml`、工程の作成・�
 設計用のスクリプトには`AIDLC_ARTIFACTS_DIR`でその工程の成果物ディレクトリを渡す。TS/JSのコード例がなく、スクリプトも未設定の場合は`not_applicable`と理由を記録する。CGのアプリケーションコードの検査とは別に扱う。
 
 CI工程は`pipelinePaths`に明示したファイルだけを書き出せる。YAMLは構文を確認し、全体ビルド・テストと技術レビューを通す。CIサービス上でのジョブ実行やデプロイを完了したとは扱わない。
+
+## 最終の要件充足判定
+
+`supervisor`と組み込み`supervise`を使い、全Unitの最終コードをIntent、Inceptionの要求、設計、各Unitの判定と照合する。個別工程のreviewと、フェーズ最後のsuperviseは別セッションで実行する。
+
+- approved：全要求と全Unitについてコード上の根拠を記録し、最終の機械検証へ進む。
+- changes_requested：repairUnitsの所有Unitを依存順にCGへ戻し、Build and Testと必要なCI工程をやり直す。その後superviseを再実行する。
+- blocked：外部判断が必要な理由を保存し、対話待ちにせず停止する。
+
+superviseからの修正は1回まで。再判定でも不合格ならfailedとする。Build and Testからの修正もフェーズ全体で1回まで。
+判定後のソースの変更は受け入れない。superviseがapprovedでも、最終ビルド・テスト・適用センサーが失敗すればverifiedにはならない。
 
 ## 結果
 
