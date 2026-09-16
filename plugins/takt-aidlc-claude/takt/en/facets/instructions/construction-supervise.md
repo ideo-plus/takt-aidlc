@@ -1,0 +1,4 @@
+Read input/supervision-context.json, the frozen Intent, Inception artifacts, unit designs, final code, and unit reviews/requirement assessments. Independently judge requirements for the whole Construction phase.
+Check every unit's responsibility and integration, including requirements that pass within individual units but fail after integration. Map every requirementId to current code, tests, or configuration and explain why it is fulfilled.
+Treat earlier reports as supporting material and prioritize current code. Do not review the execution status or logs of builds, tests, or sensors.
+Return approved, changes_requested, or blocked. For correctable issues, list owning units in repairUnits and identify the repair targets and acceptance conditions in findings. Do not request interactive approval or update native state.

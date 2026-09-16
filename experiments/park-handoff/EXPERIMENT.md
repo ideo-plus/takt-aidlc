@@ -1,97 +1,101 @@
-# park中のフックとTAKTの実行環境を比較する
+# Comparing parked hooks and TAKT execution environments
 
-## 結論: 読取専用の入力と、AI-DLCの制御を継承しない実行環境で編集できた
+[日本語](EXPERIMENT.ja.md)
 
-判定: **VERIFIED**。
+> Historical record. The prototype execution scripts have been removed. Commands and paths below describe the recorded experiment, not the current setup.
 
-2026年9月15日、実際のTAKTからClaude Codeを呼ぶ比較実験で、AI-DLCのPlan Approval Guardを継承したケースは編集が拒否され、制御設定を分けたケースは編集できた。元の要求文書、状態ファイル、引き継ぎ用入力は変わらなかった。
+## Conclusion: editing worked with read-only inputs and separated AI-DLC controls
 
-ただし、「park中ならいつでも編集拒否」ではない。フック単体の比較では、Inception末尾のDelivery Planningでparkした状態はソース変更を許可した。拒否の条件は、Code Generationの工程・指示と承認状態にある。
+Verdict: **VERIFIED**.
 
-測定結果は[結果JSON](results/2026-09-15.json)、生ログは同JSONの`rawEvidenceDirectory`に保存した。実験データと上流のキャッシュはGit管理対象から除外している。
+On September 15, 2026, a real TAKT → Claude Code comparison rejected editing when Plan Approval Guard was inherited, while editing succeeded with separated control settings. Original requirements, state, and handoff inputs remained unchanged.
 
-## 実モデルの比較では、同じ編集依頼を2つの環境へ渡した
+Parking does not always imply rejected edits. In direct hook tests, source edits were allowed when parked at Delivery Planning near the end of Inception. Rejection depended on CG stage/directive and approval state.
 
-| 条件 | AI-DLCの制御を継承 | 制御設定を分離 |
+Measurements are in the [result JSON](results/2026-09-15.json); raw logs are at its `rawEvidenceDirectory`. Experimental data and upstream caches are excluded from Git.
+
+## The live comparison used the same editing request in two environments
+
+| Condition | Inherited AI-DLC controls | Separated controls |
 |---|---|---|
-| 入力 | answerを42にする要求文書のコピー | 同じ内容のコピー |
-| 開始時のコード | `export const answer = 41;` | 同じコード |
-| 実行 | TAKT → Claude Code | TAKT → Claude Code |
-| AI-DLC承認ガード | プロジェクトのPreToolUseに登録 | 登録なし |
-| Editの結果 | ガードが終了コード2で拒否 | 編集成功 |
-| 終了時のコード | `answer = 41` | `answer = 42` |
-| 入力コピー | 変更なし | 変更なし |
-| 元の要求・状態ファイル | 変更なし | 変更なし |
-| TAKTの終了コード | 0 | 0 |
-| 経過時間 | 約11.8秒 | 約7.9秒 |
+| Input | Copy of requirements to set answer to 42 | Same contents |
+| Initial code | `export const answer = 41;` | Same code |
+| Execution | TAKT → Claude Code | TAKT → Claude Code |
+| Approval guard | Registered in project PreToolUse | Not registered |
+| Edit result | Rejected with exit code 2 | Succeeded |
+| Final code | `answer = 41` | `answer = 42` |
+| Input copy | Unchanged | Unchanged |
+| Original requirements/state | Unchanged | Unchanged |
+| TAKT exit code | 0 | 0 |
+| Elapsed time | About 11.8 seconds | About 7.9 seconds |
 
-実モデル試験は各条件1回。時間は参考記録で、速度比較を目的とした測定ではない。
+Each live condition ran once. Times are reference observations, not a performance comparison.
 
-継承側ではReadが2回許可され、続くEditが拒否された。理由には `no matching v2 code-generation active directive` と記録されている。Claude Codeは拒否を報告して止まり、設定や承認を変更して回避しなかった。
+The inherited case allowed two Read calls, then rejected Edit with `no matching v2 code-generation active directive`. Claude reported the rejection and stopped without altering settings or approvals to bypass it.
 
-ここで使ったWorkflowは「編集を一度試して終了する」ことを完了条件にしている。そのため、拒否側もTAKT上は成功となる。これはTAKTが実装成功を誤判定したという意味ではない。自動連携の完了条件には、要求に対応する成果物や検証コマンドの結果を組み込む必要がある。
+The workflow's completion condition was “attempt one edit and finish,” so both cases succeeded from TAKT's perspective. This was not a false implementation-success judgment. An automated integration must include required artifacts and verification-command results in its completion conditions.
 
-## AIを呼ばない比較で、拒否条件を切り分けた
+## Model-free comparisons isolated rejection conditions
 
-上流の生成ランタイムに含まれる実際のフックをサブプロセスとして実行した。Writeはフックが終了コード0を返した場合だけ実験側で適用した。この編集処理はハーネスの模擬であり、上記の実Claude Code試験と区別する。
+Actual hooks from the generated upstream runtime ran as subprocesses. The experiment applied a Write only after hook exit zero. This editing mechanism simulates a harness and is separate from the live Claude test.
 
-| 条件・操作 | 結果 |
+| Condition / operation | Result |
 |---|---|
-| 未承認のCode GenerationでソースへWrite | 拒否: 終了コード2 |
-| 同じ工程でparkし、`next`を実行してからWrite | 拒否: 終了コード2 |
-| park後に要求文書をRead | 許可: 終了コード0 |
-| park後にBashのリダイレクトでソース変更を要求 | 拒否: 終了コード2 |
-| park後に上流の要求文書へWrite | 拒否: 終了コード2 |
-| park後にCode Generationの計画文書へWrite | 拒否: 終了コード2 |
-| Delivery PlanningでparkしてソースへWrite | この承認ガードは許可: 終了コード0 |
-| 自律実行モードでpark | エンジンは`kind: error`を返す |
-| CWDだけ変更し、元のフックとプロジェクト指定を継承 | 拒否: 終了コード2 |
-| 入力・制御設定を分離してTAKTのmockで実行 | ソース生成成功、入力と元の要求・状態は変更なし |
+| Write source during unapproved CG | Rejected, exit 2 |
+| Park in the same stage, run `next`, then Write | Rejected, exit 2 |
+| Read requirements after parking | Allowed, exit 0 |
+| Request a source change through Bash redirection after parking | Rejected, exit 2 |
+| Write upstream requirements after parking | Rejected, exit 2 |
+| Write the CG plan after parking | Rejected, exit 2 |
+| Write source while parked at Delivery Planning | Allowed by this approval guard, exit 0 |
+| Park in autonomous mode | Engine returned `kind: error` |
+| Change only CWD while inheriting original hook/project settings | Rejected, exit 2 |
+| Run mock TAKT with separate inputs/controls | Source generated; inputs and original requirements/state unchanged |
 
-`park`後の`next`が`kind: parked`を返すことも確認した。その状態では現在の指示がコード生成用でなくなるため、未承認計画を作るための通常の書き込み例外も利用できない場合がある。今回の拒否は単に「計画がない」だけでなく、「対応する有効なコード生成指示がない」という理由だった。
+`next` returned `kind: parked` after parking. Without an active CG directive, even the normal exception for creating an unapproved plan may be unavailable. The observed reason was the absence of a matching active CG directive, not merely a missing plan.
 
-また、park拒否時にもエンジンのプロセス終了コードは0だった。連携処理は終了コードだけで成功と判断せず、返されたJSONの`kind`を確認しなければならない。
+The engine process still exited zero when park was rejected. An integration must inspect the returned JSON `kind`, not rely only on process exit status.
 
-## 上流の実装を固定し、承認は作らずに実験した
+## Pinned upstream implementation and no invented approvals
 
-| 項目 | 使用した版 |
+| Tool | Version |
 |---|---|
 | AI-DLC | v2.8.2 / `355903d6dc8eb07d3c77180be5d40ed679d6a40f` |
 | TAKT | 0.65.0 |
 | Claude Code | 2.1.270 |
 | Bun | 1.3.13 |
 
-AI-DLCの状態は実験用に合成したもの。未承認のCode Generationなどを設定し、実際の`orchestrate park`でparkした。Inception全工程の実行や、人の承認記録の生成・偽装は行っていない。
+AI-DLC state was synthetic experiment data, including unapproved CG, and was parked using actual `orchestrate park`. The experiment did not run all Inception stages or generate/fabricate human approval records.
 
-AI-DLCの上流ソースは変更せず、公式の`package.ts claude`で生成したランタイムを使った。実モデル試験の継承側には、対象を切り分けるためPlan Approval Guardだけを登録した。AI-DLCの全フックを登録した構成や、Codex側の動作はこの実験の対象外である。
+Upstream source was not changed. The runtime came from official `package.ts claude`. To isolate the target behavior, the inherited live case registered only Plan Approval Guard. A configuration with every AI-DLC hook and Codex behavior were outside this experiment.
 
-TAKTは実験専用の設定ディレクトリと`--pipeline --skip-git`を使用する。Claude Codeは実験プロジェクトの設定だけを読み、使えるツールをRead・Write・Editに限定した。元のユーザー設定や実プロジェクトのガードを解除していない。Gitのコミットは再現用の架空プロジェクト内で基準を作るためだけに行い、このリポジトリの変更はコミットしていない。
+TAKT used private settings and `--pipeline --skip-git`. Claude read only experiment-project settings and was limited to Read, Write, and Edit. Original user settings and real-project guards were not disabled. Git commits only established a baseline in the synthetic project; this repository's changes were not committed as part of that experiment.
 
-入力は読取専用のファイルモードにし、実行前後のハッシュを比較した。実モデル試験には入力へのWrite・Editを拒否する権限設定も加えた。ただし、任意の悪意あるプロセスに対する完全な隔離や、監査ファイル全体の不変性を証明するものではない。
+Inputs used read-only file modes and before/after hashes. The live trial also denied Write/Edit on inputs. This does not prove complete isolation from arbitrary malicious processes or immutability of all audit files.
 
-## 再実行する
+## Historical reproduction commands
 
-リポジトリのルートで実行する。Bun、Git、TAKTが必要。初回はAI-DLC v2.8.2を取得し、指定コミットとの一致を確認してランタイムを生成する。
+At the time of the experiment, run these from the repository root with Bun, Git, and TAKT installed. Initial setup fetched AI-DLC v2.8.2, checked its commit, and generated the runtime.
 
 ```sh
 bun experiments/park-handoff/run.ts
 ```
 
-末尾に出る`runDir`を指定して実モデル試験を実行する。Claude Codeの認証済み環境が必要で、モデル利用量が発生する。
+Pass the printed runDir to the live trial. It requires Claude authentication and consumes model usage.
 
 ```sh
 bun experiments/park-handoff/live.ts <runDir>
 ```
 
-実モデル試験は同じrunDirでは一度だけ実行できる。再試行する場合は`run.ts`から新しい実験データを作る。各条件のプロセス全体を90秒で停止し、Claude Codeの呼び出しにもターン数と費用の上限を設定している。
+A live trial could run only once per runDir; retrying required new data from run.ts. Each condition had a 90-second process limit, plus Claude turn and spending limits.
 
-生ログには実験用プロンプトやローカルパスが含まれる。共有用の結果JSONには、判定、版、測定値、フックの終了コードだけを抜き出した。
+Raw logs include prompts and local paths. The shared JSON extracts verdicts, versions, measurements, and hook exit codes.
 
-## 次はInception承認後の自動引き継ぎを試す
+## Next step identified at the time: automatic handoff after Inception approval
 
-今回証明したのは、特定のガードによる拒否と、制御設定を分離したTAKT実行である。Inceptionの承認後に自動でpark・起動する接続自体はまだ実装していない。
+This experiment demonstrated rejection by a particular guard and TAKT execution with separated controls. Automatic park/startup after Inception approval was not yet implemented.
 
-1. **推奨: 自動引き継ぎを実装する。** 成果物の固定、parkのJSON確認、TAKT起動、受入検証までをつなぐ。
-2. **対応範囲を先に広げる。** AI-DLCの全フックを登録した環境とCodexで、同じ比較を行う。
+1. **Recommended: implement automatic handoff.** Connect artifact freezing, park JSON checks, TAKT startup, and acceptance validation.
+2. **Expand tested scope first.** Repeat with all AI-DLC hooks and with Codex.
 
-実装する場合も、元のAI-DLCをparkしたという事実だけでTAKTの書き込みが許可されるとは考えず、入力・制御設定・成果物の管理を明確に分ける。
+Keep input, control, and output management separate. Parking original AI-DLC alone does not establish permission for TAKT writes.

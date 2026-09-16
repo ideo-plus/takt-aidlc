@@ -7,8 +7,14 @@ import { collectCgContext } from '../../src/code-generation/context';
 const baseTests = `import { expect, test } from 'bun:test';\nimport { answer } from './value';\ntest('answer is 42', () => expect(answer).toBe(42));\ntest('answer is numeric', () => expect(typeof answer).toBe('number'));\ntest('answer is not 41', () => expect(answer).not.toBe(41));\n`;
 const testSource = baseTests + `\nimport * as api from './value';\ntest('public API is unchanged', () => expect(Object.keys(api)).toEqual(['answer']));\ntest('answer is a finite integer', () => expect(Number.isFinite(answer) && Number.isInteger(answer)).toBe(true));\n`;
 
-export async function cgFixture(options: { constructionEntry?: boolean; hostHarness?: 'claude' | 'codex'; live?: boolean; provider?: 'claude' | 'codex'; model?: string; reasoningEffort?: string; buildFailure?: boolean; sensorFailure?: boolean; blocked?: boolean; maxSteps?: number } = {}) {
+export function supervisionReport(ids: string[], path = 'src/value.ts') {
+  return { verdict: 'approved', intentAssessment: 'Intentと全受入条件を現在のコードへ照合した合成判定',
+    requirements: ids.map(id => ({ id, status: 'met', evidence: [{ path, reason: '現在の公開値と処理が受入条件に一致する' }] })), findings: [] as any[] };
+}
+
+export async function cgFixture(options: { language?: 'ja' | 'en'; constructionEntry?: boolean; hostHarness?: 'claude' | 'codex'; live?: boolean; provider?: 'claude' | 'codex'; model?: string; reasoningEffort?: string; buildFailure?: boolean; sensorFailure?: boolean; blocked?: boolean; maxSteps?: number; supervisionRepair?: boolean; supervisionBlocked?: boolean } = {}) {
   const f = await fixture({ approved: false });
+  const language = options.language ?? 'ja';
   for (const directory of ['aidlc-common', 'agents', 'knowledge', 'sensors']) cpSync(join(testRuntime, '.claude', directory), join(f.project, '.claude', directory), { recursive: true });
   if (options.hostHarness === 'codex') {
     await prepareTestRuntime('codex');
@@ -25,22 +31,25 @@ export async function cgFixture(options: { constructionEntry?: boolean; hostHarn
   put(f.state, state);
   if(!options.constructionEntry) f.audit.appendAuditEntry('STAGE_STARTED', { Stage: 'code-generation', Details: 'SYNTHETIC CG ENTRY — not a human approval' }, f.project);
   const names = ['requirements-analysis/requirements.md', 'practices-discovery/team-practices.md', 'units-generation/unit-of-work.md', 'units-generation/unit-of-work-dependency.md', 'delivery-planning/bolt-plan.md'];
-  for (const name of names) put(join(f.project, record, 'inception', name), readFileSync(join(repo, 'experiments/code-generation/input', name), 'utf8'));
+  for (const name of names) put(join(f.project, record, 'inception', name), readFileSync(join(repo, 'experiments/code-generation/input', name.replace(/\.md$/, '.ja.md')), 'utf8'));
   writeJson(join(f.project, record, 'project-description.json'), 'CG-INTENT-SENTINEL: 合成テスト入力。answerを41から42へ変更する。既存の設計・規約に従い、CG単体をHOTLで実行する。standardの5テストとビルドを必ず通す。');
   put(join(f.project, 'aidlc/spaces/default/memory/team.md'), '# Team\n\n## Testing Posture\n- **Methodology**: test-after\n- **Ordering**: 値を変更してから5件のテストを作り、ビルドと単一Unitのテストを実行する。\n- standard戦略に従って5テストを使い、行カバレッジ80%以上を満たす。\n\n## Code Style\n既存の名前付きexportを維持する。Lint基盤は追加しない。\n');
   const control = 'aidlc/takt-handoff';
   cpSync(join(repo, 'takt'), join(f.project, control, 'takt'), { recursive: true });
-  let workflow = readFileSync(join(repo, 'takt/workflows/aidlc-code-generation-stage.yaml'), 'utf8');
+  let workflow = readFileSync(join(repo, `takt/${language}/workflows/aidlc-code-generation-stage.yaml`), 'utf8');
   if (options.maxSteps) workflow = workflow.replace('max_steps: 20', `max_steps: ${options.maxSteps}`);
-  put(join(f.project, control, 'takt/workflows/aidlc-code-generation-stage.yaml'), workflow);
+  put(join(f.project, control, `takt/${language}/workflows/aidlc-code-generation-stage.yaml`), workflow);
   put(join(f.project, control, 'build.ts'), `import { join } from 'node:path';\nconst result = await Bun.build({entrypoints:[join(process.cwd(),'src/value.ts')],target:'bun',outdir:join(process.cwd(),'cg/build')});\nif(!result.success){console.error(result.logs);process.exit(1)}\nconsole.log('Bun build passed');\n`);
   put(join(f.project, control, 'test.ts'), readFileSync(join(repo, 'experiments/code-generation/verify-app.ts'), 'utf8').replace("['test', '--coverage'", "['test', 'src/value.test.ts', '--coverage'"));
   put(join(f.project, control, 'typecheck.ts'), `import {spawnSync} from 'node:child_process';\nconst r=spawnSync(process.execPath,[${JSON.stringify(join(repo, 'node_modules/typescript/bin/tsc'))},'--ignoreConfig','--noEmit','--strict','--skipLibCheck','--target','esnext','--module','esnext','--moduleResolution','bundler','--types','bun-types','src/value.ts','src/value.test.ts'],{encoding:'utf8'});\nconsole.log(JSON.stringify({pass:r.status===0,errors:r.stdout||r.stderr}));\n`);
   const artifacts = names.map(name => `${record}/inception/${name}`);
-  const config = { hostHarness: options.hostHarness ?? 'claude', enabled: true, delegationScope: 'code-generation', artifacts, sources: ['src/value.ts'], workflow: `${control}/takt/workflows/aidlc-code-generation-stage.yaml`, buildScript: `${control}/build.ts`, verifyScript: `${control}/test.ts`, sensorScripts: { 'type-check': `${control}/typecheck.ts` }, sensorExceptions: { linter: { reason: 'このIntentの確定方針でLintを導入しない', source: `${record}/inception/practices-discovery/team-practices.md` } }, provider: options.live ? (options.provider ?? 'claude') : 'mock', disableBedrock: true, timeoutMs: 900000, mockScenario: `${control}/scenario.json` };
+  const config = { language, hostHarness: options.hostHarness ?? 'claude', enabled: true, delegationScope: 'code-generation', artifacts, sources: ['src/value.ts'], workflow: `${control}/takt/${language}/workflows/aidlc-code-generation-stage.yaml`, buildScript: `${control}/build.ts`, verifyScript: `${control}/test.ts`, sensorScripts: { 'type-check': `${control}/typecheck.ts` }, sensorExceptions: { linter: { reason: 'このIntentの確定方針でLintを導入しない', source: `${record}/inception/practices-discovery/team-practices.md` } }, provider: options.live ? (options.provider ?? 'claude') : 'mock', disableBedrock: true, timeoutMs: 900000, mockScenario: `${control}/scenario.json` };
   if (options.live && options.provider === 'codex') Object.assign(config, { model: options.model ?? 'gpt-5.6-luna', codexReasoningEffort: options.reasoningEffort ?? 'max', timeoutMs: 1800000 });
   else if (options.model) Object.assign(config, { model: options.model });
   writeJson(join(f.project, control, 'config.json'), config);
+  if (options.supervisionRepair) {
+    writeJson(join(f.project, record, 'project-description.json'), 'CG-INTENT-SENTINEL: answerは42を返し、値は6 * 7の式で定義する。');
+  }
   const context = collectCgContext(f.project, artifacts, unit, {}, options.hostHarness);
   const plan = { verdict: 'ready', testingContractHash: context.testingContract.contract_sha256,
     steps: [{ id: 1, unit, action: 'answerを42へ変更する', requirementIds: context.requirementIds, files: ['src/value.ts'] }, { id: 2, unit, action: '5件のテストを作り実行する', requirementIds: ['FR2'], files: ['src/value.test.ts'] }],
@@ -60,6 +69,8 @@ export async function cgFixture(options: { constructionEntry?: boolean; hostHarn
     ...(options.buildFailure ? writes('export const answer = ;\n') : []),
     ...(options.sensorFailure ? writes('export const answer: string = 42;\n') : []),
     ...writes('export const answer = 42;\n'), ...report(approved),
+    ...report(options.supervisionBlocked ? { ...supervisionReport(context.requirementIds), verdict: 'blocked', reason: '入力の解釈に外部判断が必要' } : options.supervisionRepair ? { ...supervisionReport(context.requirementIds), verdict: 'changes_requested', findings: [{ id: 'S1', requirementIds: [context.requirementIds[0]], reason: '値は合うがIntentで指定した積の式がない', fix: 'src/value.tsを6 * 7の式へ修正する' }] } : supervisionReport(context.requirementIds), options.supervisionBlocked ? 3 : options.supervisionRepair ? 2 : 1),
+    ...(options.supervisionRepair ? [...writes('export const answer = 6 * 7;\n'), ...report(approved), ...report(supervisionReport(context.requirementIds))] : []),
     { content: 'CGを完了しました' }, { content: JSON.stringify({ verdict: 'complete', summary: 'ビルド、5テスト、型検査、CG成果物の検証が成功', notReproduced: ['human-approval', 'aidlc-lifecycle'] }) },
   ];
   writeJson(join(f.project, control, 'scenario.json'), scenario);

@@ -1,9 +1,9 @@
-# 実行計画（合成CGテスト入力）
+# Execution plan: synthetic CG test input
 
-## 対象
+## Scope
 
-U1のみ。TAKTはCG単体をHOTLとして実行する。新しい機能設計やインフラ設計、対話的な承認、ウォーキングスケルトン後の人間承認はこのCGには含まれない。
+U1 only. TAKT runs CG as HOTL. This CG scope excludes new functional/infrastructure design, interactive approval, and human approval after the walking skeleton.
 
-## 完了条件
+## Completion conditions
 
-answerが42、5件のテストが成功、ビルドと型検査が成功、行カバレッジ80%以上。CGの計画、テスト手順、変更ファイル一覧、要求との対応表、実測結果を返す。AI-DLCの状態・承認・センサー監査記録は更新しない。
+answer equals 42; five tests, build, and type checking pass; line coverage is at least 80%. Return the CG plan, test instructions, changed-file manifest, requirement mappings, and measured results. Do not update AI-DLC state, approval, or sensor audit records.

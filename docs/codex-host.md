@@ -1,35 +1,37 @@
-# CodexホストでAI-DLCのCGをTAKTへ委譲する
+# Delegate AI-DLC work from a Codex host
 
-## 対応範囲
+[日本語](codex-host.ja.md)
 
-Codex CLI 0.154.0、AI-DLC 2.8.2、TAKT 0.65.0を対象に、CG単体とConstruction全体のホスト連携を実装した。AI-DLCをCodex上で進め、CG入口でparkし、TAKTへ委譲する。TAKT内の対話承認はなく、ビルド・テスト・適用するセンサーの成功条件はClaude Codeホストと共通。
+## Supported scope
 
-ホストとワーカーは別の選択である。`hostHarness: "codex"`はAI-DLC側、`provider: "codex"`はTAKT側を指定する。Construction全体版の設定は[専用の導入手順](construction-phase.md)を参照。以下はCG単体の例。
+The host integration supports CG-only and full Construction delegation with Codex CLI 0.154.0, AI-DLC 2.8.2, and TAKT 0.65.0. AI-DLC runs on Codex and is parked at the chosen boundary. TAKT proceeds without interactive approval, with the same build, test, and sensor requirements as the Claude Code host.
 
-## インストール
+Host and worker are separate choices: `hostHarness: "codex"` selects the AI-DLC host, while `provider: "codex"` selects the TAKT worker. See the [Construction guide](construction-phase.md) for full-phase configuration. The following example uses CG-only delegation.
 
-ビルド済みプラグインをHTTPSで取得する。手動のclone・ビルドは不要。
+## Installation
+
+Download the prebuilt plugin over HTTPS. A manual clone or build is not required.
 
 ```sh
 codex plugin marketplace add https://github.com/ideo-plus/takt-aidlc.git
 codex plugin add takt-aidlc@takt-aidlc
 ```
 
-ユーザー設定の`config.toml`で`[features]`の`hooks = true`を有効にする。設定済みのテーブルがあればその中に追記する。インストール後は新しいCodexセッションを開始し、AI-DLC本体とプラグインのフックを確認して信頼する。インストールだけでは未信頼のフックは動かない。[Codexのフック仕様](https://learn.chatgpt.com/docs/hooks)
+Enable `hooks = true` under `[features]` in the user `config.toml`. Add it to the existing table if one is already present. Start a new Codex session after installation, review the AI-DLC and plugin hooks, and trust them. Installation alone does not activate untrusted hooks. See the [Codex hook documentation](https://learn.chatgpt.com/docs/hooks).
 
-## AI-DLCプロジェクトの設定
+## AI-DLC project setup
 
-対象のGitリポジトリで、ワークフロー開始前にCodex用ランタイムを設定する。
+Set up the Codex runtime in the target Git repository before starting the workflow:
 
 ```sh
 aidlc config --harness codex --yes
 ```
 
-`.codex/`にCG定義、担当者のMarkdownとTOML、知識、センサー、ツールが配置される。`.agents/skills/aidlc/`にはAI-DLCのスキルが入る。
+AI-DLC places stage definitions, agent Markdown/TOML, knowledge, sensors, and tools under `.codex/`. Its skill is installed under `.agents/skills/aidlc/`.
 
-AI-DLCの配布設定はBedrockを既定にするため、通常のOpenAI認証を使う場合はプロジェクトの`.codex/config.toml`と必要な担当者設定を確認する。ホストのproviderをOpenAI認証に合わせ、`codex login`で認証する。TAKT設定の`disableBedrock`は子プロセス向けであり、ホストの認証設定は変更しない。
+AI-DLC's distributed settings default to Bedrock. For standard OpenAI authentication, inspect the project's `.codex/config.toml` and relevant agent settings, select the matching host provider, and authenticate with `codex login`. The handoff setting `disableBedrock` affects child processes; it does not change host authentication.
 
-[共通のCG設定手順](getting-started.md#configure-cg-delegation-before-cg-entry)に従って`aidlc/takt-handoff/config.json`を用意する。追加するホスト設定は次のとおり。他の入力、ソース、検証スクリプトの指定も必要。
+Follow the [shared CG setup](getting-started.md#configure-cg-delegation-before-cg-entry) to create `aidlc/takt-handoff/config.json`. Add the host setting below along with the required inputs, sources, and verification scripts:
 
 ```json
 {
@@ -42,36 +44,36 @@ AI-DLCの配布設定はBedrockを既定にするため、通常のOpenAI認証�
 }
 ```
 
-`hostHarness`を省略すると従来どおり`claude`になる。ワーカーの`provider`からホストを推測しない。プラグインのホストと設定が一致しない場合、そのプラグインは委譲を実行しない。
+Omitting `hostHarness` selects `claude`. The integration does not infer the host from the worker provider. A plugin whose host differs from the configuration does not start delegation.
 
-プロジェクトから`codex`を起動し、`$aidlc`で通常のAI-DLCを進める。CGより前の必要な設計・承認はAI-DLCが担当する。
+Run `codex` in the project and use `$aidlc`. AI-DLC handles the required designs and approvals before CG.
 
-## フックと出力の扱い
+## Hooks and tool output
 
-- SessionStartでCG委譲の方針をホストへ通知する。
-- PreToolUseで、AI-DLCが付けるセッション識別用の前置きを正規化し、残った`next`／`continue`を検査する。任意のシェル連結は許可しない。
-- PostToolUseで、本家のCG応答・現在の状態・開始記録を照合して入力を固定する。公式CLIでparkしてTAKTを起動し、元のCG指示を委譲通知へ置き換える。
-- Codex CLI 0.154.0のBash出力は文字列で、stderrも混在する。本家の`aidlc-orchestrate:`診断行だけを除き、一意なJSON応答を読む。未知の混在出力や複数JSONは拒否する。
-- メタデータ付き出力で失敗・中断・未完了が明示されている場合は委譲しない。生の文字列には終了コードがないため、コマンドの識別とネイティブの状態・監査照合も必要になる。
+- SessionStart announces the CG delegation policy.
+- PreToolUse normalizes AI-DLC's session-binding prefix and inspects the remaining `next` / `continue` command. Arbitrary shell chaining is rejected.
+- PostToolUse verifies the native CG response, current state, and start record before freezing inputs. It parks AI-DLC through the official CLI, starts TAKT, and replaces the original CG directive with a handoff notice.
+- Codex CLI 0.154.0 returns Bash output as a string that may include stderr. The adapter strips only known `aidlc-orchestrate:` diagnostic lines and requires one unambiguous JSON response. Unknown mixed output or multiple JSON responses are rejected.
+- Metadata that indicates failure, interruption, or an unfinished command prevents delegation. A raw string has no exit code, so command recognition and native state/audit checks are also required.
 
-`continue: false`は元のツール結果を置き換えるが、Codexのターン終了を保証するものではない。委譲通知とpark状態を併用する。実機試験では通知後にターンが終了し、ホストによる実装の重複は起きなかった。
+`continue: false` replaces the tool result but does not guarantee the end of a Codex turn. The integration combines a handoff notice with parked state. In the live host trial, the turn ended after the notice and the host did not duplicate implementation.
 
-## 状態確認
+## Inspecting a run
 
 ```sh
-cat aidlc/takt-handoff/cg-runs/<run-id>/status.json
+cat aidlc/takt-handoff/code-generation-stage-runs/<run-id>/status.json
 ```
 
-結果は`aidlc/takt-handoff/cg-runs/<run-id>/`に保存する。`verified`はTAKTのCG検証完了を表す。元のAI-DLCへのコード取り込み、ネイティブCG完了、後続工程の自動再開は未実装。
+Results are stored under `aidlc/takt-handoff/code-generation-stage-runs/<run-id>/`. `verified` means TAKT completed CG validation. Importing code, completing native CG, and resuming later stages are not automated.
 
-## 検証
+## Verification
 
-[実機の記録](../experiments/codex-host/RESULTS.md)では、合成Intentを使い、実際のCodexホスト・AI-DLC本体のフック・TAKT mockワーカーでCG委譲を確認した。CGの実装を実モデルで完走したという意味ではない。
+The [live host record](../experiments/codex-host/RESULTS.md) uses a synthetic Intent, a real Codex host, native AI-DLC hooks, and a mock TAKT worker. It does not demonstrate a complete live-model CG execution.
 
-認証済み環境から再現する場合は、リポジトリで次を実行する。
+To reproduce it in an authenticated environment, run this from the repository:
 
 ```sh
 bun run experiment:codex-host
 ```
 
-このスクリプトは隔離したプロジェクトとCodex設定を作る。既存の認証ファイルを参照し、自分たちの試験で確認したフックを実行するため、その起動に限ってフック信頼の確認を省略する。通常利用では上記の信頼手順を使う。利用者の既存プロジェクトやグローバル設定は変更しない。
+The script creates an isolated project and Codex configuration. It references the existing authentication file and bypasses hook trust confirmation only for that test invocation, using the hooks already inspected for this experiment. Normal use follows the trust procedure above. Existing user projects and global configuration are not modified.

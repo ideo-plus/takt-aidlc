@@ -1,3 +1,4 @@
+import { taktLanguage } from '../takt/language';
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -61,6 +62,7 @@ export function phaseConfig(project: string) {
   const path = fileInside(project, "aidlc/takt-handoff/config.json");
   const c = readJson<PhaseConfig>(path);
   hostHarness(c.hostHarness);
+  taktLanguage(c.language);
   if (!c.enabled || delegationScope(c) !== "construction")
     throw new Error("Construction設定が無効です");
   if (
@@ -106,6 +108,10 @@ export function phaseConfig(project: string) {
     "phaseVerifyScript",
   ] as const)
     fileInside(project, c[key]);
+  for (const path of [c.workflow, c.constructionWorkflow]) {
+    const workflow = Bun.YAML.parse(readFileSync(fileInside(project, path), 'utf8')) as any;
+    if (!workflow.steps?.some((step: any) => step.name === 'supervise')) throw new Error(`superviseステップが必要です: ${path}`);
+  }
   return { c, configHash: digest(readFileSync(path)) };
 }
 export function filesBelow(project: string, dir: string): string[] {

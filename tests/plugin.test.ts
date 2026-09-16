@@ -57,7 +57,7 @@ test('フック失敗時はConstructionを続行しないよう明示する', as
   const result = invoke(f.project, 'PostToolUse', { ...f.event, tool_response: { stdout: '{"kind":"error"}' } });
   expect(result.status).toBe(2);
   expect(result.stderr).toContain('Constructionを進めず、このターンを終了');
-  expect(existsSync(join(f.project, 'aidlc/takt-handoff/phase-runs'))).toBe(false);
+  expect(existsSync(join(f.project, 'aidlc/takt-handoff/construction-phase-runs'))).toBe(false);
 });
 
 test('承認にechoやリダイレクトを付けたら実行前に形式修正を促す', async () => {
@@ -81,19 +81,19 @@ test('承認にechoやリダイレクトを付けたら実行前に形式修正�
 test('CG設定はInception承認で起動せず、CG入口から一度だけ自動実行する', async () => {
   const f = await cgFixture();
   expect(existsSync(join(moved, 'scripts/code-generation-gate.ts'))).toBe(true);
-  expect(existsSync(join(moved, 'takt/workflows/aidlc-code-generation-stage.yaml'))).toBe(true);
+  expect(existsSync(join(moved, 'takt/ja/workflows/aidlc-code-generation-stage.yaml'))).toBe(true);
   const denied = invoke(f.project, 'PreToolUse', { ...f.event, hook_event_name: 'PreToolUse', tool_input: { command: 'aidlc engine orchestrate next 2>&1; echo ok' } });
   expect(JSON.parse(denied.stdout).hookSpecificOutput.permissionDecision).toBe('deny');
   const inceptionResponse = invoke(f.project, 'PostToolUse', { ...f.event, tool_input: { command: 'aidlc engine orchestrate report --stage delivery-planning --result approved' }, tool_response: { stdout: '{"kind":"done"}' } });
   expect(inceptionResponse.stdout).toBe('');
-  expect(existsSync(join(f.project, 'aidlc/takt-handoff/cg-runs'))).toBe(false);
+  expect(existsSync(join(f.project, 'aidlc/takt-handoff/code-generation-stage-runs'))).toBe(false);
   for (let n = 0; n < 2; n++) {
     const started = invoke(f.project, 'PostToolUse', f.event);
     expect(started.status).toBe(0);
     expect(started.stdout).toContain('CG単体');
   }
   const { readdirSync } = await import('node:fs');
-  const runs = join(f.project, 'aidlc/takt-handoff/cg-runs');
+  const runs = join(f.project, 'aidlc/takt-handoff/code-generation-stage-runs');
   const ids = readdirSync(runs).filter(n => /^[a-f0-9]{24}$/.test(n)); expect(ids).toHaveLength(1);
   const path = join(runs, ids[0], 'status.json');
   const until = Date.now() + 25000;
@@ -113,7 +113,7 @@ test('Claude Codeの配布物もConstruction全体を委譲する',async()=>{
   expect(invoke(f.project,'SessionStart',{}).stdout).toContain('Construction全体');
   expect(invoke(f.project,'PreToolUse',{...f.event,hook_event_name:'PreToolUse'}).status).toBe(0);f.approve();
   const r=invoke(f.project,'PostToolUse',f.event);expect(r.status).toBe(0);expect(r.stdout).toContain('Construction全体');
-  const {readdirSync}=await import('node:fs');const root=join(f.project,'aidlc/takt-handoff/phase-runs');const id=readdirSync(root).find(n=>/^[a-f0-9]{24}$/.test(n))!;
+  const {readdirSync}=await import('node:fs');const root=join(f.project,'aidlc/takt-handoff/construction-phase-runs');const id=readdirSync(root).find(n=>/^[a-f0-9]{24}$/.test(n))!;
   let status:any;const deadline=Date.now()+20000;do{status=readJson(join(root,id,'status.json'));if(status.state==='blocked'||status.state==='failed')break;await Bun.sleep(100);}while(Date.now()<deadline);
   expect(status.state).toBe('blocked');
 },60000);

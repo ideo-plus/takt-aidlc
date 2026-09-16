@@ -1,14 +1,16 @@
-# 問い合わせと開発手順
+# Support and development
 
-## 問い合わせ
+[日本語](contributing.ja.md)
 
-不具合や機能提案は[GitHub Issues](https://github.com/ideo-plus/takt-aidlc/issues)へお願いします。使用したAI-DLC・TAKT・Bunのバージョン、実行した工程、期待した結果と実際の結果を添えてください。認証情報や秘密を含むログは掲載しないでください。
+## Support
 
-このリポジトリは`ideo-plus`で管理しています。アクセスできるメンテナーが変更をレビューします。
+Report bugs and feature requests through [GitHub Issues](https://github.com/ideo-plus/takt-aidlc/issues). Include the AI-DLC, TAKT, and Bun versions; the stage being executed; and the expected and actual behavior. Do not include credentials or secrets in logs.
 
-## 開発
+The repository is maintained by `ideo-plus`. Maintainers with repository access review contributions.
 
-[必要なツール](getting-started.md)を用意してから、次を実行します。
+## Development
+
+Install the [required tools](getting-started.md), then run:
 
 ```sh
 git clone https://github.com/ideo-plus/takt-aidlc.git
@@ -20,49 +22,51 @@ bun run test
 bun run build:marketplace
 ```
 
-`bun run test`はAI-DLC 2.8.2のテスト用ランタイムを`.experiments/cache/`に準備します。以前の手元の実験データは不要です。CGの合成入力は`experiments/code-generation/input/`に含めています。
+`bun run test` prepares the AI-DLC 2.8.2 test runtime under `.experiments/cache/`. It does not depend on earlier local experiments. Synthetic CG inputs are included under `experiments/code-generation/input/`.
 
-テストはmockプロバイダーを使い、モデルの認証情報なしで動きます。実際のTAKT実行エンジン、AI-DLCの状態・承認の照合、品質ゲートを通します。Codex CLIによるプラグインの隔離インストールも検証するため、Codex CLI 0.154.0を用意してください。
+Tests use a mock provider and need no model credentials. They exercise the actual TAKT engine, AI-DLC state/approval checks, and quality gates. Install Codex CLI 0.154.0 as well: tests verify plugin installation with an isolated Codex configuration.
 
-## 配布物の更新とローカル確認
+## Updating distributions and testing locally
 
-利用者はGitHubのマーケットプレイスからビルド済みプラグインを取得する。生成物もソースと同じ変更に含める。
+Users install prebuilt plugins through the GitHub marketplace. Include regenerated distributions in the same change as their source.
 
-| パス | 用途 |
+| Path | Purpose |
 |---|---|
-| `takt/workflows/` / `takt/facets/` | TAKTのYAML、ローカルファセット、組み込みペルソナの選択理由 |
-| `plugins/claude/` / `plugins/codex/takt-aidlc/` | マニフェストとフックの編集元 |
-| `dist/claude/` / `dist/codex/` | ローカル開発用の生成先（Git管理外） |
-| `plugins/takt-aidlc-claude/` / `plugins/takt-aidlc/` | 公開する生成物（Git管理対象、直接編集しない） |
-| `.claude-plugin/marketplace.json` / `.agents/plugins/marketplace.json` | Claude Code／Codexの公開マーケットプレイス |
+| `takt/{ja,en}/workflows/` / `takt/{ja,en}/facets/` | Workflow YAML, local facets, and the rationale for built-in personas |
+| `plugins/claude/` / `plugins/codex/` | Editable manifests and hooks |
+| `dist/claude/` / `dist/codex/` | Local build output, excluded from Git |
+| `plugins/takt-aidlc-claude/` / `plugins/takt-aidlc-codex/` | Committed distribution output; do not edit directly |
+| `.claude-plugin/marketplace.json` / `.agents/plugins/marketplace.json` | Public Claude Code / Codex marketplace definitions |
 
-ソース・フック・TAKTの定義を変更したら、編集元のプラグインのバージョンも更新し、`bun run build:marketplace`で再生成する。Codexの開発用キャッシュ更新にはplugin-creatorのcachebusterヘルパーを使える。`bun run check:marketplace`で、配布物が現在のソースから再現できることを確認する。
+When source, hooks, or TAKT definitions change, update the source plugin version and run `bun run build:marketplace`. The plugin-creator cachebuster helper can refresh the Codex development version. Use `bun run check:marketplace` to confirm that committed bundles match the source.
 
-ローカルで確認する場合だけ、次の方法を使う。公開版の同じプラグインと同時に読み込まない。
+Use the following only for local development. Do not load the published version of the same plugin at the same time.
 
 ```sh
-# Claude Code: 対象プロジェクトから起動
+# Claude Code: run from the target project.
 claude --plugin-dir /absolute/path/to/takt-aidlc/dist/claude
 
-# Codex: ローカル開発用マーケットプレイス
+# Codex: register the local development marketplace.
 codex plugin marketplace add /absolute/path/to/takt-aidlc/dist/codex
 codex plugin add takt-aidlc@takt-aidlc-local
 ```
 
-mainにマージされると、READMEのHTTPSインストール手順から取得できる。公開定義はビルド済みファイルだけを参照し、利用者の環境ではビルドしない。
+Once merged into main, the changes are available through the README's HTTPS installation commands. Marketplace entries reference prebuilt files; users do not build the plugin.
 
 ## CI
 
-[CI定義](../.github/workflows/ci.yml)は、レビュー用の変更とmainへの更新で起動します。Ubuntu上でツールのバージョンを固定し、型検査、テスト、プラグインビルド、Claude Codeのプラグイン検証を行います。モデルは呼びません。配布物とソースの一致、隔離した設定で両CLIからインストールできることも検証します。
+The [CI workflow](../.github/workflows/ci.yml) runs for pull requests and pushes to main. It pins tool versions on Ubuntu and checks types, tests, builds, Claude Code plugin validity, source/bundle consistency, and installation through both CLIs in isolated settings. It does not call models.
 
-実モデルの実験は手動で明示的に実行します。
+Select live experiments explicitly:
 
 ```sh
 bun run experiment:cg -- --live --provider codex --model gpt-5.6-luna --reasoning-effort max
 ```
 
-結果を報告するときは、通常のAI-DLC承認を通した試験か、合成したCG入口とIntentを使ったWorkflow試験かを区別してください。失敗や手動復旧も、成功した実行とは別に記録します。
+When reporting results, distinguish a normal native AI-DLC approval journey from a workflow test using synthetic CG entry and Intent/design inputs. Record failures and manual recovery separately from successful runs.
 
-## 変更の説明
+## Describing changes
 
-コミットメッセージは英語のConventional Commits形式にします。レビュー用の説明は日本語で、変更した動作、検証方法、未確認の範囲をまとめてください。
+Use English Conventional Commits messages. Write pull request descriptions in Japanese, covering behavior changes, validation, and unverified scope.
+
+Keep English and Japanese versions together. TAKT definitions use matching paths under `takt/en/{facets,workflows}/` and `takt/ja/{facets,workflows}/`; Markdown filenames have no locale suffix there. Guides, experiment inputs, and records elsewhere use English `.md` and Japanese `.ja.md` pairs. Update both versions and their links together. Each workflow references its own language’s facets. Keep workflow step IDs, transitions, and report schemas identical across languages. Experiment helpers copy Japanese inputs to native AI-DLC filenames. Regenerate distribution copies after changing bundled Markdown.

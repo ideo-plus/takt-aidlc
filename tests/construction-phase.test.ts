@@ -10,7 +10,7 @@ import {
 import { readJson, writeJson } from "../src/handoff/io";
 
 test("Constructionは依存順に設計・共通CGを実行し、全体検証とCIまで完了する", async () => {
-  const f = await phaseFixture({ twoUnits: true, repairs: true });
+  const f = await phaseFixture({ twoUnits: true, repairs: true, language: "en" });
   await capturePhase(f.project, f.event);
   f.approve();
   const h = (await preparePhase(f.project, f.event))!;
@@ -24,7 +24,7 @@ test("Constructionは依存順に設計・共通CGを実行し、全体検証と
       ?.filter((s) => s.stage === "code-generation")
       .map((s) => s.unit),
   ).toEqual(["answer-value-update", "answer-consumer"]);
-  expect(result.steps?.at(-1)?.stage).toBe("ci-pipeline");
+  expect(result.steps?.at(-1)?.stage).toBe("supervise");
   expect(
     readFileSync(join(result.workspace!, "src/consumer.ts"), "utf8"),
   ).toContain("from './value'");
@@ -40,6 +40,13 @@ test("Constructionは依存順に設計・共通CGを実行し、全体検証と
           r.event === "PLAN_APPROVAL_RECORDED" || r.event === "STAGE_STARTED",
       ),
   ).toBe(false);
+  for (const step of result.steps!) {
+    const config = Bun.YAML.parse(readFileSync(join(step.attempt, "takt-config/config.yaml"), "utf8")) as any;
+    expect(config.language).toBe("en");
+    const sourceBundle = step.stage === "code-generation" ? "context/plan.md" : step.stage === "supervise" ? "supervision-sources.md" : "sources.md";
+    const bundle = readFileSync(join(step.attempt, "control", sourceBundle), "utf8");
+    expect(bundle).toStartWith(step.stage === "code-generation" ? "# AI-DLC CG HOTL execution contract" : step.stage === "supervise" ? "# AI-DLC requirement validation" : "# Construction HOTL execution contract");
+  }
   const first = result.steps![0];
   const ledger = readJson<any[]>(
     join(first.attempt, "control/construction-ledger.json"),
@@ -70,7 +77,7 @@ test("Inception承認がない場合と最終の全体テスト失敗を成功�
   const h = (await preparePhase(f.project, f.event))!;
   const result = await executePhase(f.project, h.id);
   expect(result.state).toBe("failed");
-  expect(result.steps?.at(-1)?.stage).toBe("ci-pipeline");
+  expect(result.steps?.at(-1)?.stage).toBe("supervise");
   expect(readJson<any>(join(h.run, "attempts/1/final-test.json")).code).toBe(1);
 }, 120000);
 
@@ -79,6 +86,8 @@ test("不正なscope・Unitの不正な依存・park後の入力変更を拒否�
   const path = join(f.project, "aidlc/takt-handoff/config.json");
   writeJson(path, { ...f.config, delegationScope: "unknown" });
   await expect(capturePhase(f.project, f.event)).rejects.toThrow("delegationScope");
+  writeJson(path, { ...f.config, language: 'fr' });
+  await expect(capturePhase(f.project, f.event)).rejects.toThrow("language");
   writeJson(path, f.config);
   const dependency = join(
     f.project,

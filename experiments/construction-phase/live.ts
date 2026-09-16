@@ -16,7 +16,7 @@ export async function livePhaseFixture() {
     put(
       join(f.project, record, "inception", target),
       readFileSync(
-        join(repo, "experiments/construction-phase/live-input", source),
+        join(repo, "experiments/construction-phase/live-input", source.replace(/\.md$/, ".ja.md")),
         "utf8",
       ),
     );

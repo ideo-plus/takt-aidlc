@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cleanEnvironment, command, digest, fileInside, readJson, requireSuccess, snapshot, unchanged, writeJson, type Snapshot } from '../handoff/io';
 import { collectCgContext, type CgContext } from './context';
-import adaptation from '../../takt/facets/policies/code-generation-hotl.md' with { type: 'text' };
+import { runtimePolicies, taktLanguage, type TaktLanguage } from '../takt/language';
 import { workflowFiles, materializeWorkflow } from '../takt/workflow';
 import { prepareProvider } from '../handoff/provider';
 import { sources } from './code-generation-gate';
@@ -12,6 +12,7 @@ import { hostHarness, harnessDirectory, delegationScope, type HostHarness } from
 
 export type CgConfig = {
   hostHarness?: HostHarness;
+  language?: TaktLanguage;
   enabled: boolean; delegationScope: 'code-generation'; provider: 'mock' | 'claude' | 'codex';
   artifacts: string[]; sources: string[]; workflow: string; buildScript: string; verifyScript: string;
   sensorScripts: Partial<Record<'linter' | 'type-check', string>>;
@@ -33,6 +34,7 @@ export function loadConfig(project: string) {
   const configPath = fileInside(project, 'aidlc/takt-handoff/config.json');
   const c = readJson<CgConfig>(configPath);
   hostHarness(c.hostHarness);
+  taktLanguage(c.language);
   if (!c.enabled || delegationScope(c) !== 'code-generation' || !['claude', 'codex', 'mock'].includes(c.provider)) throw new Error('CG設定が無効です');
   if (!Number.isInteger(c.timeoutMs) || c.timeoutMs < 1000 || c.timeoutMs > 3600000) throw new Error('CGの時間上限は1秒〜1時間です');
   if (c.model !== undefined && (typeof c.model !== 'string' || !c.model.trim())) throw new Error('modelが不正です');
@@ -40,6 +42,8 @@ export function loadConfig(project: string) {
   if (!Array.isArray(c.artifacts) || !c.artifacts.length || !Array.isArray(c.sources) || !c.sources.length) throw new Error('CGの入力とソースを指定してください');
   for (const p of c.sources) if (p.split('/').some(name => name === 'node_modules' || name === '.venv') || /^(?:node_modules|\.venv|\.git|\.claude|\.codex|\.agents|\.takt|aidlc|input|cg)(?:\/|$)/.test(p)) throw new Error(`制御領域をソースにできません: ${p}`);
   for (const key of ['workflow', 'buildScript', 'verifyScript'] as const) fileInside(project, c[key]);
+  const workflow = Bun.YAML.parse(readFileSync(fileInside(project, c.workflow), 'utf8')) as any;
+  if (!workflow.steps?.some((step: any) => step.name === 'supervise')) throw new Error('CGのsuperviseステップが必要です');
   for (const id of ['linter', 'type-check'] as const) {
     if (c.sensorScripts?.[id]) fileInside(project, c.sensorScripts[id]!);
     else if (!c.sensorExceptions?.[id]?.reason || !c.sensorExceptions[id]?.source) throw new Error(`${id}の検査スクリプト、または根拠付きの適用外設定が必要です`);
@@ -84,7 +88,7 @@ export async function prepareCg(project: string, directive: any) {
   if (!start) throw new Error('現在のCG開始記録がありません');
   const entryHash = digest(start.block.trim());
   const id = digest(JSON.stringify({ entryHash, unit: cg.unit, files, configHash })).slice(0, 24);
-  const base = join(cgStorage(project), 'cg-runs'); mkdirSync(base, { recursive: true });
+  const base = join(cgStorage(project), 'code-generation-stage-runs'); mkdirSync(base, { recursive: true });
   const run = join(base, id); mkdirSync(run, { recursive: true });
   const lock = join(base, 'prepare.lock'); const fd = openSync(lock, 'wx'); closeSync(fd);
   try {
@@ -116,7 +120,7 @@ export async function prepareCg(project: string, directive: any) {
 
 export async function executeCg(project: string, id: string) {
   if (!/^[a-f0-9]{24}$/.test(id)) throw new Error('不正なCG run IDです');
-  const run = join(cgStorage(project), 'cg-runs', id);
+  const run = join(cgStorage(project), 'code-generation-stage-runs', id);
   const m = readJson<CgManifest>(join(run, 'manifest.json'));
   const statusPath = join(run, 'status.json');
   const status = readJson<CgStatus>(statusPath);
@@ -164,6 +168,7 @@ export async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOrigi
     const gate = join(control, 'code-generation-gate.ts'); copyFileSync(join(import.meta.dir, 'code-generation-gate.ts'), gate);
     const frozen = (path: string) => fileInside(snapshotRoot, path);
     const cgConfig = m.config;
+    const { codeGeneration: adaptation, supervision: supervisionContract } = runtimePolicies(cgConfig.language);
     writeJson(join(control, 'context.json'), {
       workspace, inputs, cg: m.cg, initialSources: sources(workspace),
       buildScript: frozen(cgConfig.buildScript), buildHash: m.files[cgConfig.buildScript],
@@ -172,14 +177,15 @@ export async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOrigi
       sensorExceptions: cgConfig.sensorExceptions ?? {},
     });
     const { workflow, controlFiles: facetFiles } = materializeWorkflow(snapshotRoot, cgConfig.workflow, control);
-    const roleFor: Record<string, string> = { plan: 'plan', 'plan-review': 'review', implement: 'implement', fix: 'implement', 'code-review': 'review', finish: 'report' };
+    const roleFor: Record<string, string> = { plan: 'plan', 'plan-review': 'review', implement: 'implement', fix: 'implement', 'code-review': 'review', supervise: 'supervise', finish: 'report' };
     const injection: Record<string, unknown> = {};
     const bundleFiles: string[] = [];
     workflow.instructions ??= {};
     for (const [role, rolePaths] of Object.entries(m.cg.roles)) {
       const paths = [...new Set(rolePaths)];
       const originals = paths.map(path => `\n## Original source: ${path}\nCopy: input/project/${path}\nSHA256: ${m.files[path]}\n\n${readFileSync(frozen(path), 'utf8')}`).join('\n');
-      const content = `${adaptation}\n${originals}\n## Frozen Testing Contract\n${m.cg.testingContractText}\n${adaptation}`;
+      const contract = role === 'supervise' ? supervisionContract : adaptation;
+      const content = `${contract}\n${originals}\n## Frozen Testing Contract\n${m.cg.testingContractText}\n${contract}`;
       const bundle = `context/${role}.md`; mkdirSync(join(control, 'context'), { recursive: true });
       writeFileSync(join(control, bundle), content); bundleFiles.push(bundle);
       workflow.instructions[`code-generation-source-${role}`] = bundle;
@@ -187,7 +193,7 @@ export async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOrigi
     for (const step of workflow.steps) {
       const role = roleFor[step.name]; if (!role) throw new Error(`CG外の工程: ${step.name}`);
       const paths = [...new Set(m.cg.roles[role])];
-      step.instruction = [`code-generation-source-${role}`, adaptation, ...[step.instruction].flat()];
+      step.instruction = [`code-generation-source-${role}`, role === 'supervise' ? supervisionContract : adaptation, ...[step.instruction].flat()];
       injection[step.name] = { sources: paths.map(path => ({ path, sha256: m.files[path] })), sourceBundleHash: digest(readFileSync(join(control, `context/${role}.md`))) };
     }
     writeFileSync(join(control, 'workflow.yaml'), Bun.YAML.stringify(workflow));
@@ -201,7 +207,7 @@ export async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOrigi
     const ctx = readJson<any>(join(control, 'context.json')); ctx.initialSources = sources(workspace); writeJson(join(control, 'context.json'), ctx);
     protectedControl['context.json'] = digest(readFileSync(join(control, 'context.json')));
     for (const args of [['init', '-q'], ['config', 'core.hooksPath', '/dev/null'], ['add', '.'], ['-c', 'user.name=TAKT CG', '-c', 'user.email=cg@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', 'chore: seed CG workspace']]) requireSuccess(await command(['git', ...args], workspace, env, 10000));
-    const result = await command(['takt', '--pipeline', '--skip-git', '--provider', cgConfig.provider, '--workflow', join(control, 'workflow.yaml'), '--task', 'AI-DLCのCG単体をHOTLで実行。inputのIntent・設計と、注入された本家CG/知識/センサー定義に従い、ビルド・テスト成功まで完了しないこと。'], workspace, env, cgConfig.timeoutMs, {outputPrefix:join(attempt,'takt-output')});
+    const result = await command(['takt', '--pipeline', '--skip-git', '--provider', cgConfig.provider, '--workflow', join(control, 'workflow.yaml'), '--task', cgConfig.language === 'en' ? 'Execute standalone AI-DLC CG in HOTL mode. Follow the input Intent and designs and injected native CG, knowledge, and sensor definitions. Do not complete until builds and tests pass.' : 'AI-DLCのCG単体をHOTLで実行。inputのIntent・設計と、注入された本家CG/知識/センサー定義に従い、ビルド・テスト成功まで完了しないこと。'], workspace, env, cgConfig.timeoutMs, {outputPrefix:join(attempt,'takt-output')});
     writeJson(join(attempt, 'takt.json'), result);
     verifyOriginal(); unchanged(workspace, inputs); unchanged(control, protectedControl);
     const evidence = await command([process.execPath, gate, 'result'], workspace, env, 10000); writeJson(join(attempt, 'cg-result.json'), evidence);

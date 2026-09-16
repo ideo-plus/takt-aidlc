@@ -1,47 +1,51 @@
-# Constructionワークフローの検証結果
+# Prototype Construction workflow results
 
-## 結論
+[日本語](RESULTS.ja.md)
 
-2026年9月15日、設計・設計レビュー・実装とテスト・コードレビュー・完了報告を含むWorkflowが、TAKT 0.65.0と実際のClaudeプロバイダーで完了した。判定は**VERIFIED**。[機械可読の結果](results/2026-09-15.json)にレポートと検証結果を保存した。
+> Historical record. The prototype execution scripts have been removed. Commands and paths below describe the recorded experiment, not the current setup.
 
-| 項目 | 結果 |
+## Conclusion
+
+On September 15, 2026, a workflow covering design, design review, implementation/tests, code review, and reporting completed with TAKT 0.65.0 and the real Claude provider. The verdict was **VERIFIED**. Reports and checks are recorded in the [machine-readable results](results/2026-09-15.json).
+
+| Item | Result |
 |---|---|
-| Workflowの実行 | 成功、約5分20秒 |
-| 主工程のセッション | 5種類。設計・レビュー・実装・報告を分離 |
-| 設計レビュー | approved |
-| コードレビュー | approved |
-| アプリの検証 | 3テスト成功、行カバレッジ100%（1/1） |
-| 最終的なソース | `export const answer = 42;` |
-| 元のソース | 41のまま |
-| 元の入力・固定スナップショット・park後の状態 | ハッシュ一致、変更なし |
-| 自動マージ・デプロイ | 実施していない |
+| Workflow execution | Successful, about 5m 20s |
+| Main role sessions | Five; design, review, implementation, and reporting separated |
+| Design review | approved |
+| Code review | approved |
+| Application validation | Three tests passed; line coverage 100% (1/1) |
+| Final source | `export const answer = 42;` |
+| Original source | Remained 41 |
+| Original inputs, frozen snapshot, parked state | Hashes matched; unchanged |
+| Automatic merge / deployment | Not performed |
 
-入力は、以前の実AI-DLCセッションで人が承認したInception文書のコピーである。今回の試験では、引き継ぎ境界のAI-DLC状態・承認イベントは合成した。通常の最終承認からの自動起動は、[別の実セッション](../native-session/STATUS.md)で確認している。
+Inputs were copies of Inception documents approved by a human in an earlier native AI-DLC session. This trial used synthetic state/approval events for its handoff boundary. Automatic startup from ordinary final approval was verified in a [separate native session](../native-session/STATUS.md).
 
-## 差し戻しと停止の検証
+## Revision and stopping behavior
 
-mockプロバイダーで応答を固定し、TAKTの実行エンジンと検証コマンドを通して次を確認した。
+Fixed mock responses, the actual TAKT engine, and verification commands checked that:
 
-- 設計レビューの指摘で設計へ戻り、再レビュー後に実装へ進む。
-- テスト失敗で実装へ戻り、実際のテストが成功してからレビューへ進む。
-- コードレビューの指摘で修正へ進み、再テスト・再レビューを通る。
-- 設計時・実装時に人間の判断が必要なら、質問を保存して`needs_input`で停止する。
-- `needs_input`を通常の再試行で進めない。
-- 工程数の上限に達しても成功扱いしない。
-- レビュー後のコード変更を、古い検証結果では完了扱いしない。
-- 設計担当がレポート外へファイルを作った場合、実装へ進ませない。
-- 配布物を別ディレクトリへ移しても、同梱のWorkflowと品質ゲートで実行できる。
+- Design findings return to design and require re-review before implementation.
+- Test failures return to implementation; actual tests must pass before review.
+- Code findings trigger fixes, retests, and re-review.
+- Questions requiring human judgment during design or implementation are saved and stop as `needs_input`.
+- Normal retry cannot advance `needs_input`.
+- Reaching the step limit is not success.
+- Changed code after review cannot reuse old validation results.
+- Files written outside the design report prevent implementation.
+- A relocated distribution can execute using its bundled workflow and gates.
 
-連携全体で25件のテスト、123アサーションが成功した。AI-DLCのテスト用ランタイムがない状態からの準備も含めて確認している。
+The integration's 25 tests and 123 assertions passed, including preparation without an existing AI-DLC test runtime.
 
-## 実モデルで見つかった問題と対応
+## Issues found with the live model
 
-最初の試行では、設計担当が`.kiro/specs/`へ追加の設計文書を書き、設計工程の変更検知に拒否された。設計とレビューはファイルを直接作らず、TAKTのレポート出力を使うと明示し、不要な`.kiro/`への書き込みも制限した。
+The first attempt wrote extra design documents into `.kiro/specs/` and was rejected by design-stage change detection. Instructions were updated so designers/reviewers return reports instead of writing files, and unnecessary `.kiro/` writes were restricted.
 
-次の試行では、設計レビューがTypeScriptのリテラル型の説明の誤りを指摘し、設計を差し戻した。修正後に実装とテストまでは進んだが、コードレビュー中に5分の上限へ達したため、全体は失敗として記録した。Constructionの時間上限を設定可能にし、実験では10分を指定した。
+The next attempt's design reviewer found an incorrect description of TypeScript literal types and requested revision. After correction, implementation and tests ran, but code review hit the five-minute limit. The entire attempt was recorded as failed. Construction timeout became configurable, and the experiment used ten minutes.
 
-その後の試行が上記の成功結果である。失敗した試行の情報も結果JSONに残しており、途中まで進んだ試行を成功に数えてはいない。
+A later attempt produced the successful result above. Failed attempts remain in the result JSON; partial progress was not counted as success.
 
-## この試験では分からないこと
+## Limits of this trial
 
-対象は単一の定数変更と3件のテストに限られる。多くのUnitを持つアプリ、外部サービス、CI生成、インフラ構築、Operationへの復帰は試していない。実モデルの成功試行ではコード修正ループは不要で、修正の分岐は決定的なmockテストで確認した。一般的なコード品質がどの程度向上するかを比較測定した試験ではない。
+The subject was one constant change and three tests. Multi-unit applications, external services, CI generation, infrastructure provisioning, and return to Operation were not tested. The successful live attempt did not need a code-fix loop; correction branches were checked with deterministic mocks. This was not a comparative measurement of general code-quality improvement.

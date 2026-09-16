@@ -42,5 +42,5 @@ test('承認中の入力・設定変更と中断応答ではparkしない', asyn
   writeFileSync(join(f.project, 'src/value.ts'), 'export const answer = 99;\n');
   await expect(preparePhase(f.project, f.event)).rejects.toThrow('入力が変化');
   expect(readFileSync(f.state, 'utf8')).toBe(state);
-  expect(existsSync(join(f.project, 'aidlc/takt-handoff/phase-runs'))).toBe(false);
+  expect(existsSync(join(f.project, 'aidlc/takt-handoff/construction-phase-runs'))).toBe(false);
 });

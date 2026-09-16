@@ -29,7 +29,7 @@ console.log(JSON.stringify({ project: f.project, base }));
 const prompt = 'これは合成Intentを使うCG入口の接続試験です。まず aidlc engine orchestrate next を単独のコマンドで実行してください。load-steeringなら規約を読み、返されたcontinue_tokenで aidlc engine orchestrate continue <token> を単独実行してください。TAKT委譲のフック通知が来たら、設計・実装・承認操作をせず、委譲した旨だけ返してターンを終了してください。人の承認を作らず、他のエージェントを起動せず、入力ファイルを変更しないでください。';
 const host = await command(['codex', 'exec', '--dangerously-bypass-hook-trust', '-C', f.project, '-s', 'workspace-write', '--json', prompt], f.project, env, 180000);
 writeJson(join(base, 'host.json'), host);
-const runs = join(f.project, 'aidlc/takt-handoff/cg-runs');
+const runs = join(f.project, 'aidlc/takt-handoff/code-generation-stage-runs');
 const ids = existsSync(runs) ? readdirSync(runs).filter(n => /^[a-f0-9]{24}$/.test(n)) : [];
 let status: any;
 if (ids.length === 1) {

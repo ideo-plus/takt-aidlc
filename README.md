@@ -26,7 +26,7 @@ codex plugin marketplace add https://github.com/ideo-plus/takt-aidlc.git
 codex plugin add takt-aidlc@takt-aidlc
 ```
 
-Start a new host session after installation. For Codex, [enable and trust hooks](docs/codex-host.md#インストール) before use. If you previously used the development plugin, [remove the duplicate registration](docs/getting-started.md#updating-and-migrating) first.
+Start a new host session after installation. For Codex, [enable and trust hooks](docs/codex-host.md#installation) before use. If you previously used the development plugin, [remove the duplicate registration](docs/getting-started.md#updating-and-migrating) first.
 
 ## Use in your project
 
@@ -37,13 +37,15 @@ Start a new host session after installation. For Codex, [enable and trust hooks]
 | Delegation scope | When TAKT starts | Setup |
 |---|---|---|
 | `code-generation` | At CG entry, after the required designs | [CG setup](docs/getting-started.md#configure-cg-delegation-before-cg-entry) |
-| `construction` | After final Inception approval; runs design through full verification | [Construction setup](docs/construction-phase.md#設定) |
+| `construction` | After final Inception approval; runs design through full verification | [Construction setup](docs/construction-phase.md#configuration) |
 
 **Installation alone does not enable delegation.** Configure the project before the selected boundary. `hostHarness` selects the AI-DLC host; `provider` independently selects the TAKT worker (Claude or Codex).
 
+Both modes include an independent `supervise` step for final requirement fulfillment; Construction also checks the complete set of units before completion.
+
 Both modes use HOTL (human-on-the-loop): automated technical reviews and bounded corrections, without interactive approvals inside TAKT. Build, tests, and applicable sensors must pass before a run becomes `verified`; unresolved input conflicts become `blocked`.
 
-Inspect `aidlc/takt-handoff/cg-runs/<run-id>/status.json` or `phase-runs/<run-id>/status.json`. The original project remains parked. **Generated code is not automatically merged, and native AI-DLC completion/resumption is not automated.**
+Inspect `aidlc/takt-handoff/code-generation-stage-runs/<run-id>/status.json` or `construction-phase-runs/<run-id>/status.json`. The original project remains parked. **Generated code is not automatically merged, and native AI-DLC completion/resumption is not automated.**
 
 ## Compatibility and verification
 
@@ -60,8 +62,8 @@ The current profile supports `test-after` and a single AI-DLC audit shard. Const
 - [CG-only / Construction delegation modes](docs/delegation-modes.md)
 - [Claude Code host](docs/claude-plugin.md) · [Codex host](docs/codex-host.md)
 - [TAKT workflows and facets](takt/README.md)
-- [CG behavior and sensors](docs/code-generation.md) · [Construction behavior](docs/construction-phase.md)
-- [Support and maintainers](docs/contributing.md#問い合わせ)
+- [CG behavior and sensors](docs/code-generation-stage.md) · [Construction behavior](docs/construction-phase.md)
+- [Support and maintainers](docs/contributing.md#support)
 
 ## Development
 

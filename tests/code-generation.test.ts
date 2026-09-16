@@ -2,9 +2,9 @@ import { expect, test } from 'bun:test';
 import { existsSync, readFileSync, readdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { cgFixture } from '../experiments/code-generation/fixture';
-import { executeCg, isCgEntryCommand, prepareCg } from '../src/code-generation/runner';
+import { loadConfig, executeCg, isCgEntryCommand, prepareCg } from '../src/code-generation/runner';
 import { collectCgContext } from '../src/code-generation/context';
-import { command, cleanEnvironment, readJson } from '../src/handoff/io';
+import { command, cleanEnvironment, readJson, writeJson } from '../src/handoff/io';
 import { put } from './handoff-fixture';
 
 test('CG原文を展開し、ビルド失敗・型検査不合格を修正してから完了する', async () => {
@@ -66,6 +66,11 @@ test('本家のセンサー定義の欠落と入力変化を拒否する', async
 
 test('未対応のTesting Contractをtest-afterへ勝手に変更しない', async () => {
   const f = await cgFixture();
+  const configPath = join(f.project, 'aidlc/takt-handoff/config.json');
+  writeJson(configPath, { ...f.config, language: 'fr' });
+  expect(() => loadConfig(f.project)).toThrow('language');
+  writeJson(configPath, { ...f.config, language: undefined });
+  expect(loadConfig(f.project).c.language).toBeUndefined();
   put(join(f.project, 'aidlc/spaces/default/memory/team.md'), '# Team\n\n## Testing Posture\n- **Methodology**: TDD\n- **Ordering**: Red, Green, Refactor.\n');
   expect(() => collectCgContext(f.project, f.config.artifacts, f.unit)).toThrow();
   expect(isCgEntryCommand('aidlc engine orchestrate next --stage code-generation')).toBe(true);

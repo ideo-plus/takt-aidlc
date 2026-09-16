@@ -1,0 +1,8 @@
+Use input/construction-context.json and the injected original sources to return artifacts for the current stage.
+Include every required file in artifacts, with at least two H2 headings per Markdown file. If traceability.json is required, include stage, upstream_ids, and coverage[{id,status:"OK",target:"target required by the native sensor"}]. For Functional Design, target existing BRx.y IDs in rules.md and resolve orphan derived rules. Use requirementIds from input/construction-context.json. NFR Requirements must introduce detailed NFRx.y IDs in its requirements document, and NFR Design and later stages must carry them into the corresponding text.
+List all upstreamArtifacts in upstream and show how native stage rules are applied in appliedRules.
+Do not edit files directly. Only CI may place contents for each pipelinePaths file in writes; writes must be empty for other stages.
+Do not guess contradictory requirements, conventions, or undecided matters. Return blocked with a reason when they cannot be resolved.
+For Build and Test, read every unit's CG artifacts and verification results and describe quality targets, checking methods, measured evidence, and cross-unit requirement coverage. If checks have not run, describe the gate's plan and expected results without claiming success.
+On revision, address report findings and any failures in input/phase-checks.json.
+If a measured Build and Test failure requires application changes, return verdict repair_required, the owning unit from input units as repairUnit, and failure evidence as reason. The controller returns to that unit's shared CG once.

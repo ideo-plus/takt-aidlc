@@ -1,41 +1,43 @@
-# CodexホストのCG委譲試験
+# Codex host CG delegation trial
 
-## 結果
+[日本語](RESULTS.ja.md)
 
-**VERIFIED：実際のCodexホストからAI-DLCのCG入口を通り、TAKT mockによるCG検証まで成功した。**
+## Result
 
-- Codex CLI 0.154.0、ホストモデル`gpt-5.6-luna`、推論強度`max`。
-- AI-DLC 2.8.2、TAKT 0.65.0、Bun 1.3.13。
-- `dist/codex`をローカルマーケットプレイスとして登録し、実際のCLIでプラグインをインストールした。
-- 本家のCodexフックを残したプロジェクトで、ホストが`next`→`continue`の2コマンドを実行した。
-- プラグインがCG入口を検出し、公式CLIでparkしてTAKTを起動した。
-- TAKTの実行は1回で`verified`。ビルド・5テスト・型検査・要求対応の検証を通り、最終のビルドとテストも終了コード0だった。
-- 元のコードは`answer = 41`、固定した入力も保持された。ホストは委譲通知後にターンを終了し、実装を重複して進めなかった。
+**VERIFIED: a real Codex host entered native AI-DLC CG and completed CG validation through a mock TAKT worker.**
 
-[機械可読の結果](results/2026-09-15.json)に到達範囲と失敗履歴を記録した。
+- Codex CLI 0.154.0, host model `gpt-5.6-luna`, reasoning effort `max`.
+- AI-DLC 2.8.2, TAKT 0.65.0, Bun 1.3.13.
+- Registered `dist/codex` as a local marketplace and installed the plugin through the real CLI.
+- With native Codex hooks retained, the host executed `next` followed by `continue`.
+- The plugin detected CG entry, parked through the official CLI, and launched TAKT.
+- Exactly one TAKT run reached `verified`. Build, five tests, type checking, requirement mapping, and final build/test all passed.
+- Original code remained `answer = 41`, frozen inputs were preserved, and the host ended its turn after the handoff notice without duplicate implementation.
 
-## 試験の境界
+The [machine-readable record](results/2026-09-15.json) includes reached scope and failed attempts.
 
-Intent・前工程の入力とCG入口の状態は合成データ。人間の承認記録を作る試験ではない。TAKTワーカーの応答もmockであり、実モデルのCG全工程完走を示すものではない。一方、Codexホスト、プラグインの読み込み、本家AI-DLCフック、`next`／`continue`／`park`、TAKTエンジン、ビルドとテストは実際に実行した。
+## Trial boundary
 
-実験専用のCodex設定領域を用意し、既存の認証ファイルを参照した。確認したフックを自動試験で使うため、起動時だけフック信頼の確認を省略している。通常の導入ではフックを確認して信頼する必要がある。既存プロジェクト、ユーザーのグローバル設定、個人マーケットプレイスは変更していない。
+The Intent, earlier-stage inputs, and CG-entry state were synthetic. This was not a test that created human approval records. TAKT worker responses were also mocked, so this does not establish a complete live-model CG run. The Codex host, plugin loading, native AI-DLC hooks, `next` / `continue` / `park`, TAKT engine, build, and tests were executed for real.
 
-## 実機で見つけた違い
+The trial used an isolated Codex configuration referencing an existing authentication file. Hook trust confirmation was bypassed only for this test invocation of the inspected hooks. Normal installation requires review and trust. Existing projects, global settings, and the personal marketplace were not modified.
 
-最初の試行はTAKT起動前に停止した。CodexのBash結果には本家CLIの診断行とJSONが一緒に入るため、全体をJSONとして読む処理が失敗した。
+## Differences found on the real host
 
-本家の`aidlc-orchestrate:`診断行だけを許可し、JSONが1つに定まる場合だけ処理するよう修正した。未知の出力や複数のJSONを勝手に読み飛ばす処理は入れていない。修正後に新しい隔離プロジェクトで再試行し、上記の成功を確認した。
+The first attempt stopped before TAKT started: native CLI diagnostics and JSON shared the Bash output, so parsing the entire output as JSON failed.
 
-別の短い実機試験では、SessionStart・PreToolUse・PostToolUseのイベント形を取得し、Bashの`tool_response`が文字列であることを確認した。AI-DLCのセッション前置きも、実際に書き換えられたコマンドで確認した。
+The adapter was changed to allow only known `aidlc-orchestrate:` diagnostic lines and one unambiguous JSON response. It does not silently skip arbitrary output or multiple JSON objects. A retry in a new isolated project produced the successful result above.
 
-## 自動テストと再現
+Another short live test captured SessionStart, PreToolUse, and PostToolUse event shapes and confirmed that Bash `tool_response` is a string. The AI-DLC session prefix was checked against an actually rewritten command.
 
-CIでは実モデルを呼ばず、Codex CLIによるプラグインのインストール、配布物の移動、Codex用原文の注入、重複起動防止、ビルド・型検査失敗からの修正、誤った前置き・複合コマンド・別プロジェクト・未完了出力の拒否を確認する。
+## Automated tests and reproduction
 
-実機試験の再現にはCodexの認証が必要。
+CI does not call models. It checks CLI plugin installation, relocated distributions, Codex-specific source injection, duplicate prevention, build/type-check corrections, and rejection of invalid prefixes, compound commands, other projects, and unfinished output.
+
+The live host trial requires Codex authentication:
 
 ```sh
 bun run experiment:codex-host
 ```
 
-[導入手順](../../docs/codex-host.md)と、別途実施した[Luna MaxワーカーのCG試験](../code-generation/RESULTS.md)も参照。後者の30分タイムアウトは、この接続試験の成功によって解消した扱いにはしない。
+See [setup](../../docs/codex-host.md) and the separate [Luna Max worker trial](../code-generation/RESULTS.md). The latter's 30-minute timeout was not resolved by this successful host-connection test.

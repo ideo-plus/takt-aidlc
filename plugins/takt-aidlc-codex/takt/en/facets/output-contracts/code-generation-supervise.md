@@ -1,0 +1,3 @@
+Return JSON only; write prose in English.
+{"verdict":"approved or changes_requested or blocked","reason":"reason for stopping","intentAssessment":"assessment of the complete Intent against current code","requirements":[{"id":"requirement ID from input/context.json","status":"met or unmet or undetermined","evidence":[{"path":"relative path to existing source or tests","reason":"evidence for the acceptance condition"}]}],"findings":[{"id":"stable finding ID","requirementIds":["requirement ID"],"reason":"evidence of the gap","fix":"repair target and acceptance condition"}]}
+List every requirement ID once. approved requires all rows met and no findings. changes_requested requires at least one finding. For blocked, explain the external judgment required.

@@ -5,7 +5,7 @@ import { buildPlugin, codexOutput, output } from './build-plugin';
 const root = resolve(import.meta.dir, '..');
 const bundles = [
   [output, join(root, 'plugins/takt-aidlc-claude')],
-  [codexOutput, join(root, 'plugins/takt-aidlc')],
+  [codexOutput, join(root, 'plugins/takt-aidlc-codex')],
 ];
 
 function files(directory: string): string[] {

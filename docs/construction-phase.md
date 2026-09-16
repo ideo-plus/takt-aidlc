@@ -1,50 +1,55 @@
-# Construction全体をTAKTへ委譲する
+# Delegate the complete Construction phase to TAKT
 
-## 動作
+[日本語](construction-phase.ja.md)
 
-`delegationScope: "construction"`で、AI-DLCのInception最終承認後にConstruction全体をTAKTへ委譲する。Claude Code／Codexの両ホストに対応する。元のAI-DLCは公式CLIでparkし、以降の実行は別の作業領域で進める。
+## Execution flow
+
+Set `delegationScope: "construction"` to delegate Construction after final Inception approval. Both Claude Code and Codex hosts are supported. The official CLI parks the original AI-DLC session, and work continues in a separate workspace.
 
 ```text
-Inceptionの最終承認
-  → 入力・工程選択・Unit依存関係を固定してpark
-  → Unitを依存順に処理
+Final Inception approval
+  → Freeze inputs, stage selection, and unit dependencies; park AI-DLC
+  → Process units in dependency order
       → Functional Design
       → NFR Requirements / NFR Design
       → Infrastructure Design
-      → 共通CG（計画・レビュー・実装・ビルド・テスト・センサー・修正）
-  → 全UnitのBuild and Testと技術レビュー
-      → 必要なら所有UnitのCGへ一度戻して修正・再検証
-  → 必要なCI Pipelineの生成と技術レビュー
-  → 最終ソースで全Unitの検査と全体ビルド・テストを再実行
+      → Shared CG: plan, review, implement, build/test/sensors, correct
+  → Build and Test across all units, followed by technical review
+      → If needed, repair the owning unit once through CG and recheck
+  → Generate and review applicable CI pipelines
+  → Supervise the complete Intent, requirements, and unit integration
+      → If needed, rerun owning-unit CG and global stages once, then reassess
+  → Rerun every unit check and the full build/tests on the approved source
 ```
 
-設計工程とCI工程は、元のStage Progressで実行対象になっているものを使う。`[S]`または`SKIP`の工程は実行しない。Unit種別による成果物の適用範囲も反映する。テスト手順の必須ファイルはMinimal／Standard／Comprehensiveに合わせる。
+Design and CI stages follow the original Stage Progress selection. Stages marked `[S]` or `SKIP` are not run. Artifact applicability follows unit kinds. Required testing documents follow the Minimal, Standard, or Comprehensive strategy.
 
-TAKT内の確認は自動の技術レビューであり、人間承認ではない。ウォーキングスケルトン後にも対話承認を置かない。入力から判断できないことは理由を記録して`blocked`で終了する。ネイティブの承認・CG開始・工程完了の監査行は作らない。
+TAKT performs automatic technical review, not human approval. There is no interactive gate after the walking skeleton. Unresolvable inputs produce `blocked` with a reason. The integration does not create native approval, CG-start, or stage-completion audit rows.
 
-## CG単体版との共通部分
+## Shared implementation with CG-only mode
 
-CG単体の入口確認と、固定入力から動く`executeCgWorkspace`を分離した。Construction全体版は各Unitで同じCG実行処理・Workflow・品質ゲートを呼ぶ。
+Native CG entry validation is separate from `executeCgWorkspace`, which operates on frozen inputs. Construction calls the same CG executor, workflow, and quality gates for each unit.
 
-- 本家CG、Intent、規約、知識、センサー、Testing Contractの原文をインストラクションへ展開する。
-- 前工程の設計は技術レビュー後に固定し、CGの読み取り入力へ追加する。
-- ビルド・テスト・適用するセンサーを通した同じコードに対してレビューする。
-- CGの結果を次のUnitへ渡し、依存先のコードがある状態で実装する。
-- 最終ソースでも各Unitの固定したビルド・テスト・センサーを再実行する。
+- Inject the original CG definition, Intent, conventions, knowledge, sensors, and Testing Contract.
+- Freeze earlier designs after technical review and add them to CG's read-only inputs.
+- Review the same code that passed build, tests, and applicable sensors.
+- Pass generated code to dependent units before implementing them.
+- Rerun each unit's fixed build, tests, and sensors on the final source.
 
-設計とフェーズ全体の工程には、各工程の本家Markdown、担当者・レビュアーの定義と知識、上流成果物、固定した検証スクリプトを渡す。出典とhashは各工程の`control/injection.json`に残す。
+Design and phase-wide stages receive their native Markdown, author/reviewer definitions and knowledge, upstream artifacts, and fixed scripts. Each stage records provenance and hashes in `control/injection.json`.
 
-## 設定
+## Configuration
 
-[共通の導入手順](getting-started.md)と[Codexホストの導入](codex-host.md)を参照し、Inceptionの最終承認より前に設定する。
+Follow [shared setup](getting-started.md) and the [Codex host guide](codex-host.md). Configure the project before final Inception approval.
 
-次は設定の雛形。ファイル名と検証スクリプトは対象プロジェクトに合わせて用意する。
+Adapt these paths and scripts to the target project:
 
 ```json
 {
   "enabled": true,
   "hostHarness": "codex",
   "delegationScope": "construction",
+  "language": "ja",
   "provider": "codex",
   "model": "gpt-5.6-luna",
   "codexReasoningEffort": "max",
@@ -52,8 +57,8 @@ CG単体の入口確認と、固定入力から動く`executeCgWorkspace`を分�
     "aidlc/spaces/default/intents/<intent>/inception/requirements-analysis/requirements.md"
   ],
   "sources": ["src/value.ts"],
-  "workflow": "aidlc/takt-handoff/takt/workflows/aidlc-code-generation-stage.yaml",
-  "constructionWorkflow": "aidlc/takt-handoff/takt/workflows/aidlc-construction-phase.yaml",
+  "workflow": "aidlc/takt-handoff/takt/ja/workflows/aidlc-code-generation-stage.yaml",
+  "constructionWorkflow": "aidlc/takt-handoff/takt/ja/workflows/aidlc-construction-phase.yaml",
   "buildScript": "aidlc/takt-handoff/unit-build.ts",
   "verifyScript": "aidlc/takt-handoff/unit-test.ts",
   "sensorScripts": {
@@ -61,7 +66,7 @@ CG単体の入口確認と、固定入力から動く`executeCgWorkspace`を分�
   },
   "sensorExceptions": {
     "linter": {
-      "reason": "確定した開発方針でLint基盤を追加しない",
+      "reason": "The approved practices exclude adding a lint framework",
       "source": "aidlc/spaces/default/intents/<intent>/inception/practices-discovery/team-practices.md"
     }
   },
@@ -72,71 +77,84 @@ CG単体の入口確認と、固定入力から動く`executeCgWorkspace`を分�
 }
 ```
 
-[TAKT定義の取得手順](getting-started.md#download-the-takt-bundle)に従い、`takt/`を`facets/`ごと`aidlc/takt-handoff/`へ配置する。リポジトリのclone・ビルドは不要。
-CGには`takt/workflows/aidlc-code-generation-stage.yaml`、工程の作成・レビューには`takt/workflows/aidlc-construction-phase.yaml`を使う。ローカルの指示・ポリシー・知識・出力契約も固定入力になる。ペルソナはTAKT 0.65.0の組み込みを使う。
+`language` accepts `ja` (the default) or `en`. For English execution, set `language: "en"` and point `workflow` and, in Construction mode, `constructionWorkflow` to `takt/en/workflows/`. Built-in facets and injected runtime policies use the same language. Original AI-DLC sources remain frozen inputs without translation.
 
-ホストは`hostHarness`、委譲範囲は`delegationScope`、ワーカーは`provider`で選ぶ。委譲範囲の指定は必須で、`code-generation`または`construction`を指定する。
+Follow [TAKT bundle download](getting-started.md#download-the-takt-bundle) and place the complete `takt/`, including both language trees, under `aidlc/takt-handoff/`. No clone or build of this repository is required.
+Use `takt/ja/workflows/aidlc-code-generation-stage.yaml` for CG and `takt/ja/workflows/aidlc-construction-phase.yaml` for artifact creation and review. Local instructions, policies, knowledge, and output contracts are frozen inputs. Personas use TAKT 0.65.0 built-ins.
 
-### Unitごとの検査
+`hostHarness` selects the host, `delegationScope` the scope, and `provider` the worker. Scope is required and must be `code-generation` or `construction`.
 
-`unitChecks`にUnit名をキーとして、`buildScript`、`verifyScript`、`sensorScripts`、`sensorExceptions`を指定できる。未指定のUnitはトップレベルの同名設定を使う。
+### Per-unit checks
 
-複数Unitでは、未実装の後続Unitを先行Unitの検査対象に含めないよう、それぞれのビルド・テストを定義する。全Unitをまとめる検査は`phaseBuildScript`と`phaseVerifyScript`に置く。カバレッジなどの品質目標は固定スクリプトで検証する。
+Use unit names as keys in `unitChecks` to override `buildScript`, `verifyScript`, `sensorScripts`, and `sensorExceptions`. Units without overrides use the corresponding top-level settings.
 
-### 設計成果物のセンサー
+Define each unit's checks so that an earlier unit does not require a later, unimplemented unit. Put combined checks in `phaseBuildScript` and `phaseVerifyScript`. Fixed scripts enforce coverage and other quality targets.
 
-- `required-sections`: 2つ以上のH2と、存在する独自テンプレートの見出しを確認する。
-- `upstream-coverage`: 固定した上流成果物の確認一覧に欠落がないことを確認する。
-- `traceability`: 本家の`aidlc engine sensor-traceability`で検証する。Functional DesignはFR/ACからBRへの対応と孤立ルール、NFR工程は工程に応じたNFRのIDを確認する。CGの直前には、設計で追加されたBR・NFRの詳細IDも再解決する。
-- `linter`／`type-check`: TS/JSのコード例があれば、`stageSensorScripts`の対応するスクリプトが必要。終了コード0とJSONの`pass: true`を要求する。
+### Sensors for design artifacts
 
-本家センサーには、元のpark状態とレビュー済みの上流成果物を専用ディレクトリへ投影して渡す。これは検査用のコピーであり、元のAI-DLCの状態を進めたり承認記録を作ったりしない。
+- `required-sections`: require at least two H2 headings and any headings specified by a custom template.
+- `upstream-coverage`: require a complete inventory of frozen upstream artifacts.
+- `traceability`: use native `aidlc engine sensor-traceability`. Functional Design checks FR/AC-to-BR mappings and orphan rules; NFR stages use their corresponding NFR IDs. Resolve IDs again before CG to include BR and detailed NFR IDs introduced by design.
+- `linter` / `type-check`: TS/JS code snippets require the corresponding `stageSensorScripts` entry, exit code zero, and JSON `pass: true`.
 
-設計用のスクリプトには`AIDLC_ARTIFACTS_DIR`でその工程の成果物ディレクトリを渡す。TS/JSのコード例がなく、スクリプトも未設定の場合は`not_applicable`と理由を記録する。CGのアプリケーションコードの検査とは別に扱う。
+Native sensors receive a private projection of the original parked state and reviewed upstream artifacts. This is a checking copy, not an advancement of original state or an invented approval.
 
-CI工程は`pipelinePaths`に明示したファイルだけを書き出せる。YAMLは構文を確認し、全体ビルド・テストと技術レビューを通す。CIサービス上でのジョブ実行やデプロイを完了したとは扱わない。
+Design scripts receive the artifact directory through `AIDLC_ARTIFACTS_DIR`. When there are no TS/JS snippets and no configured script, record `not_applicable` with a reason. This is separate from checking application code during CG.
 
-## 結果
+CI may write only files listed in `pipelinePaths`. YAML must parse, and full build/test and technical review must pass. This does not claim that the CI service ran a job or deployed anything.
+
+## Final requirement validation
+
+The built-in `supervisor` and `supervise` compare all units' final code with the Intent, Inception requirements, designs, and unit assessments. Individual stage reviews and phase-final supervision run in separate sessions.
+
+- approved: record code evidence for every requirement and unit, then proceed to final machine checks.
+- changes_requested: return `repairUnits` to CG in dependency order, repeat Build and Test and applicable CI, then supervise again.
+- blocked: record the required external decision and stop without waiting for interaction.
+
+Supervision permits one repair round; another rejection produces failed. Build and Test also permits one repair round for the whole phase.
+Changed code cannot reuse an earlier judgment. Even approved supervision does not produce verified if the final build, tests, or applicable sensors fail.
+
+## Results
 
 ```sh
-cat aidlc/takt-handoff/phase-runs/<run-id>/status.json
+cat aidlc/takt-handoff/construction-phase-runs/<run-id>/status.json
 ```
 
-`aidlc/takt-handoff/phase-runs/<run-id>/`に記録する。
+Records are stored under `aidlc/takt-handoff/construction-phase-runs/<run-id>/`.
 
-| 保存先 | 内容 |
+| Location | Contents |
 |---|---|
-| `manifest.json` / `snapshot/` | 承認時に固定した入力と設定 |
+| `manifest.json` / `snapshot/` | Inputs and settings frozen at approval |
 | `status.json` | `parked` → `running` → `verified` / `blocked` / `failed` |
-| `attempts/1/<工程>/` | TAKTの実行、出典、レポート、技術レビュー、検査結果 |
-| `attempts/1/store/` | 次の工程へ渡すコードとレビュー済み成果物 |
-| `attempts/1/result/` | 最終の生成ソース |
-| `attempts/1/final-unit-checks.json` | 最終ソースに対する各Unitの再検査 |
-| `attempts/1/final-build.json` / `final-test.json` | 全体の最終検査 |
-| `attempts/1/result.json` | 工程・Unit・生成物とhashの一覧 |
+| `attempts/1/<stage>/` | TAKT execution, provenance, reports, reviews, checks |
+| `attempts/1/store/` | Code and reviewed artifacts passed to later stages |
+| `attempts/1/result/` | Final generated source |
+| `attempts/1/final-unit-checks.json` | Unit checks on the final source |
+| `attempts/1/final-build.json` / `final-test.json` | Final phase-wide checks |
+| `attempts/1/result.json` | Stages, units, artifacts, and hashes |
 
-`verified`でも、元のAI-DLCはparkを維持する。元プロジェクトへのコード取り込み、ネイティブConstructionの完了、Operationへの自動移行は未実装。
+The original AI-DLC session remains parked even after verified. Code import, native Construction completion, and automatic transition to Operation are not implemented.
 
-## 検証と制約
+## Verification and limits
 
-[検証記録](../experiments/construction-phase/RESULTS.md)を参照。合成入力とmockワーカーで、複数Unit、設計差し戻し、CGのビルド／型検査修正、CI生成、両ホストのフック接続を確認する。実モデルでConstruction全体を完走した実績とは区別する。
+See the [verification record](../experiments/construction-phase/RESULTS.md). Synthetic inputs and mock workers exercise multiple units, design revisions, build/type-check corrections, CI generation, and both hosts' hooks. This is separate from completing the entire phase with a live model.
 
-- AI-DLC 2.8.2、State Version 8、単一監査シャード、Inception完了直後を対象とする。
-- 有効なUnit依存DAG、CGとBuild and Testを含む工程選択、確定したTest Strategyと`test-after`が必要。ゼロUnitや、CGを省略する部分的なConstructionには対応しない。
-- Unitは依存順に直列実行する。工程の時間上限と最大ステップ数を設ける。TAKTの詳細出力は各工程の`takt-output.stdout.log`／`takt-output.stderr.log`へ保存し、`takt.json`には末尾64,000文字を保持する。ログは1回のTAKT実行につき合計100MBを上限とし、超過と時間切れを区別する。
-- 設計とCGの差し戻しは各Workflow内で修正する。Build and Testで実測の失敗がある場合は、`repair_required`と所有Unitを返し、共通CGで一度修正して再検証する。修正後も失敗する場合や入力から所有者を決められない場合は停止する。
-- ソースは通常ファイルを列挙する。`node_modules`と`.venv`は一時的な依存として差分の対象から除く。途中再開、ロックの自動回収、OSレベルの完全な隔離は未実装。
+- Requires AI-DLC 2.8.2, State Version 8, a single audit shard, and entry immediately after Inception completion.
+- Requires a valid unit dependency DAG, CG and Build and Test in the selected scope, an agreed Test Strategy, and `test-after`. Zero-unit and CG-skipping scopes are unsupported.
+- Units run serially in dependency order. Stages have time and step limits. Full TAKT output is saved to `takt-output.stdout.log` / `takt-output.stderr.log`; `takt.json` keeps the last 64,000 characters. One TAKT invocation has a combined 100 MB log limit. Output limits and timeouts are reported separately.
+- Designs and CG are corrected within their workflows. A measured Build and Test failure can return `repair_required` and its owning unit for one shared-CG repair and recheck. Stop if it still fails or ownership cannot be determined from inputs.
+- Enumerate regular source files. `node_modules` and `.venv` are treated as temporary dependencies and excluded from differences. Mid-run resumption, automatic lock recovery, and complete OS isolation are not implemented.
 
-## 実モデルの試験
+## Live-model trial
 
 ```sh
 bun run experiment:construction-phase -- --live
 ```
 
-Codexの認証が必要。Luna Max（gpt-5.6-luna、max）で1 Unit・全7工程を実行し、上限は1時間。専用の合成入力と合成承認境界を使い、TAKTワーカーにはmockを使わない。`--repairs`との併用はできない。
+Requires Codex authentication. The trial uses Luna Max (`gpt-5.6-luna`, `max`), one unit, all seven native stages, and a one-hour limit. It uses dedicated synthetic inputs and a synthetic approval boundary, with a live TAKT worker. It cannot be combined with `--repairs`.
 
-進捗は次で確認できる。
+Inspect progress with:
 
 ```sh
-bun experiments/construction-phase/inspect.ts /absolute/path/to/phase-runs/<run-id>
+bun experiments/construction-phase/inspect.ts /absolute/path/to/construction-phase-runs/<run-id>
 ```

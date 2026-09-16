@@ -1,54 +1,56 @@
-# TAKTへの委譲範囲を選ぶ
+# Choose the scope delegated to TAKT
 
-## 方針
+[日本語](delegation-modes.ja.md)
 
-TAKTへ委譲する範囲として、CGステージ単体とConstructionフェーズ全体の2モードを用意する。Claude Code／Codexというホストの選択、TAKTワーカーのprovider・モデルとは別の設定として扱う。
+## Design
 
-CG単体とConstruction全体の両モードを実装済み。Claude Code／Codexの両ホストに対応し、同じCG実行処理と品質ゲートを使う。実モデルでの全工程完走は未確認。
+Two scopes are available: the CG stage only, or the complete Construction phase. Choose the scope independently of the Claude Code / Codex host and the TAKT worker provider/model.
 
-## 2つのモード
+Both modes and both hosts are implemented. They share CG execution and quality gates. Completion of the entire phase with a live model remains unverified.
 
-| 項目 | CGステージ単体 | Constructionフェーズ全体 |
+## The two modes
+
+| Choice | CG stage only | Complete Construction phase |
 |---|---|---|
-| 委譲する時点 | AI-DLCが必要な設計を終え、CGへ入る時点 | AI-DLCのInception最終承認後、Constructionを始める前 |
-| AI-DLCの担当 | Inceptionと必要なConstruction設計 | Inception |
-| TAKTの担当 | 現在のUnitのCG計画、技術レビュー、実装、ビルド・テスト・センサー、コードレビューと修正 | 有効なConstruction工程の設計、Unitの依存順の実装、レビュー、ビルド・テストと修正 |
-| 主な入力 | Intent、Inception成果物、現在のUnit設計、CG定義と関連規約・知識・センサー | Intent、Inception成果物、Constructionの工程・Unit計画、各工程の定義と関連規約・知識・センサー |
-| 向く使い方 | 設計をAI-DLCで確認し、実装部分を自動化したい | 承認済みの要求から設計・実装・検証までまとめて自動化したい |
+| Delegation boundary | CG entry, after required designs | Final Inception approval, before Construction starts |
+| AI-DLC owns | Inception and required Construction designs | Inception |
+| TAKT owns | The current unit's plan, technical review, implementation, build/test/sensors, code review, corrections, and final requirement validation | Selected Construction designs, dependency-ordered implementation, reviews, build/test, corrections, and phase-wide requirement validation |
+| Main inputs | Intent, Inception artifacts, current unit designs, CG definition, conventions, knowledge, and sensors | Intent, Inception artifacts, stage/unit plan, stage definitions, conventions, knowledge, and sensors |
+| Suitable use | Review designs in AI-DLC and automate implementation | Automate design through verification from approved requirements |
 
-同じIntentで両モードを同時に起動しない。実行開始時に委譲範囲と入力を固定し、実行中に範囲を切り替えない。
+Do not start both modes for the same Intent. Scope and inputs are frozen at entry and cannot be switched during a run.
 
-## 共通の動作
+## Shared behavior
 
-- 元のAI-DLCは公式CLIでparkし、TAKTは別の作業領域で実行する。
-- TAKT内はHOTLとし、技術レビューと修正を自動で進める。ウォーキングスケルトン後にも対話承認待ちを置かない。
-- 要求の矛盾や不足を自律的に解決できなければ、理由を残して`blocked`で終了する。人間の判断や承認記録を作らない。
-- 生成コードのビルド・テスト・適用するセンサーが成功するまで、委譲結果を成功にしない。
-- 元のAI-DLCへのコード取り込み、ネイティブの完了記録、後続工程の再開は別の受け入れ処理として設計する。
+- Park the original AI-DLC session through its official CLI and run TAKT in a separate workspace.
+- Use HOTL inside TAKT: automatic technical reviews and corrections, without interactive approval after the walking skeleton or other steps.
+- Stop as `blocked` with a reason when requirements are contradictory or insufficient for autonomous decisions. Do not invent human decisions or approval records.
+- Require successful builds, tests, and applicable sensors before accepting generated code.
+- Treat importing code, recording native completion, and resuming later stages as separate acceptance operations.
 
-## CG処理を共通にする
+## Shared CG execution
 
-Construction全体版のCGと、単体委譲のCGが別々の品質条件にならない構造にする。
+CG-only delegation and CG inside Construction use the same quality conditions.
 
 ```text
-CG単体
-  AI-DLCのUnit設計 → 共通CG処理 → 検証済みCG結果
+CG only
+  AI-DLC unit designs → shared CG execution → verified CG result
 
-Construction全体
-  Inception成果物
-    → 必要な設計と技術レビュー
-    → Unit依存順に共通CG処理
-    → フェーズ全体のビルド・テスト
-    → 検証済みConstruction結果
+Complete Construction
+  Inception artifacts
+    → required designs and technical reviews
+    → shared CG execution in unit dependency order
+    → phase-wide build and tests
+    → verified Construction result
 ```
 
-共通化するのは、原文の解決、Testing Contract、CG計画と要求対応、実装・レビューの契約、検証ゲート。ホストでの入口確認・parkと、固定入力から動くCG処理を分離した。Construction内のCG呼び出しのために、元のAI-DLCの状態をCGへ進める必要はない。
+The shared implementation resolves original sources and the Testing Contract, creates the CG plan and requirement mapping, and applies implementation/review contracts and quality gates. Host entry checks and parking are separate from execution on frozen inputs. Construction can therefore call CG without advancing the original AI-DLC state to CG.
 
-Construction内で作ったUnit設計は、技術レビュー後にCG用の入力として固定する。元のAI-DLCにCG開始や人間承認の監査記録を作って、この条件を満たしたことにしない。
+Designs generated during Construction are frozen after technical review and added to CG's read-only inputs. The integration does not create native CG-start or human-approval audit records to satisfy this prerequisite.
 
-## 設定
+## Configuration
 
-次は設定の主要部分。入力ファイルや検証スクリプトなどの設定も必要。[Construction設定手順](construction-phase.md)を参照。
+The following shows the main selections. Inputs and verification scripts are also required; see [Construction setup](construction-phase.md).
 
 ```json
 {
@@ -60,11 +62,10 @@ Construction内で作ったUnit設計は、技術レビュー後にCG用の入�
 }
 ```
 
-- `hostHarness`: AI-DLCを進めるホスト。`claude`または`codex`。
-- `delegationScope`: TAKTへ渡す範囲。`code-generation`または`construction`。
-- `provider`とモデル設定: TAKT内で使う実行環境。
+- `hostHarness`: the host running AI-DLC, either `claude` or `codex`.
+- `delegationScope`: the scope delegated to TAKT, either `code-generation` or `construction`.
+- `provider` and model settings: the environment used by TAKT workers.
 
+## Current behavior
 
-## 現状
-
-[CG単体](code-generation.md)と[Construction全体](construction-phase.md)を選択できる。設計の差し戻し、CGの修正、全体検証から所有Unitへの修正依頼は、TAKT側で自動処理する。入力の矛盾や上限到達は停止し、成功として受け入れない。
+Choose [CG only](code-generation-stage.md) or [full Construction](construction-phase.md). TAKT handles design revisions, CG corrections, and repair requests from phase-wide checks to the owning unit. Contradictory inputs and exhausted limits stop the run and are not accepted as successful completion.

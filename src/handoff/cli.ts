@@ -60,13 +60,13 @@ try {
     const result = await executePhase(project,id); console.log(JSON.stringify(result)); if(result.state !== 'verified') process.exitCode=1;
   } else if (mode === 'phase-status') {
     if(!/^[a-f0-9]{24}$/.test(id??'')) throw new Error('Construction run IDが必要です');
-    console.log(JSON.stringify(readJson(join(phaseStorage(project),'phase-runs',id,'status.json')),null,2));
+    console.log(JSON.stringify(readJson(join(phaseStorage(project),'construction-phase-runs',id,'status.json')),null,2));
   } else if (mode === 'cg-work') {
     const result = await executeCg(project, id); console.log(JSON.stringify(result));
     if (result.state !== 'verified') process.exitCode = 1;
   } else if (mode === 'cg-status') {
     if (!/^[a-f0-9]{24}$/.test(id ?? '')) throw new Error('CG run IDが必要です');
-    console.log(JSON.stringify(readJson(join(cgStorage(project), 'cg-runs', id, 'status.json')), null, 2));
+    console.log(JSON.stringify(readJson(join(cgStorage(project), 'code-generation-stage-runs', id, 'status.json')), null, 2));
   } else {
     throw new Error('usage: bun handoff.js session|plugin-hook|codex-session|codex-hook|cg-work|cg-status|phase-work|phase-status <project> [id]');
   }

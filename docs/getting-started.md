@@ -1,5 +1,7 @@
 # Installation and project setup
 
+[日本語](getting-started.ja.md)
+
 ## Install the plugin
 
 Install the prebuilt plugin from the GitHub marketplace. You do not need to clone this repository, run `bun install`, or build it.
@@ -18,7 +20,7 @@ codex plugin marketplace add https://github.com/ideo-plus/takt-aidlc.git
 codex plugin add takt-aidlc@takt-aidlc
 ```
 
-The CLIs fetch the Git repository themselves; Git and HTTPS access to GitHub are required. Start a new session after installation. For Codex, enable and trust hooks as described in the [host guide](codex-host.md#インストール). Then configure the target project below; installing the plugin alone does not enable delegation.
+The CLIs fetch the Git repository themselves; Git and HTTPS access to GitHub are required. Start a new session after installation. For Codex, enable and trust hooks as described in the [host guide](codex-host.md#installation). Then configure the target project below; installing the plugin alone does not enable delegation.
 
 The remote source formats are documented in the [Claude Code marketplace guide](https://code.claude.com/docs/en/discover-plugins) and [OpenAI plugin guide](https://developers.openai.com/plugins/build/plugins).
 
@@ -45,7 +47,7 @@ sh /tmp/install-aidlc-2.8.2.sh --version 2.8.2
 
 Check `aidlc --version` and `takt --version`. An already-installed newer AI-DLC release is not a compatible replacement for this prototype.
 
-Authenticate the CLI(s) selected as host and worker. For Codex, run `codex login` and confirm with `codex login status`. Build and tests of this plugin are contributor tasks; see [development](contributing.md#開発).
+Authenticate the CLI(s) selected as host and worker. For Codex, run `codex login` and confirm with `codex login status`. Build and tests of this plugin are contributor tasks; see [development](contributing.md#development).
 
 ## Configure an AI-DLC project
 
@@ -98,7 +100,7 @@ Alternatively, download the repository archive over HTTPS with an authenticated 
 
 `delegationScope` is required; only `code-generation` and `construction` are supported.
 
-Both methods create `aidlc/takt-handoff/takt/`. YAML files in `takt/workflows/` reference `../facets/`; copying a YAML file alone is insufficient. If the marketplace is pinned to a tag or commit, use the installed copy or replace `main` with the same ref in the API command.
+Both methods create `aidlc/takt-handoff/takt/`. YAML files in `takt/ja/workflows/` and `takt/en/workflows/` reference `../facets/`; copying a YAML file alone is insufficient. If the marketplace is pinned to a tag or commit, use the installed copy or replace `main` with the same ref in the API command.
 
 The [TAKT directory guide](../takt/README.md) explains instructions, policies, personas, knowledge, and output contracts. Personas use the built-ins shipped with TAKT 0.65.0; local Markdown files contain the AI-DLC-specific instructions, policies, knowledge, and report formats. Prepare or customize these files before delegation; referenced Markdown files are frozen and checked alongside the YAML.
 
@@ -115,6 +117,7 @@ Create `aidlc/takt-handoff/config.json`. This is a template: replace `<intent-di
   "enabled": true,
   "delegationScope": "code-generation",
   "hostHarness": "claude",
+  "language": "ja",
   "provider": "codex",
   "model": "gpt-5.6-luna",
   "codexReasoningEffort": "max",
@@ -126,7 +129,7 @@ Create `aidlc/takt-handoff/config.json`. This is a template: replace `<intent-di
     "aidlc/spaces/default/intents/<intent-dir>/inception/delivery-planning/bolt-plan.md"
   ],
   "sources": ["src/value.ts"],
-  "workflow": "aidlc/takt-handoff/takt/workflows/aidlc-code-generation-stage.yaml",
+  "workflow": "aidlc/takt-handoff/takt/ja/workflows/aidlc-code-generation-stage.yaml",
   "buildScript": "aidlc/takt-handoff/build.ts",
   "verifyScript": "aidlc/takt-handoff/test.ts",
   "sensorScripts": {
@@ -137,6 +140,8 @@ Create `aidlc/takt-handoff/config.json`. This is a template: replace `<intent-di
   "timeoutMs": 1800000
 }
 ```
+
+`language` accepts `ja` (the default) or `en`. For English execution, set `language: "en"` and point `workflow` and, in Construction mode, `constructionWorkflow` to `takt/en/workflows/`. Built-in facets and injected runtime policies use the same language. Original AI-DLC sources remain frozen inputs without translation.
 
 The integration adds the current Intent, unit designs, native CG definition, knowledge, sensors, memory, and templates to these explicit artifacts. Source paths are individual regular files, not globs. Include package manifests, lockfiles, and required configuration for real applications; dependency installation is your build script's responsibility.
 
@@ -166,10 +171,10 @@ When the normal conductor's single `aidlc engine orchestrate next` or `continue`
 The hook returns a run ID. Inspect it with:
 
 ```sh
-cat aidlc/takt-handoff/cg-runs/<run-id>/status.json
+cat aidlc/takt-handoff/code-generation-stage-runs/<run-id>/status.json
 ```
 
-Results are under `aidlc/takt-handoff/cg-runs/<run-id>/`. `status.json` records `parked`, `running`, `verified`, `blocked`, or `failed`. The generated code is in `attempts/1/work/`; CG artifacts are in its `cg/` directory, and validation records are in `attempts/1/control/`.
+Results are under `aidlc/takt-handoff/code-generation-stage-runs/<run-id>/`. `status.json` records `parked`, `running`, `verified`, `blocked`, or `failed`. The generated code is in `attempts/1/work/`; CG artifacts are in its `cg/` directory, and validation records are in `attempts/1/control/`.
 
 `verified` means this TAKT CG execution passed its checks. The original AI-DLC project stays parked at CG. Importing the result, completing native CG, and resuming downstream stages are not automated. Do not run the original CG concurrently. CG retry and automatic stale-lock recovery are not implemented.
 
@@ -189,7 +194,7 @@ codex plugin marketplace upgrade takt-aidlc
 codex plugin add takt-aidlc@takt-aidlc
 ```
 
-Restart the host after updating. Prepare a matching `takt/` bundle, including facets, for new runs; do not change an active run's frozen inputs. The former repository-level `workflows/` directory has moved to `takt/workflows/`. When switching to these templates, update `workflow` and (for Construction) `constructionWorkflow` in the config.
+Restart the host after updating. Prepare a matching `takt/` bundle, including facets, for new runs; do not change an active run's frozen inputs. Workflow definitions now live in `takt/ja/workflows/` and `takt/en/workflows/`. Update `workflow` and (for Construction) `constructionWorkflow` to the selected language directory and set the matching `language`. Old paths are not supported.
 
 For migration from the previous local development setup:
 
@@ -200,6 +205,6 @@ Local builds and live experiments are documented in [development](contributing.m
 
 ## Limits and troubleshooting
 
-See [CG behavior and limits](code-generation.md) and [verification results](../experiments/code-generation/RESULTS.md). The initial profile supports `test-after` only; it rejects other Testing Contracts before parking. Model limits, unresolved input conflicts, and failed checks are recorded as failures or `blocked`, never successful generation.
+See [CG behavior and limits](code-generation-stage.md) and [verification results](../experiments/code-generation/RESULTS.md). The initial profile supports `test-after` only; it rejects other Testing Contracts before parking. Model limits, unresolved input conflicts, and failed checks are recorded as failures or `blocked`, never successful generation.
 
 If a run stops progressing, inspect its status, TAKT logs, and quality-gate logs before recovery. Changing frozen files invalidates a run. Process isolation and source hashes are not an OS security boundary against arbitrary code running as the same user.

@@ -1,14 +1,14 @@
-# 要求（合成CGテスト入力）
+# Requirements: synthetic CG test input
 
-## 機能要件
+## Functional requirements
 
-- FR1: src/value.tsのanswerを41から42へ変更する。
-- FR1.1: 公開exportはanswerだけとし、名前付きの数値定数という形を維持する。
-- FR2: src/value.test.tsにstandard戦略の範囲内で5件のテストを追加する。
-- FR2.1: 値42、数値型、旧値41でないことを必須で確認する。
-- FR2.2: 公開exportの形と有限な整数であることも確認する。
+- FR1: Change answer in src/value.ts from 41 to 42.
+- FR1.1: Expose only answer and preserve it as a named numeric constant export.
+- FR2: Add five tests in src/value.test.ts within the Standard strategy.
+- FR2.1: Check the value 42, numeric type, and that the value is not the old value 41.
+- FR2.2: Also check the public export shape and that the value is a finite integer.
 
-## 非機能要件
+## Nonfunctional requirements
 
-- NFR1: Bunでビルドと単一Unitのテストを実行し、行カバレッジ80%以上を満たす。
-- NFR2: アプリへpackage.json、外部依存、CI、Lint設定を新設しない。型検査は連携側の固定ツールで実施する。
+- NFR1: Build and test the single unit with Bun and achieve at least 80% line coverage.
+- NFR2: Do not add application package.json, external dependencies, CI, or lint settings. Use fixed integration tooling for type checking.

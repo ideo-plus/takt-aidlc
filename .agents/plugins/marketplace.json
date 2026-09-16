@@ -8,7 +8,7 @@
       "name": "takt-aidlc",
       "source": {
         "source": "local",
-        "path": "./plugins/takt-aidlc"
+        "path": "./plugins/takt-aidlc-codex"
       },
       "policy": {
         "installation": "AVAILABLE",

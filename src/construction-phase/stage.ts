@@ -27,7 +27,7 @@ import { sources, cgGateSource } from "../code-generation/code-generation-gate";
 import type { CgContext } from "../code-generation/context";
 import type { PhaseConfig, StageDefinition } from "./context";
 import { materializeWorkflow } from "../takt/workflow";
-import stageContract from '../../takt/facets/policies/construction-hotl.md' with { type: 'text' };
+import { runtimePolicies } from '../takt/language';
 
 export async function executeStage(args: {
   attempt: string;
@@ -166,7 +166,10 @@ export async function executeStage(args: {
   copyFileSync(cgGateSource, join(control, "code-generation-gate.ts"));
   copyFileSync(nativeTraceSource, join(control, "native-trace.ts"));
   const { workflow, controlFiles: facetFiles } = materializeWorkflow(store, c.constructionWorkflow, control);
-  const contract = `${stageContract}\n現在の工程は${stage.slug}、Unitは${unit ?? "全Unit"}です。\n`;
+  // 個別工程はレビューまで。全Unit完了後のsuperviseはphase runnerが一度呼ぶ。
+  workflow.steps = workflow.steps.filter((step: any) => step.name !== 'supervise');
+  for (const step of workflow.steps) for (const rule of step.rules ?? []) if (rule.next === 'supervise') rule.next = 'COMPLETE';
+  const contract = `${runtimePolicies(c.language).construction}\nCurrent stage: ${stage.slug}; Unit: ${unit ?? "all units"}.\n`;
   const bundlePaths = paths.filter(
     (path) =>
       path !== cg.stageFile && !/^\.(?:claude|codex)\/tools\//.test(path),
@@ -246,7 +249,7 @@ export async function executeStage(args: {
       "--workflow",
       join(control, "workflow.yaml"),
       "--task",
-      `Constructionの${stage.slug}をHOTLで実行し、成果物と検証結果を技術レビューする`,
+      c.language === "en" ? `Execute Construction ${stage.slug} in HOTL mode and review artifacts and verification results.` : `Constructionの${stage.slug}をHOTLで実行し、成果物と検証結果を技術レビューする`,
     ],
     workspace,
     env,
