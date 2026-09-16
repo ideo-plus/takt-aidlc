@@ -1,14 +1,16 @@
 {
-  "version": "0.5.0+codex.20260916032402",
+  "version": "0.6.0+codex.20260916044230",
   "aidlcVersion": "2.8.2",
   "bunVersion": "1.3.13",
   "sources": {
+    "src/setup/cli.ts": "7d198b002c8dc5f59b1c4d011b14b5841f5199ea7bdefb3002ad45ad72531ac6",
+    "src/setup/project.ts": "f328013ab8cb5e30202c506c84ee2673d7c87b35480346ef8fc86e8bdeac6578",
     "src/takt/language.ts": "c3da311cdd4e7fbfcff8d3c1eb680f77999bc0c19324e55de51da3c5033472ad",
     "src/takt/workflow.ts": "1aa13b7ea7401156b0833da9d436b3ed11ca27214cc85953fa04b113c8dca4f5",
     "src/construction-phase/supervision.ts": "35215650160af30e1f3a1290945d9644d4cf6b275dc24bb879f40ea95a412743",
     "src/construction-phase/construction-supervision-gate.ts": "f7ad687c9170fd91fe3b8f453e73cddb304555f699764bb0d242990c97afc6da",
-    "takt/README.ja.md": "801152eba288e8683f15b6d0f66f1dc003a01e7b913314f0cff787cb2f6d301f",
-    "takt/README.md": "9a1967c2c5d6f4e47fc3f9f3087dc0f6f20f85f49fcd70812ea0ce639117c076",
+    "takt/README.ja.md": "35f4fea86bd8acb5cf1536c5827947526f45fc6d9524a78f8b3a1098388f46d4",
+    "takt/README.md": "52a3ee63eafc4a6f9ec7a9649a61e86404b9ab0a07a9f48cb2ffb4a4502fc82a",
     "takt/en/facets/instructions/code-generation-code-review.md": "a9a659dfe34c6e016904057796620f2511e64a278772c1b5251414de326e4d3d",
     "takt/en/facets/instructions/code-generation-finish.md": "a1fd75552e1a5f85ae7dcebb15adb60c7c112b4593988fd712b3571956c4bbb5",
     "takt/en/facets/instructions/code-generation-fix.md": "937d71072ae91f6d38e51ba7c2448f65e2e2d35c78194ac6edb730d114e49924",
@@ -82,8 +84,9 @@
     "src/code-generation/runner.ts": "dcfc10bfbdc190a997cd06e0e976b5419843b3aab07c26065a1c69243fb19fa9",
     "src/code-generation/code-generation-gate.ts": "811fc3c1d8923668283e10c01b54a563571b230a237dbd50e99cc533c09475c2",
     "LICENSE": "20d237c297511eb6a0711b4928d02750bb94a21b594dfcc8ea9ca8435c8487ef",
-    "plugins/codex/.codex-plugin/plugin.json": "4da6f4e2cc5ad5af07bcd61bd45eef096c6f7a9e3fbb900f128d4b2705aa6250",
+    "plugins/codex/.codex-plugin/plugin.json": "b8d1629909d4e1d605ebcfbc36f611a9cda8396cea4893d00aeb7ad72494e42c",
     "plugins/codex/hooks/hooks.json": "bc39570d69a90ab9dced7eaea1e01173fb00a7b43e2a5c05d00284098b588320"
   },
-  "bundleSha256": "bc696158936e734455b31d1cef9a931e68d7f35e3689717961a8b1f0724a145b"
+  "bundleSha256": "bc696158936e734455b31d1cef9a931e68d7f35e3689717961a8b1f0724a145b",
+  "setupSha256": "06e915f0ee4b0f2c94c91aacaab0972273682ce7747e4f3c55ebc15f128b680a"
 }

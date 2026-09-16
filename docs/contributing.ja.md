@@ -39,6 +39,7 @@ bun run build:marketplace
 | パス | 用途 |
 |---|---|
 | `takt/{ja,en}/workflows/` / `takt/{ja,en}/facets/` | TAKTのYAML、ローカルファセット、組み込みペルソナの選択理由 |
+| `src/setup/` | プロジェクト初期設定CLI。`scripts/setup.js`として同梱 |
 | `plugins/claude/` / `plugins/codex/` | マニフェストとフックの編集元 |
 | `dist/claude/` / `dist/codex/` | ローカル開発用の生成先（Git管理外） |
 | `plugins/takt-aidlc-claude/` / `plugins/takt-aidlc-codex/` | 公開する生成物（Git管理対象、直接編集しない） |

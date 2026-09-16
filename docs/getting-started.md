@@ -73,44 +73,40 @@ Run `/aidlc` normally. Use the usual questions and approval gates up to the sele
 
 Use `delegationScope: "code-generation"` for CG only, or `delegationScope: "construction"` for the whole phase after Inception approval. Both hosts support both modes. See the [Construction guide](construction-phase.md) for phase and per-unit checks; the configuration below is for CG only.
 
-## Download the TAKT bundle
+## Initialize the project
 
-Copy the installed plugin's entire `takt/` directory into the target project. This uses the exact installed version and needs neither a Git checkout nor a build.
+Run the installed plugin’s setup command to place its bundled TAKT definitions and create a configuration template together. No clone, build, or manual copy is needed. Run this once for the target project; installation and session-start hooks do not run setup automatically.
 
-Find the installation path with `claude plugin list --json` (`installPath` for `takt-aidlc@takt-aidlc`) or `codex plugin add takt-aidlc@takt-aidlc --json` (`installedPath`). The Codex command also ensures the plugin is installed. Then use that path:
-
-```sh
-mkdir -p aidlc/takt-handoff
-cp -R /path/from-the-cli/takt aidlc/takt-handoff/
-```
-
-Alternatively, download the repository archive over HTTPS with an authenticated GitHub CLI (`gh auth login`). This also works while the repository is private; anonymous `curl` access does not. Your account must have repository access.
+Find the installation path with `claude plugin list --json` (`installPath` for `takt-aidlc@takt-aidlc`) or `codex plugin add takt-aidlc@takt-aidlc --json` (`installedPath`). The Codex command also ensures the plugin is installed. Replace `/path/from-the-cli` below with that path.
 
 ```sh
-(
-  set -e
-  mkdir -p aidlc/takt-handoff
-  takt_download_dir=$(mktemp -d)
-  trap 'rm -rf "$takt_download_dir"' EXIT
-  gh api repos/ideo-plus/takt-aidlc/tarball/main > "$takt_download_dir/source.tar.gz"
-  takt_archive_root=$(tar -tzf "$takt_download_dir/source.tar.gz" | sed -n '1s@/.*@@p')
-  tar -xzf "$takt_download_dir/source.tar.gz" --strip-components=1 -C aidlc/takt-handoff "$takt_archive_root/takt"
-)
+# Japanese, CG only
+bun "/path/from-the-cli/scripts/setup.js" --project .
+
+# English, full Construction, Codex workers
+bun "/path/from-the-cli/scripts/setup.js" --project . --language en --scope construction --provider codex
 ```
 
-`delegationScope` is required; only `code-generation` and `construction` are supported.
+Normally, choose one command. Defaults are the current directory for `--project`, `ja` for `--language`, and `code-generation` for `--scope`. Setup detects `hostHarness` from the installed plugin. `--provider` defaults to that host; specify `claude` or `codex` to choose a different worker.
 
-Both methods create `aidlc/takt-handoff/takt/`. YAML files in `takt/ja/workflows/` and `takt/en/workflows/` reference `../facets/`; copying a YAML file alone is insufficient. If the marketplace is pinned to a tag or commit, use the installed copy or replace `main` with the same ref in the API command.
+Setup creates:
 
-The [TAKT directory guide](../takt/README.md) explains instructions, policies, personas, knowledge, and output contracts. Personas use the built-ins shipped with TAKT 0.65.0; local Markdown files contain the AI-DLC-specific instructions, policies, knowledge, and report formats. Prepare or customize these files before delegation; referenced Markdown files are frozen and checked alongside the YAML.
+- `aidlc/takt-handoff/takt/`: both languages’ workflows and facets.
+- `aidlc/takt-handoff/config.json`: a template with the host, language, delegation scope, and workflow paths. Construction also includes paths for phase-wide build/test scripts.
+
+New configurations have `enabled: false`. Configure project-specific inputs, sources, build/test scripts, and sensors before changing it to `true`. Setup does not generate verification scripts. Complete the CG configuration below or follow [Construction configuration](construction-phase.md#configuration).
+
+**Existing configuration files and TAKT directories are each preserved in full.** Running setup with different options does not switch existing settings or add/update files within an existing TAKT directory. Check the `created`/`preserved` output and align the configured language with workflow paths. Setup is not an upgrade command.
+
+The [TAKT directory guide](../takt/README.md) explains instructions, policies, personas, knowledge, and output contracts. Referenced Markdown is frozen and checked with the YAML, so prepare it before delegation.
 
 ## Configure CG delegation before CG entry
 
-Download the bundle above before entering CG.
+Run project setup above before entering CG.
 
 Add trusted Bun scripts for your application's build, unit tests, and applicable sensors. These scripts run from frozen copies with the generated workspace as their working directory.
 
-Create `aidlc/takt-handoff/config.json`. This is a template: replace `<intent-dir>`, list every required source/config file, and implement the named scripts for your application.
+Edit the generated `aidlc/takt-handoff/config.json`. This is a template: replace `<intent-dir>`, list every required source/config file, and implement the named scripts for your application.
 
 ```json
 {

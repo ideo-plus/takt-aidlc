@@ -79,8 +79,8 @@ HOTLへの置換規則は`<language>/facets/policies/code-generation-hotl.md`と
 
 ## プロジェクトへの配置
 
-`takt/`を、両言語のディレクトリも含めて対象プロジェクトの`aidlc/takt-handoff/takt/`へ配置する。
-取得手順は[導入ガイド](https://github.com/ideo-plus/takt-aidlc/blob/main/docs/getting-started.ja.md#download-the-takt-bundle)を参照。
+プラグインの初期設定コマンドが、日英の定義を対象プロジェクトの`aidlc/takt-handoff/takt/`へ配置し、無効状態の設定ひな形を作成する。既存ファイルは保持する。
+手順は[導入ガイド](https://github.com/ideo-plus/takt-aidlc/blob/main/docs/getting-started.ja.md#initialize-the-project)を参照。
 YAMLだけをコピーすると参照先が足りないため、委譲前の検証で停止する。
 
 連携CLIは宣言されたMarkdownも入力一覧とhashに含める。実行用YAMLを移動するときは固定コピーからファセットを配置し、参照を更新する。

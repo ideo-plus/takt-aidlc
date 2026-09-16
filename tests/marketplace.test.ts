@@ -47,6 +47,10 @@ test('公開するGitツリーだけで両CLIからインストールしフッ�
       expect(readFileSync(join(installed, 'takt/ja/facets/instructions/code-generation-plan.md'), 'utf8')).toContain('現在のUnitのCG計画');
       expect(readFileSync(join(installed, 'takt/en/workflows/aidlc-code-generation-stage.yaml'), 'utf8')).toContain('../facets/instructions/code-generation-plan.md');
       expect(readFileSync(join(installed, 'takt/en/facets/instructions/code-generation-plan.md'), 'utf8')).toContain('CG plan');
+      const project = join(temporary, `${host}-project`); mkdirSync(project);
+      const setup = JSON.parse(run([process.execPath, join(installed, 'scripts/setup.js'), '--project', project]));
+      expect(setup.takt.action).toBe('created');
+      expect(JSON.parse(readFileSync(setup.config.path, 'utf8'))).toMatchObject({ enabled: false, hostHarness: host });
       const hooks = JSON.parse(readFileSync(join(installed, 'hooks/hooks.json'), 'utf8')).hooks;
       const hook = spawnSync('/bin/sh', ['-c', hooks.SessionStart[0].hooks[0].command], {
         cwd: temporary,

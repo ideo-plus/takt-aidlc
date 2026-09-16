@@ -66,7 +66,7 @@ HOTL adaptations live in `<language>/facets/policies/code-generation-hotl.md` an
 
 ## Project placement
 
-Copy the complete `takt/`, including both language trees, to `aidlc/takt-handoff/takt/` in the target project. Follow the [setup guide](https://github.com/ideo-plus/takt-aidlc/blob/main/docs/getting-started.md#download-the-takt-bundle). Copying YAML alone leaves missing references and stops delegation checks.
+The plugin’s setup command places the complete `takt/`, including both language trees, at `aidlc/takt-handoff/takt/` and creates a disabled configuration template. Existing files are preserved. Follow the [setup guide](https://github.com/ideo-plus/takt-aidlc/blob/main/docs/getting-started.md#initialize-the-project). Copying YAML alone leaves missing references and stops delegation checks.
 
 The runner records declared Markdown in the input inventory and hashes, copies facets from frozen inputs when relocating YAML, and checks their hashes after execution. Put custom file references in top-level YAML declarations. Expand local Markdown include/extends directives into self-contained files.
 
