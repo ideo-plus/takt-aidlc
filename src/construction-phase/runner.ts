@@ -1,3 +1,4 @@
+import type { HookEvent } from '../hosts/events';
 import { seedTraceProject, resolveTraceIds } from "./native-trace";
 import {
   chmodSync,
@@ -15,8 +16,7 @@ import {
   approvalCommand,
   approvalCommandIssue,
   approvedBoundary,
-  type HookEvent,
-} from "../handoff/bridge";
+} from "../handoff/approval";
 import {
   cleanEnvironment,
   command,
@@ -29,7 +29,7 @@ import {
   type Snapshot,
 } from "../handoff/io";
 import { executeCgWorkspace, type CgConfig } from "../code-generation/runner";
-import { sources } from "../code-generation/cg-gate";
+import { sources } from "../code-generation/code-generation-gate";
 import { hostHarness } from "../hosts/harness";
 import {
   stageApplies,

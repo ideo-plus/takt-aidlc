@@ -64,10 +64,7 @@ Construction内で作ったUnit設計は、技術レビュー後にCG用の入�
 - `delegationScope`: TAKTへ渡す範囲。`code-generation`または`construction`。
 - `provider`とモデル設定: TAKT内で使う実行環境。
 
-現行の`handoffStage: code-generation`、`handoffStage: inception-legacy`、`construction: true`からの移行は、黙って実行範囲を広げない明示的な変換にする。
 
 ## 現状
 
 [CG単体](code-generation.md)と[Construction全体](construction-phase.md)を選択できる。設計の差し戻し、CGの修正、全体検証から所有Unitへの修正依頼は、TAKT側で自動処理する。入力の矛盾や上限到達は停止し、成功として受け入れない。
-
-[旧Construction試作](construction-workflow.md)は、`inception-legacy`を明示した過去の実験用に残している。新しい全体版には`delegationScope: "construction"`を使う。

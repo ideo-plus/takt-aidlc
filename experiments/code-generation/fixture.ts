@@ -4,12 +4,11 @@ import { fixture, put, repo } from '../../tests/handoff-fixture';
 import { testRuntime, codexTestRuntime, prepareTestRuntime } from '../../scripts/test-runtime';
 import { writeJson } from '../../src/handoff/io';
 import { collectCgContext } from '../../src/code-generation/context';
-import { testSource as baseTests } from '../construction/fixture';
+const baseTests = `import { expect, test } from 'bun:test';\nimport { answer } from './value';\ntest('answer is 42', () => expect(answer).toBe(42));\ntest('answer is numeric', () => expect(typeof answer).toBe('number'));\ntest('answer is not 41', () => expect(answer).not.toBe(41));\n`;
 const testSource = baseTests + `\nimport * as api from './value';\ntest('public API is unchanged', () => expect(Object.keys(api)).toEqual(['answer']));\ntest('answer is a finite integer', () => expect(Number.isFinite(answer) && Number.isInteger(answer)).toBe(true));\n`;
 
 export async function cgFixture(options: { constructionEntry?: boolean; hostHarness?: 'claude' | 'codex'; live?: boolean; provider?: 'claude' | 'codex'; model?: string; reasoningEffort?: string; buildFailure?: boolean; sensorFailure?: boolean; blocked?: boolean; maxSteps?: number } = {}) {
   const f = await fixture({ approved: false });
-  rmSync(join(f.project, '.takt-aidlc'), { recursive: true });
   for (const directory of ['aidlc-common', 'agents', 'knowledge', 'sensors']) cpSync(join(testRuntime, '.claude', directory), join(f.project, '.claude', directory), { recursive: true });
   if (options.hostHarness === 'codex') {
     await prepareTestRuntime('codex');
@@ -30,14 +29,15 @@ export async function cgFixture(options: { constructionEntry?: boolean; hostHarn
   writeJson(join(f.project, record, 'project-description.json'), 'CG-INTENT-SENTINEL: 合成テスト入力。answerを41から42へ変更する。既存の設計・規約に従い、CG単体をHOTLで実行する。standardの5テストとビルドを必ず通す。');
   put(join(f.project, 'aidlc/spaces/default/memory/team.md'), '# Team\n\n## Testing Posture\n- **Methodology**: test-after\n- **Ordering**: 値を変更してから5件のテストを作り、ビルドと単一Unitのテストを実行する。\n- standard戦略に従って5テストを使い、行カバレッジ80%以上を満たす。\n\n## Code Style\n既存の名前付きexportを維持する。Lint基盤は追加しない。\n');
   const control = 'aidlc/takt-handoff';
-  let workflow = readFileSync(join(repo, 'workflows/aidlc-code-generation.yaml'), 'utf8');
+  cpSync(join(repo, 'takt'), join(f.project, control, 'takt'), { recursive: true });
+  let workflow = readFileSync(join(repo, 'takt/workflows/aidlc-code-generation-stage.yaml'), 'utf8');
   if (options.maxSteps) workflow = workflow.replace('max_steps: 20', `max_steps: ${options.maxSteps}`);
-  put(join(f.project, control, 'workflow.yaml'), workflow);
+  put(join(f.project, control, 'takt/workflows/aidlc-code-generation-stage.yaml'), workflow);
   put(join(f.project, control, 'build.ts'), `import { join } from 'node:path';\nconst result = await Bun.build({entrypoints:[join(process.cwd(),'src/value.ts')],target:'bun',outdir:join(process.cwd(),'cg/build')});\nif(!result.success){console.error(result.logs);process.exit(1)}\nconsole.log('Bun build passed');\n`);
-  put(join(f.project, control, 'test.ts'), readFileSync(join(repo, 'experiments/native-session/verify-app.ts'), 'utf8').replace("['test', '--coverage'", "['test', 'src/value.test.ts', '--coverage'"));
+  put(join(f.project, control, 'test.ts'), readFileSync(join(repo, 'experiments/code-generation/verify-app.ts'), 'utf8').replace("['test', '--coverage'", "['test', 'src/value.test.ts', '--coverage'"));
   put(join(f.project, control, 'typecheck.ts'), `import {spawnSync} from 'node:child_process';\nconst r=spawnSync(process.execPath,[${JSON.stringify(join(repo, 'node_modules/typescript/bin/tsc'))},'--ignoreConfig','--noEmit','--strict','--skipLibCheck','--target','esnext','--module','esnext','--moduleResolution','bundler','--types','bun-types','src/value.ts','src/value.test.ts'],{encoding:'utf8'});\nconsole.log(JSON.stringify({pass:r.status===0,errors:r.stdout||r.stderr}));\n`);
   const artifacts = names.map(name => `${record}/inception/${name}`);
-  const config = { hostHarness: options.hostHarness ?? 'claude', enabled: true, handoffStage: 'code-generation', artifacts, sources: ['src/value.ts'], workflow: `${control}/workflow.yaml`, buildScript: `${control}/build.ts`, verifyScript: `${control}/test.ts`, sensorScripts: { 'type-check': `${control}/typecheck.ts` }, sensorExceptions: { linter: { reason: 'このIntentの確定方針でLintを導入しない', source: `${record}/inception/practices-discovery/team-practices.md` } }, provider: options.live ? (options.provider ?? 'claude') : 'mock', disableBedrock: true, timeoutMs: 900000, mockScenario: `${control}/scenario.json` };
+  const config = { hostHarness: options.hostHarness ?? 'claude', enabled: true, delegationScope: 'code-generation', artifacts, sources: ['src/value.ts'], workflow: `${control}/takt/workflows/aidlc-code-generation-stage.yaml`, buildScript: `${control}/build.ts`, verifyScript: `${control}/test.ts`, sensorScripts: { 'type-check': `${control}/typecheck.ts` }, sensorExceptions: { linter: { reason: 'このIntentの確定方針でLintを導入しない', source: `${record}/inception/practices-discovery/team-practices.md` } }, provider: options.live ? (options.provider ?? 'claude') : 'mock', disableBedrock: true, timeoutMs: 900000, mockScenario: `${control}/scenario.json` };
   if (options.live && options.provider === 'codex') Object.assign(config, { model: options.model ?? 'gpt-5.6-luna', codexReasoningEffort: options.reasoningEffort ?? 'max', timeoutMs: 1800000 });
   else if (options.model) Object.assign(config, { model: options.model });
   writeJson(join(f.project, control, 'config.json'), config);

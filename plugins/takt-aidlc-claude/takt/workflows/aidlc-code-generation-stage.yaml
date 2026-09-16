@@ -1,0 +1,174 @@
+name: aidlc-code-generation-stage
+description: 本家AI-DLCのCG定義・Intent・知識・センサーを入力とする、対話承認なしのCG単体。
+initial_step: plan
+max_steps: 20
+policies:
+  aidlc-verification: ../facets/policies/aidlc-verification.md
+  code-generation-hotl: ../facets/policies/code-generation-hotl.md
+knowledge:
+  aidlc-frozen-inputs: ../facets/knowledge/aidlc-frozen-inputs.md
+  code-generation-artifacts: ../facets/knowledge/code-generation-artifacts.md
+instructions:
+  code-generation-plan: ../facets/instructions/code-generation-plan.md
+  code-generation-plan-review: ../facets/instructions/code-generation-plan-review.md
+  code-generation-implement: ../facets/instructions/code-generation-implement.md
+  code-generation-code-review: ../facets/instructions/code-generation-code-review.md
+  code-generation-fix: ../facets/instructions/code-generation-fix.md
+  code-generation-finish: ../facets/instructions/code-generation-finish.md
+report_formats:
+  code-generation-plan: ../facets/output-contracts/code-generation-plan.md
+  code-generation-plan-review: ../facets/output-contracts/code-generation-plan-review.md
+  code-generation-code-review: ../facets/output-contracts/code-generation-code-review.md
+  code-generation-finish: ../facets/output-contracts/code-generation-finish.md
+steps:
+  - name: plan
+    session_key: code-generation-planner
+    edit: false
+    persona: planner
+    policy:
+      - aidlc-verification
+      - code-generation-hotl
+    knowledge:
+      - aidlc-frozen-inputs
+      - code-generation-artifacts
+    instruction: code-generation-plan
+    output_contracts:
+      report:
+        - name: 01-code-generation-plan.json
+          format: code-generation-plan
+    quality_gates:
+      - type: command
+        command: bun ../control/code-generation-gate.ts plan
+        timeout_ms: 130000
+    rules:
+      - condition: CG計画がready
+        next: plan-review
+      - condition: CG計画がblocked
+        next: ABORT
+  - name: plan-review
+    session_key: code-generation-plan-reviewer
+    edit: false
+    persona: architecture-reviewer
+    policy:
+      - evidence-based-judgment
+      - aidlc-verification
+      - code-generation-hotl
+    knowledge:
+      - architecture
+      - aidlc-frozen-inputs
+      - code-generation-artifacts
+    instruction:
+      - architecture-review
+      - code-generation-plan-review
+    output_contracts:
+      report:
+        - name: 02-code-generation-plan-review.json
+          format: code-generation-plan-review
+    quality_gates:
+      - type: command
+        command: bun ../control/code-generation-gate.ts plan-review
+        timeout_ms: 130000
+    rules:
+      - condition: 計画レビューがapproved
+        next: implement
+      - condition: 計画レビューがchanges_requested
+        next: plan
+      - condition: 計画レビューがblocked
+        next: ABORT
+  - name: implement
+    session_key: code-generation-developer
+    edit: true
+    required_permission_mode: edit
+    persona: coder
+    policy:
+      - aidlc-verification
+      - code-generation-hotl
+    knowledge:
+      - aidlc-frozen-inputs
+      - code-generation-artifacts
+    instruction: code-generation-implement
+    quality_gates:
+      - type: command
+        command: bun ../control/code-generation-gate.ts implement
+        timeout_ms: 250000
+    rules:
+      - condition: 実装とCG成果物の記録が完了
+        next: code-review
+      - condition: 自律的に解決できずblocked
+        next: ABORT
+  - name: code-review
+    session_key: code-generation-code-reviewer
+    edit: false
+    persona: coding-reviewer
+    policy:
+      - review
+      - contract-change
+      - evidence-based-judgment
+      - aidlc-verification
+      - code-generation-hotl
+    knowledge:
+      - architecture
+      - aidlc-frozen-inputs
+      - code-generation-artifacts
+      - unit-testing
+    instruction:
+      - coding-review
+      - code-generation-code-review
+    output_contracts:
+      report:
+        - name: 03-code-generation-code-review.json
+          format: code-generation-code-review
+    quality_gates:
+      - type: command
+        command: bun ../control/code-generation-gate.ts code-review
+        timeout_ms: 130000
+    rules:
+      - condition: コードレビューがapproved
+        next: finish
+      - condition: コードレビューがchanges_requested
+        next: fix
+      - condition: コードレビューがblocked
+        next: ABORT
+  - name: fix
+    session_key: code-generation-developer
+    edit: true
+    required_permission_mode: edit
+    persona: coder
+    policy:
+      - aidlc-verification
+      - code-generation-hotl
+    knowledge:
+      - aidlc-frozen-inputs
+      - code-generation-artifacts
+    instruction: code-generation-fix
+    quality_gates:
+      - type: command
+        command: bun ../control/code-generation-gate.ts fix
+        timeout_ms: 250000
+    rules:
+      - condition: 修正とCG成果物の更新が完了
+        next: code-review
+      - condition: 自律的に解決できずblocked
+        next: ABORT
+  - name: finish
+    session_key: code-generation-reporter
+    edit: false
+    persona: exec-assistant
+    policy:
+      - aidlc-verification
+      - code-generation-hotl
+    knowledge:
+      - aidlc-frozen-inputs
+      - code-generation-artifacts
+    instruction: code-generation-finish
+    output_contracts:
+      report:
+        - name: 04-code-generation-summary.json
+          format: code-generation-finish
+    quality_gates:
+      - type: command
+        command: bun ../control/code-generation-gate.ts finish
+        timeout_ms: 130000
+    rules:
+      - condition: CGの完了報告が完成
+        next: COMPLETE

@@ -7,7 +7,7 @@ import {
   type PhaseConfig,
 } from "../../src/construction-phase/context";
 import { readJson, writeJson } from "../../src/handoff/io";
-import { put, repo } from "../../tests/handoff-fixture";
+import { put } from "../../tests/handoff-fixture";
 export async function phaseFixture(
   options: {
     host?: "claude" | "codex";
@@ -61,10 +61,6 @@ export async function phaseFixture(
     );
   }
   put(
-    join(f.project, control, "stage-workflow.yaml"),
-    readFileSync(join(repo, "workflows/aidlc-construction-stage.yaml"), "utf8"),
-  );
-  put(
     join(f.project, control, "phase-build.ts"),
     `const r=await Bun.build({entrypoints:${JSON.stringify(options.twoUnits ? ["src/value.ts", "src/consumer.ts"] : ["src/value.ts"])},target:'bun',outdir:'cg/build'});if(!r.success)process.exit(1);console.log('phase build passed');\n`,
   );
@@ -76,14 +72,13 @@ export async function phaseFixture(
     ...f.config,
     provider: "mock",
     delegationScope: "construction",
-    stageWorkflow: `${control}/stage-workflow.yaml`,
+    constructionWorkflow: `${control}/takt/workflows/aidlc-construction-phase.yaml`,
     phaseBuildScript: `${control}/phase-build.ts`,
     phaseVerifyScript: `${control}/phase-test.ts`,
     pipelinePaths: [".github/workflows/ci.yml"],
     stageScenarios: {},
     timeoutMs: 180000,
   } as any;
-  delete (config as any).handoffStage;
   if (options.twoUnits) {
     for (const name of ["build", "test", "typecheck"])
       put(

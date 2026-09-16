@@ -13,14 +13,15 @@ import {
   harnessDirectory,
 } from "../hosts/harness";
 import { digest, fileInside, readJson, snapshot } from "../handoff/io";
+import { workflowFiles } from "../takt/workflow";
 
 export type UnitChecks = Pick<
   CgConfig,
   "buildScript" | "verifyScript" | "sensorScripts" | "sensorExceptions"
 > & { mockScenario?: string };
-export type PhaseConfig = Omit<CgConfig, "delegationScope" | "handoffStage"> & {
+export type PhaseConfig = Omit<CgConfig, "delegationScope"> & {
   delegationScope: "construction";
-  stageWorkflow: string;
+  constructionWorkflow: string;
   phaseBuildScript: string;
   phaseVerifyScript: string;
   unitChecks?: Record<string, UnitChecks>;
@@ -98,7 +99,7 @@ export function phaseConfig(project: string) {
   }
   for (const key of [
     "workflow",
-    "stageWorkflow",
+    "constructionWorkflow",
     "buildScript",
     "verifyScript",
     "phaseBuildScript",
@@ -292,8 +293,8 @@ export function phaseFiles(project: string, c: PhaseConfig, ctx: PhaseContext) {
     ...Object.values(ctx.cg).flatMap((cg) => cg.files),
     ...ctx.stages.flatMap((s) => s.files),
     ...c.sources,
-    c.workflow,
-    c.stageWorkflow,
+    ...workflowFiles(project, c.workflow),
+    ...workflowFiles(project, c.constructionWorkflow),
     c.phaseBuildScript,
     c.phaseVerifyScript,
     ...Object.values(c.stageSensorScripts ?? {}),

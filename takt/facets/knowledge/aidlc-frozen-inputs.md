@@ -1,0 +1,7 @@
+# 固定入力と出典
+
+AI-DLC文書の元パスは出典を表し、この作業領域で直接編集する場所ではない。
+CGとConstruction各工程の原文コピーはinput/project配下にあり、入力の索引とSHA256で対応が分かる。
+旧Construction試作はinput/manifest.jsonのartifactsに示したコピーを使う。
+Testing Contractには合意済みのテスト方法・順序・品質目標とhashが含まれる。
+TAKTのレポート、検証ログ、生成ソースは別々の成果物であり、レポートに書いた成功と実測の成功は同義ではない。

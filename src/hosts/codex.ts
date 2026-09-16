@@ -1,4 +1,4 @@
-import type { HookEvent } from '../handoff/bridge';
+import type { HookEvent } from './events';
 
 // AI-DLC 2.8.2のbind-bash-sessionが付ける前置きだけを認める。
 export function codexCommand(command: string, sessionId: string): string {

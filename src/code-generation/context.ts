@@ -107,15 +107,3 @@ export function collectCgContext(project: string, artifacts: string[], unit: str
   } finally { rmSync(probeDir, { recursive: true, force: true }); }
   return { version: 1, hostHarness: host, record, unit, files, roles, testingContract, testingContractText: result.stdout, requirementIds, intentFile, stageFile, sensors, templates, checks, mode: 'hotl' };
 }
-
-export const adaptation = `# AI-DLC CGのHOTL実行契約
-TAKTが担うのはCode Generationステージだけです。設計工程やBuild and Testステージ全体を実行しません。
-以下の資料は固定したAI-DLCの原文です。Intent、既存設計、開発規約、CGの実装手順と成果物要件に従ってください。
-ただし人間の対話承認・ウォーキングスケルトン後の承認・AI-DLCエンジンの状態更新は実行しません。ユーザーの方針により、CG内の計画確認とレビューはTAKTの自動判定へ置き換えます。
-本家のTask委譲はTAKTの担当ステップへの委譲として扱います。ネイティブのPlan Approval receiptやdispatch markerは生成・要求せず、ここでは固定入力のhash、計画のTesting Contract hash、TAKTの計画レビュー結果を生成の前提にします。
-センサー定義も開発契約です。定義された検査を実行し、その実測結果を残してください。ただしAI-DLCのネイティブ監査記録を捏造せず、人間のApprove Planを得たとも記録しないでください。元のaidlc/・.claude/・.codex/・.agents/を更新せず、CGの報告はTAKTのレポートとcg/に保存します。
-原文の<record>などは元プロジェクトでの出典です。添付した固定コピーと作業領域のソースを参照し、元の記録領域へ書き込まないでください。
-規約はstrict-additiveとして読み、空のテンプレート例を確定事項と見なさないでください。人が明示した既存の要求・例外を優先し、不明な判断は捏造せずblockedとして終了してください。
-Testing Contractの方法・順序・品質目標を弱めてはいけません。ビルドとテストの両方が成功するまでCG完了を返してはいけません。
-AI-DLC原文にあるBash等の権限は元の担当者の説明です。現在許可されたツールだけを使ってください。
-`;

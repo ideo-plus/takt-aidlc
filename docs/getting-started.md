@@ -71,16 +71,40 @@ Run `/aidlc` normally. Use the usual questions and approval gates up to the sele
 
 Use `delegationScope: "code-generation"` for CG only, or `delegationScope: "construction"` for the whole phase after Inception approval. Both hosts support both modes. See the [Construction guide](construction-phase.md) for phase and per-unit checks; the configuration below is for CG only.
 
-## Configure CG delegation before CG entry
+## Download the TAKT bundle
 
-Download the CG workflow in the target project:
+Copy the installed plugin's entire `takt/` directory into the target project. This uses the exact installed version and needs neither a Git checkout nor a build.
+
+Find the installation path with `claude plugin list --json` (`installPath` for `takt-aidlc@takt-aidlc`) or `codex plugin add takt-aidlc@takt-aidlc --json` (`installedPath`). The Codex command also ensures the plugin is installed. Then use that path:
 
 ```sh
 mkdir -p aidlc/takt-handoff
-curl --fail --location https://raw.githubusercontent.com/ideo-plus/takt-aidlc/main/workflows/aidlc-code-generation.yaml --output aidlc/takt-handoff/workflow.yaml
+cp -R /path/from-the-cli/takt aidlc/takt-handoff/
 ```
 
-If you pinned the marketplace to a tag or commit, use that same ref instead of `main` in the download URL. You can also copy `workflows/aidlc-code-generation.yaml` from the installed plugin. These files are frozen at delegation, so prepare them before entering CG.
+Alternatively, download the repository archive over HTTPS with an authenticated GitHub CLI (`gh auth login`). This also works while the repository is private; anonymous `curl` access does not. Your account must have repository access.
+
+```sh
+(
+  set -e
+  mkdir -p aidlc/takt-handoff
+  takt_download_dir=$(mktemp -d)
+  trap 'rm -rf "$takt_download_dir"' EXIT
+  gh api repos/ideo-plus/takt-aidlc/tarball/main > "$takt_download_dir/source.tar.gz"
+  takt_archive_root=$(tar -tzf "$takt_download_dir/source.tar.gz" | sed -n '1s@/.*@@p')
+  tar -xzf "$takt_download_dir/source.tar.gz" --strip-components=1 -C aidlc/takt-handoff "$takt_archive_root/takt"
+)
+```
+
+`delegationScope` is required; only `code-generation` and `construction` are supported.
+
+Both methods create `aidlc/takt-handoff/takt/`. YAML files in `takt/workflows/` reference `../facets/`; copying a YAML file alone is insufficient. If the marketplace is pinned to a tag or commit, use the installed copy or replace `main` with the same ref in the API command.
+
+The [TAKT directory guide](../takt/README.md) explains instructions, policies, personas, knowledge, and output contracts. Personas use the built-ins shipped with TAKT 0.65.0; local Markdown files contain the AI-DLC-specific instructions, policies, knowledge, and report formats. Prepare or customize these files before delegation; referenced Markdown files are frozen and checked alongside the YAML.
+
+## Configure CG delegation before CG entry
+
+Download the bundle above before entering CG.
 
 Add trusted Bun scripts for your application's build, unit tests, and applicable sensors. These scripts run from frozen copies with the generated workspace as their working directory.
 
@@ -102,7 +126,7 @@ Create `aidlc/takt-handoff/config.json`. This is a template: replace `<intent-di
     "aidlc/spaces/default/intents/<intent-dir>/inception/delivery-planning/bolt-plan.md"
   ],
   "sources": ["src/value.ts"],
-  "workflow": "aidlc/takt-handoff/workflow.yaml",
+  "workflow": "aidlc/takt-handoff/takt/workflows/aidlc-code-generation-stage.yaml",
   "buildScript": "aidlc/takt-handoff/build.ts",
   "verifyScript": "aidlc/takt-handoff/test.ts",
   "sensorScripts": {
@@ -133,7 +157,7 @@ If a sensor does not apply, omit its script and explicitly provide a reason with
 
 To use Claude workers, set `provider` to `claude` and remove `codexReasoningEffort`. Set `model` to an available Claude model or omit it. `disableBedrock: true` removes inherited Bedrock flags/model overrides only in the child process; it does not reconfigure the host's authentication.
 
-Loading the plugin without an enabled CG config does not start delegation. The workflow requires the runner's context and quality gates and cannot be invoked standalone. The legacy `construction: true` config is not the current CG mode.
+Loading the plugin without an enabled CG config does not start delegation. The workflow requires the runner's context and quality gates and cannot be invoked standalone.
 
 ## Inspect a run
 
@@ -165,7 +189,7 @@ codex plugin marketplace upgrade takt-aidlc
 codex plugin add takt-aidlc@takt-aidlc
 ```
 
-Restart the host after updating. Prepare matching workflow templates for new runs; do not change an active run's frozen inputs.
+Restart the host after updating. Prepare a matching `takt/` bundle, including facets, for new runs; do not change an active run's frozen inputs. The former repository-level `workflows/` directory has moved to `takt/workflows/`. When switching to these templates, update `workflow` and (for Construction) `constructionWorkflow` in the config.
 
 For migration from the previous local development setup:
 
