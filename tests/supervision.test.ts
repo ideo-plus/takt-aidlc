@@ -27,6 +27,10 @@ test('CGのsuperviseが要件漏れを差し戻し、修正・再レビュー・
   writeJson(reportPath, { ...JSON.parse(original), requirements: [] });
   expect((await command([process.execPath, gate, 'supervise'], result.workspace!, cleanEnvironment(), 10000)).code).not.toBe(0);
   writeFileSync(reportPath, original);
+  writeJson(join(control, 'ledger.json'), [...ledger, ledger.findLast(r => r.phase === 'code-review')]);
+  const stale = await command([process.execPath, gate, 'finish'], result.workspace!, cleanEnvironment(), 10000);
+  expect(stale.code).not.toBe(0);
+  expect(stale.stderr).toContain('最新レビュー後のsuperviseが必要');
   writeJson(join(control, 'ledger.json'), ledger.filter(r => r.phase !== 'supervise'));
   expect((await command([process.execPath, gate, 'finish'], result.workspace!, cleanEnvironment(), 10000)).code).not.toBe(0);
   expect(readFileSync(join(f.project, 'src/value.ts'), 'utf8')).toContain('41');
