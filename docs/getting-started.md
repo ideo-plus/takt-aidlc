@@ -73,17 +73,30 @@ Use `delegationScope: "code-generation"` for CG only, or `delegationScope: "cons
 
 ## Download the TAKT bundle
 
-From the target project, download the `takt/` directory, including all facet Markdown files. No Git checkout or build is needed:
+Copy the installed plugin's entire `takt/` directory into the target project. This uses the exact installed version and needs neither a Git checkout nor a build.
+
+Find the installation path with `claude plugin list --json` (`installPath` for `takt-aidlc@takt-aidlc`) or `codex plugin add takt-aidlc@takt-aidlc --json` (`installedPath`). The Codex command also ensures the plugin is installed. Then use that path:
 
 ```sh
 mkdir -p aidlc/takt-handoff
-takt_download_dir=$(mktemp -d)
-curl --fail --location https://github.com/ideo-plus/takt-aidlc/archive/refs/heads/main.tar.gz --output "$takt_download_dir/source.tar.gz" &&
-  tar -xzf "$takt_download_dir/source.tar.gz" --strip-components=1 -C aidlc/takt-handoff takt-aidlc-main/takt
-rm -rf "$takt_download_dir"
+cp -R /path/from-the-cli/takt aidlc/takt-handoff/
 ```
 
-This creates `aidlc/takt-handoff/takt/`. You can also copy the entire `takt/` directory from the installed plugin. YAML files reference `./facets/`; copying a YAML file alone is insufficient. If you pinned the marketplace to a tag or commit, copy `takt/` from that installed version instead of downloading `main`.
+Alternatively, download the repository archive over HTTPS with an authenticated GitHub CLI (`gh auth login`). This also works while the repository is private; anonymous `curl` access does not. Your account must have repository access.
+
+```sh
+(
+  set -e
+  mkdir -p aidlc/takt-handoff
+  takt_download_dir=$(mktemp -d)
+  trap 'rm -rf "$takt_download_dir"' EXIT
+  gh api repos/ideo-plus/takt-aidlc/tarball/main > "$takt_download_dir/source.tar.gz"
+  takt_archive_root=$(tar -tzf "$takt_download_dir/source.tar.gz" | sed -n '1s@/.*@@p')
+  tar -xzf "$takt_download_dir/source.tar.gz" --strip-components=1 -C aidlc/takt-handoff "$takt_archive_root/takt"
+)
+```
+
+Both methods create `aidlc/takt-handoff/takt/`. YAML files reference `./facets/`; copying a YAML file alone is insufficient. If the marketplace is pinned to a tag or commit, use the installed copy or replace `main` with the same ref in the API command.
 
 The [TAKT directory guide](../takt/README.md) explains instructions, policies, personas, knowledge, and output contracts. Prepare or customize these files before delegation; referenced Markdown files are frozen and checked alongside the YAML. Existing self-contained YAML configurations continue to work.
 
