@@ -62,7 +62,7 @@ The current profile supports `test-after` and a single AI-DLC audit shard. Const
 - [CG-only / Construction delegation modes](docs/delegation-modes.md)
 - [Claude Code host](docs/claude-plugin.md) · [Codex host](docs/codex-host.md)
 - [TAKT workflows and facets](takt/README.md)
-- [CG behavior and sensors](docs/code-generation.md) · [Construction behavior](docs/construction-phase.md)
+- [CG behavior and sensors](docs/code-generation-stage.md) · [Construction behavior](docs/construction-phase.md)
 - [Support and maintainers](docs/contributing.md#問い合わせ)
 
 ## Development

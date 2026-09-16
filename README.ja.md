@@ -62,7 +62,7 @@ codex plugin add takt-aidlc@takt-aidlc
 - [CG単体／Construction全体の委譲モード](docs/delegation-modes.md)
 - [Claude Codeホスト](docs/claude-plugin.md) · [Codexホスト](docs/codex-host.md)
 - [TAKTのワークフローとファセット](takt/README.md)
-- [CGの動作とセンサー](docs/code-generation.md) · [Constructionの動作](docs/construction-phase.md)
+- [CGの動作とセンサー](docs/code-generation-stage.md) · [Constructionの動作](docs/construction-phase.md)
 - [問い合わせ窓口と管理者](docs/contributing.md#問い合わせ)
 
 ## 開発への参加

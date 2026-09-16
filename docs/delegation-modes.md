@@ -67,4 +67,4 @@ Construction内で作ったUnit設計は、技術レビュー後にCG用の入�
 
 ## 現状
 
-[CG単体](code-generation.md)と[Construction全体](construction-phase.md)を選択できる。設計の差し戻し、CGの修正、全体検証から所有Unitへの修正依頼は、TAKT側で自動処理する。入力の矛盾や上限到達は停止し、成功として受け入れない。
+[CG単体](code-generation-stage.md)と[Construction全体](construction-phase.md)を選択できる。設計の差し戻し、CGの修正、全体検証から所有Unitへの修正依頼は、TAKT側で自動処理する。入力の矛盾や上限到達は停止し、成功として受け入れない。

@@ -1,4 +1,4 @@
-# Code GenerationをTAKTで実行する
+# Code GenerationステージをTAKTで実行する
 
 ## 接続の構造
 

@@ -200,6 +200,6 @@ Local builds and live experiments are documented in [development](contributing.m
 
 ## Limits and troubleshooting
 
-See [CG behavior and limits](code-generation.md) and [verification results](../experiments/code-generation/RESULTS.md). The initial profile supports `test-after` only; it rejects other Testing Contracts before parking. Model limits, unresolved input conflicts, and failed checks are recorded as failures or `blocked`, never successful generation.
+See [CG behavior and limits](code-generation-stage.md) and [verification results](../experiments/code-generation/RESULTS.md). The initial profile supports `test-after` only; it rejects other Testing Contracts before parking. Model limits, unresolved input conflicts, and failed checks are recorded as failures or `blocked`, never successful generation.
 
 If a run stops progressing, inspect its status, TAKT logs, and quality-gate logs before recovery. Changing frozen files invalidates a run. Process isolation and source hashes are not an OS security boundary against arbitrary code running as the same user.

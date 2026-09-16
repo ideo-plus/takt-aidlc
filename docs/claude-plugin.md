@@ -21,7 +21,7 @@ claude plugin install takt-aidlc@takt-aidlc
 
 `aidlc/takt-handoff/config.json`の`enabled: true`で有効にし、`delegationScope: "code-generation"`または`"construction"`を選ぶ。CG単体モードはCG入口、Construction全体モードはInception最終承認後に起動する。同じ入口のイベントを重複受信しても、新しいTAKT実行を重ねない。
 
-設定は[導入手順](getting-started.md)、実行内容は[CGの動作](code-generation.md)と[Constructionの動作](construction-phase.md)を参照。TAKTワーカーのproviderはClaude／Codexから独立して選べる。Codex上でAI-DLCを動かす場合は[Codexホスト用プラグイン](codex-host.md)を使う。
+設定は[導入手順](getting-started.md)、実行内容は[CGの動作](code-generation-stage.md)と[Constructionの動作](construction-phase.md)を参照。TAKTワーカーのproviderはClaude／Codexから独立して選べる。Codex上でAI-DLCを動かす場合は[Codexホスト用プラグイン](codex-host.md)を使う。
 
 ## 状態確認
 
