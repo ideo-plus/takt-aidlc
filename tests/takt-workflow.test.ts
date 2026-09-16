@@ -44,6 +44,7 @@ test('TAKT本体が組み込みペルソナを選び、移動したローカルf
       expect(resolved.map(match => match[1])).toEqual(definition.steps.map((step: any) => step.persona));
       const builtinFacets = [
         ['instructions', 'architecture-review'],
+        ['instructions', 'supervise'],
         ['policies', 'evidence-based-judgment'],
         ['knowledge', 'architecture'],
         ...(definition.steps.some((step: any) => step.name === 'code-review') ? [

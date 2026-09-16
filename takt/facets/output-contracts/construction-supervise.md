@@ -1,0 +1,3 @@
+JSONのみ、文章は日本語。
+{"verdict":"approved または changes_requested または blocked","reason":"停止理由","intentAssessment":"Intent全体とUnit間の連携を現在のコードへ照合した判断","requirements":[{"id":"入力の要求ID","status":"met または unmet または undetermined","evidence":[{"path":"実在するソース・テスト・構成ファイルの相対パス","reason":"受入条件に対する根拠"}]}],"units":[{"unit":"入力のUnit名","status":"met または unmet または undetermined","assessment":"担当要件と他Unitとの接続を確認した根拠"}],"repairUnits":[],"findings":[{"id":"一貫した指摘ID","requirementIds":["要求ID"],"reason":"未充足の根拠","fix":"修正対象と受入条件"}]}
+全要求IDと全Unitを重複なく列挙する。approvedは全要求・全Unitがmet、findingsとrepairUnitsは空。changes_requestedには指摘と有効なrepairUnitsが必要。blockedには外部判断が必要な理由を記載する。

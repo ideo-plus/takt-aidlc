@@ -41,6 +41,8 @@ codex plugin add takt-aidlc@takt-aidlc
 
 **インストールだけでは委譲は有効になりません。** 選択した入口に入る前にプロジェクトを設定してください。`hostHarness`はAI-DLCのホスト、`provider`はTAKTのワーカー（Claude／Codex）をそれぞれ選びます。
 
+両モードに、要件充足を独立に判定する`supervise`があります。Constructionでは全Unitをまとめた最終判定も行います。
+
 両モードともHOTL（人が監督し、実行中の対話承認を挟まない方式）です。技術レビューと修正を自動で繰り返し、ビルド・テスト・適用するセンサーが成功すると`verified`になります。入力の矛盾を解決できなければ`blocked`で終了します。
 
 結果は`aidlc/takt-handoff/cg-runs/<run-id>/status.json`または`phase-runs/<run-id>/status.json`で確認します。元のプロジェクトはparkを維持します。**生成コードの自動マージ、本家AI-DLCの完了処理・再開は行いません。**

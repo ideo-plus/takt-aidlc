@@ -5,6 +5,7 @@ max_steps: 20
 policies:
   aidlc-verification: ../facets/policies/aidlc-verification.md
   code-generation-hotl: ../facets/policies/code-generation-hotl.md
+  aidlc-supervision: ../facets/policies/aidlc-supervision.md
 knowledge:
   aidlc-frozen-inputs: ../facets/knowledge/aidlc-frozen-inputs.md
   code-generation-artifacts: ../facets/knowledge/code-generation-artifacts.md
@@ -15,11 +16,13 @@ instructions:
   code-generation-code-review: ../facets/instructions/code-generation-code-review.md
   code-generation-fix: ../facets/instructions/code-generation-fix.md
   code-generation-finish: ../facets/instructions/code-generation-finish.md
+  code-generation-supervise: ../facets/instructions/code-generation-supervise.md
 report_formats:
   code-generation-plan: ../facets/output-contracts/code-generation-plan.md
   code-generation-plan-review: ../facets/output-contracts/code-generation-plan-review.md
   code-generation-code-review: ../facets/output-contracts/code-generation-code-review.md
   code-generation-finish: ../facets/output-contracts/code-generation-finish.md
+  code-generation-supervise: ../facets/output-contracts/code-generation-supervise.md
 steps:
   - name: plan
     session_key: code-generation-planner
@@ -124,7 +127,7 @@ steps:
         timeout_ms: 130000
     rules:
       - condition: コードレビューがapproved
-        next: finish
+        next: supervise
       - condition: コードレビューがchanges_requested
         next: fix
       - condition: コードレビューがblocked
@@ -150,6 +153,35 @@ steps:
         next: code-review
       - condition: 自律的に解決できずblocked
         next: ABORT
+  - name: supervise
+    session_key: code-generation-supervisor
+    edit: false
+    persona: supervisor
+    policy:
+      - contract-change
+      - evidence-based-judgment
+      - aidlc-supervision
+    knowledge:
+      - aidlc-frozen-inputs
+    pass_previous_response: false
+    instruction:
+      - supervise
+      - code-generation-supervise
+    output_contracts:
+      report:
+        - name: 04-code-generation-supervision.json
+          format: code-generation-supervise
+    quality_gates:
+      - type: command
+        command: bun ../control/code-generation-gate.ts supervise
+        timeout_ms: 130000
+    rules:
+      - condition: 要件充足がapproved
+        next: finish
+      - condition: 修正可能な未充足がchanges_requested
+        next: fix
+      - condition: 外部判断が必要でblocked
+        next: ABORT
   - name: finish
     session_key: code-generation-reporter
     edit: false
@@ -163,7 +195,7 @@ steps:
     instruction: code-generation-finish
     output_contracts:
       report:
-        - name: 04-code-generation-summary.json
+        - name: 05-code-generation-summary.json
           format: code-generation-finish
     quality_gates:
       - type: command

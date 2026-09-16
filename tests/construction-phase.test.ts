@@ -24,7 +24,7 @@ test("Constructionは依存順に設計・共通CGを実行し、全体検証と
       ?.filter((s) => s.stage === "code-generation")
       .map((s) => s.unit),
   ).toEqual(["answer-value-update", "answer-consumer"]);
-  expect(result.steps?.at(-1)?.stage).toBe("ci-pipeline");
+  expect(result.steps?.at(-1)?.stage).toBe("supervise");
   expect(
     readFileSync(join(result.workspace!, "src/consumer.ts"), "utf8"),
   ).toContain("from './value'");
@@ -70,7 +70,7 @@ test("Inception承認がない場合と最終の全体テスト失敗を成功�
   const h = (await preparePhase(f.project, f.event))!;
   const result = await executePhase(f.project, h.id);
   expect(result.state).toBe("failed");
-  expect(result.steps?.at(-1)?.stage).toBe("ci-pipeline");
+  expect(result.steps?.at(-1)?.stage).toBe("supervise");
   expect(readJson<any>(join(h.run, "attempts/1/final-test.json")).code).toBe(1);
 }, 120000);
 

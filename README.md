@@ -41,6 +41,8 @@ Start a new host session after installation. For Codex, [enable and trust hooks]
 
 **Installation alone does not enable delegation.** Configure the project before the selected boundary. `hostHarness` selects the AI-DLC host; `provider` independently selects the TAKT worker (Claude or Codex).
 
+Both modes include an independent `supervise` step for final requirement fulfillment; Construction also checks the complete set of units before completion.
+
 Both modes use HOTL (human-on-the-loop): automated technical reviews and bounded corrections, without interactive approvals inside TAKT. Build, tests, and applicable sensors must pass before a run becomes `verified`; unresolved input conflicts become `blocked`.
 
 Inspect `aidlc/takt-handoff/cg-runs/<run-id>/status.json` or `phase-runs/<run-id>/status.json`. The original project remains parked. **Generated code is not automatically merged, and native AI-DLC completion/resumption is not automated.**

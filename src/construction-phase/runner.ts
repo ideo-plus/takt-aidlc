@@ -1,3 +1,4 @@
+import { executeConstructionSupervision } from './supervision';
 import type { HookEvent } from '../hosts/events';
 import { seedTraceProject, resolveTraceIds } from "./native-trace";
 import {
@@ -307,7 +308,7 @@ export async function executePhase(project: string, id: string) {
         }
         return true;
       };
-      const cgRun = async (unit: string, repair = false) => {
+      const cgRun = async (unit: string, repair?: 'build' | 'supervise') => {
         const attempt = join(
           base,
           `${status.steps!.length + 1}-${unit}-code-generation`,
@@ -344,19 +345,16 @@ export async function executePhase(project: string, id: string) {
             ),
           };
         const check = m.config.unitChecks?.[unit] ?? m.config;
+        const repairScenario = repair
+          ? m.config.stageScenarios?.[`${unit}/code-generation-${repair === 'supervise' ? 'supervision-' : ''}repair`]
+          : undefined;
         const config: CgConfig = {
           ...m.config,
           ...check,
           delegationScope: "code-generation",
           sources: sourcePaths,
           timeoutMs: remaining(),
-          ...(repair &&
-          m.config.stageScenarios?.[`${unit}/code-generation-repair`]
-            ? {
-                mockScenario:
-                  m.config.stageScenarios[`${unit}/code-generation-repair`],
-              }
-            : {}),
+          ...(repairScenario ? { mockScenario: repairScenario } : {}),
         };
         const result = await executeCgWorkspace({
           attempt,
@@ -389,6 +387,7 @@ export async function executePhase(project: string, id: string) {
           "code-generation-plan.md",
           "unit-test-instructions.md",
           "code-summary.md",
+          "supervision.json",
           "traceability.json",
           "source-manifest.json",
           "sensors.json",
@@ -422,31 +421,68 @@ export async function executePhase(project: string, id: string) {
           return status;
         }
       }
-      for (const stage of m.context.stages.filter((s) =>
-        ["build-and-test", "ci-pipeline"].includes(s.slug),
-      )) {
-        if (!(await stageRun(stage, null))) {
-          if (!repairRequest) {
-            writeJson(statusPath, status);
-            return status;
-          }
-          const request = repairRequest;
-          repairRequest = undefined;
-          const path = `${m.record}/construction/build-and-test/repair-request.json`;
-          writeJson(join(store, path), request);
-          files[path] = digest(readFileSync(join(store, path)));
-          artifacts.push(path);
-          if (!(await cgRun(request.unit, true))) {
-            writeJson(statusPath, status);
-            return status;
-          }
-          if (!(await stageRun(stage, null, true))) {
-            if (repairRequest)
-              throw new Error("全体検証からのCG修正上限に到達しました");
-            writeJson(statusPath, status);
-            return status;
+      let buildRepairUsed = false;
+      const runGlobalStages = async (afterSupervision = false) => {
+        for (const stage of m.context.stages.filter((s) =>
+          ["build-and-test", "ci-pipeline"].includes(s.slug),
+        )) {
+          if (!(await stageRun(stage, null, afterSupervision))) {
+            if (!repairRequest) {
+              writeJson(statusPath, status);
+              return false;
+            }
+            if (buildRepairUsed) throw new Error("全体検証からのCG修正上限に到達しました");
+            buildRepairUsed = true;
+            const request = repairRequest;
+            repairRequest = undefined;
+            const path = `${m.record}/construction/build-and-test/repair-request.json`;
+            writeJson(join(store, path), request);
+            files[path] = digest(readFileSync(join(store, path)));
+            artifacts.push(path);
+            if (!(await cgRun(request.unit, 'build'))) {
+              writeJson(statusPath, status);
+              return false;
+            }
+            if (!(await stageRun(stage, null, true))) {
+              if (repairRequest)
+                throw new Error("全体検証からのCG修正上限に到達しました");
+              writeJson(statusPath, status);
+              return false;
+            }
           }
         }
+        return true;
+      };
+      if (!(await runGlobalStages())) { writeJson(statusPath, status); return status; }
+      let supervisedSourceHash: string | undefined;
+      for (let round = 0; round < 2; round++) {
+        const attempt = join(base, `${status.steps!.length + 1}-all-supervise`);
+        const result = await executeConstructionSupervision({
+          attempt, store, files, sourcePaths, units: m.context.order, config: m.config,
+          repaired: round > 0, timeout: remaining(), verify,
+          requirementIds: [...new Set(m.context.order.flatMap(unit => resolveTraceIds(store, m.record, unit, 'code-generation')))],
+          inputPaths: [...new Set([
+            ...m.context.artifacts,
+            ...Object.values(m.context.cg).flatMap(cg => [cg.intentFile, ...cg.files.filter(path => /\/memory\/.*\.md$/.test(path))]),
+            ...artifacts.filter(path => !/\/(?:build|test|sensors)\.json$|\/test-results\.md$/.test(path)),
+          ])],
+        });
+        status.steps!.push({ unit: null, stage: 'supervise', state: result.verdict, attempt });
+        status.workspace = result.workspace;
+        writeJson(statusPath, status);
+        if (result.verdict === 'blocked') {
+          status.state = 'blocked'; status.reason = result.reason;
+          writeJson(statusPath, status); return status;
+        }
+        if (result.verdict === 'approved') { supervisedSourceHash = result.sourceHash; break; }
+        if (round === 1) throw new Error('Constructionのsupervise修正上限に到達しました');
+        const path = `${m.record}/construction/supervision/repair-request.json`;
+        writeJson(join(store, path), result);
+        files[path] = digest(readFileSync(join(store, path))); artifacts.push(path);
+        for (const unit of m.context.order.filter(unit => result.repairUnits.includes(unit))) {
+          if (!(await cgRun(unit, 'supervise'))) { writeJson(statusPath, status); return status; }
+        }
+        if (!(await runGlobalStages(true))) { writeJson(statusPath, status); return status; }
       }
       const workspace = join(base, "result");
       mkdirSync(workspace, { recursive: true });
@@ -456,6 +492,7 @@ export async function executePhase(project: string, id: string) {
         copyFileSync(fileInside(store, p), out);
       }
       const finalBefore = sources(workspace);
+      if (digest(JSON.stringify(finalBefore)) !== supervisedSourceHash) throw new Error("supervise対象と最終コードが不一致です");
       const unitChecks: Record<string, unknown> = {};
       for (const unit of m.context.order) {
         const check = m.config.unitChecks?.[unit] ?? m.config;

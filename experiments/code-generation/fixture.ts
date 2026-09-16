@@ -7,7 +7,12 @@ import { collectCgContext } from '../../src/code-generation/context';
 const baseTests = `import { expect, test } from 'bun:test';\nimport { answer } from './value';\ntest('answer is 42', () => expect(answer).toBe(42));\ntest('answer is numeric', () => expect(typeof answer).toBe('number'));\ntest('answer is not 41', () => expect(answer).not.toBe(41));\n`;
 const testSource = baseTests + `\nimport * as api from './value';\ntest('public API is unchanged', () => expect(Object.keys(api)).toEqual(['answer']));\ntest('answer is a finite integer', () => expect(Number.isFinite(answer) && Number.isInteger(answer)).toBe(true));\n`;
 
-export async function cgFixture(options: { constructionEntry?: boolean; hostHarness?: 'claude' | 'codex'; live?: boolean; provider?: 'claude' | 'codex'; model?: string; reasoningEffort?: string; buildFailure?: boolean; sensorFailure?: boolean; blocked?: boolean; maxSteps?: number } = {}) {
+export function supervisionReport(ids: string[], path = 'src/value.ts') {
+  return { verdict: 'approved', intentAssessment: 'Intentと全受入条件を現在のコードへ照合した合成判定',
+    requirements: ids.map(id => ({ id, status: 'met', evidence: [{ path, reason: '現在の公開値と処理が受入条件に一致する' }] })), findings: [] as any[] };
+}
+
+export async function cgFixture(options: { constructionEntry?: boolean; hostHarness?: 'claude' | 'codex'; live?: boolean; provider?: 'claude' | 'codex'; model?: string; reasoningEffort?: string; buildFailure?: boolean; sensorFailure?: boolean; blocked?: boolean; maxSteps?: number; supervisionRepair?: boolean; supervisionBlocked?: boolean } = {}) {
   const f = await fixture({ approved: false });
   for (const directory of ['aidlc-common', 'agents', 'knowledge', 'sensors']) cpSync(join(testRuntime, '.claude', directory), join(f.project, '.claude', directory), { recursive: true });
   if (options.hostHarness === 'codex') {
@@ -41,6 +46,9 @@ export async function cgFixture(options: { constructionEntry?: boolean; hostHarn
   if (options.live && options.provider === 'codex') Object.assign(config, { model: options.model ?? 'gpt-5.6-luna', codexReasoningEffort: options.reasoningEffort ?? 'max', timeoutMs: 1800000 });
   else if (options.model) Object.assign(config, { model: options.model });
   writeJson(join(f.project, control, 'config.json'), config);
+  if (options.supervisionRepair) {
+    writeJson(join(f.project, record, 'project-description.json'), 'CG-INTENT-SENTINEL: answerは42を返し、値は6 * 7の式で定義する。');
+  }
   const context = collectCgContext(f.project, artifacts, unit, {}, options.hostHarness);
   const plan = { verdict: 'ready', testingContractHash: context.testingContract.contract_sha256,
     steps: [{ id: 1, unit, action: 'answerを42へ変更する', requirementIds: context.requirementIds, files: ['src/value.ts'] }, { id: 2, unit, action: '5件のテストを作り実行する', requirementIds: ['FR2'], files: ['src/value.test.ts'] }],
@@ -60,6 +68,8 @@ export async function cgFixture(options: { constructionEntry?: boolean; hostHarn
     ...(options.buildFailure ? writes('export const answer = ;\n') : []),
     ...(options.sensorFailure ? writes('export const answer: string = 42;\n') : []),
     ...writes('export const answer = 42;\n'), ...report(approved),
+    ...report(options.supervisionBlocked ? { ...supervisionReport(context.requirementIds), verdict: 'blocked', reason: '入力の解釈に外部判断が必要' } : options.supervisionRepair ? { ...supervisionReport(context.requirementIds), verdict: 'changes_requested', findings: [{ id: 'S1', requirementIds: [context.requirementIds[0]], reason: '値は合うがIntentで指定した積の式がない', fix: 'src/value.tsを6 * 7の式へ修正する' }] } : supervisionReport(context.requirementIds), options.supervisionBlocked ? 3 : options.supervisionRepair ? 2 : 1),
+    ...(options.supervisionRepair ? [...writes('export const answer = 6 * 7;\n'), ...report(approved), ...report(supervisionReport(context.requirementIds))] : []),
     { content: 'CGを完了しました' }, { content: JSON.stringify({ verdict: 'complete', summary: 'ビルド、5テスト、型検査、CG成果物の検証が成功', notReproduced: ['human-approval', 'aidlc-lifecycle'] }) },
   ];
   writeJson(join(f.project, control, 'scenario.json'), scenario);

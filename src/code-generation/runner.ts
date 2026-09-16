@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { cleanEnvironment, command, digest, fileInside, readJson, requireSuccess, snapshot, unchanged, writeJson, type Snapshot } from '../handoff/io';
 import { collectCgContext, type CgContext } from './context';
 import adaptation from '../../takt/facets/policies/code-generation-hotl.md' with { type: 'text' };
+import supervisionContract from '../../takt/facets/policies/aidlc-supervision.md' with { type: 'text' };
 import { workflowFiles, materializeWorkflow } from '../takt/workflow';
 import { prepareProvider } from '../handoff/provider';
 import { sources } from './code-generation-gate';
@@ -40,6 +41,8 @@ export function loadConfig(project: string) {
   if (!Array.isArray(c.artifacts) || !c.artifacts.length || !Array.isArray(c.sources) || !c.sources.length) throw new Error('CGの入力とソースを指定してください');
   for (const p of c.sources) if (p.split('/').some(name => name === 'node_modules' || name === '.venv') || /^(?:node_modules|\.venv|\.git|\.claude|\.codex|\.agents|\.takt|aidlc|input|cg)(?:\/|$)/.test(p)) throw new Error(`制御領域をソースにできません: ${p}`);
   for (const key of ['workflow', 'buildScript', 'verifyScript'] as const) fileInside(project, c[key]);
+  const workflow = Bun.YAML.parse(readFileSync(fileInside(project, c.workflow), 'utf8')) as any;
+  if (!workflow.steps?.some((step: any) => step.name === 'supervise')) throw new Error('CGのsuperviseステップが必要です');
   for (const id of ['linter', 'type-check'] as const) {
     if (c.sensorScripts?.[id]) fileInside(project, c.sensorScripts[id]!);
     else if (!c.sensorExceptions?.[id]?.reason || !c.sensorExceptions[id]?.source) throw new Error(`${id}の検査スクリプト、または根拠付きの適用外設定が必要です`);
@@ -172,14 +175,15 @@ export async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOrigi
       sensorExceptions: cgConfig.sensorExceptions ?? {},
     });
     const { workflow, controlFiles: facetFiles } = materializeWorkflow(snapshotRoot, cgConfig.workflow, control);
-    const roleFor: Record<string, string> = { plan: 'plan', 'plan-review': 'review', implement: 'implement', fix: 'implement', 'code-review': 'review', finish: 'report' };
+    const roleFor: Record<string, string> = { plan: 'plan', 'plan-review': 'review', implement: 'implement', fix: 'implement', 'code-review': 'review', supervise: 'supervise', finish: 'report' };
     const injection: Record<string, unknown> = {};
     const bundleFiles: string[] = [];
     workflow.instructions ??= {};
     for (const [role, rolePaths] of Object.entries(m.cg.roles)) {
       const paths = [...new Set(rolePaths)];
       const originals = paths.map(path => `\n## Original source: ${path}\nCopy: input/project/${path}\nSHA256: ${m.files[path]}\n\n${readFileSync(frozen(path), 'utf8')}`).join('\n');
-      const content = `${adaptation}\n${originals}\n## Frozen Testing Contract\n${m.cg.testingContractText}\n${adaptation}`;
+      const contract = role === 'supervise' ? supervisionContract : adaptation;
+      const content = `${contract}\n${originals}\n## Frozen Testing Contract\n${m.cg.testingContractText}\n${contract}`;
       const bundle = `context/${role}.md`; mkdirSync(join(control, 'context'), { recursive: true });
       writeFileSync(join(control, bundle), content); bundleFiles.push(bundle);
       workflow.instructions[`code-generation-source-${role}`] = bundle;
@@ -187,7 +191,7 @@ export async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOrigi
     for (const step of workflow.steps) {
       const role = roleFor[step.name]; if (!role) throw new Error(`CG外の工程: ${step.name}`);
       const paths = [...new Set(m.cg.roles[role])];
-      step.instruction = [`code-generation-source-${role}`, adaptation, ...[step.instruction].flat()];
+      step.instruction = [`code-generation-source-${role}`, role === 'supervise' ? supervisionContract : adaptation, ...[step.instruction].flat()];
       injection[step.name] = { sources: paths.map(path => ({ path, sha256: m.files[path] })), sourceBundleHash: digest(readFileSync(join(control, `context/${role}.md`))) };
     }
     writeFileSync(join(control, 'workflow.yaml'), Bun.YAML.stringify(workflow));

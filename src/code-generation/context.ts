@@ -79,6 +79,7 @@ export function collectCgContext(project: string, artifacts: string[], unit: str
     plan: [...common, ...forRole('aidlc-developer-agent')],
     implement: [...common, ...forRole('aidlc-developer-agent')],
     review: [...common, ...forRole('aidlc-architecture-reviewer-agent'), ...forRole('aidlc-quality-agent')],
+    supervise: [...common, ...forRole('aidlc-quality-agent')],
     report: [...common, ...forRole('aidlc-developer-agent')],
   };
   const traceabilityTool = `${shell}/tools/aidlc-sensor-traceability.ts`;
