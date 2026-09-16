@@ -1,13 +1,39 @@
 # Installation and project setup
 
-## Supported environment
+## Install the plugin
 
-The integration currently targets macOS and Linux, AI-DLC 2.8.2, TAKT 0.65.0, Bun 1.3.13, and Node.js 22.22.0 or newer. Claude Code and Codex CLI are supported CG host environments. TAKT workers can use Claude or Codex. Tested CLI versions are Claude Code 2.1.270 and Codex 0.154.0.
+Install the prebuilt plugin from the GitHub marketplace. You do not need to clone this repository, run `bun install`, or build it.
 
-Install Bun, Node.js, and Git through your usual tool manager. Install the pinned TAKT and Claude Code CLIs:
+Claude Code:
 
 ```sh
-npm install --global takt@0.65.0 @anthropic-ai/claude-code@2.1.270 @openai/codex@0.154.0
+claude plugin marketplace add https://github.com/ideo-plus/takt-aidlc.git
+claude plugin install takt-aidlc@takt-aidlc
+```
+
+Codex:
+
+```sh
+codex plugin marketplace add https://github.com/ideo-plus/takt-aidlc.git
+codex plugin add takt-aidlc@takt-aidlc
+```
+
+The CLIs fetch the Git repository themselves; Git and HTTPS access to GitHub are required. Start a new session after installation. For Codex, enable and trust hooks as described in the [host guide](codex-host.md#インストール). Then configure the target project below; installing the plugin alone does not enable delegation.
+
+The remote source formats are documented in the [Claude Code marketplace guide](https://code.claude.com/docs/en/discover-plugins) and [OpenAI plugin guide](https://developers.openai.com/plugins/build/plugins).
+
+## Supported environment
+
+The integration currently targets macOS and Linux, AI-DLC 2.8.2, TAKT 0.65.0, Bun 1.3.13, and Node.js 22.22.0 or newer. Claude Code and Codex CLI support both delegation modes. TAKT workers can use Claude or Codex. Tested CLI versions are Claude Code 2.1.270 and Codex 0.154.0.
+
+Install Bun, Node.js, and Git through your usual tool manager. Install TAKT and the CLI(s) used by your chosen host and worker:
+
+```sh
+npm install --global takt@0.65.0
+# Install Claude Code if you use a Claude host or worker.
+npm install --global @anthropic-ai/claude-code@2.1.270
+# Install Codex if you use a Codex host or worker.
+npm install --global @openai/codex@0.154.0
 ```
 
 For AI-DLC, use the versioned [official release](https://github.com/awslabs/aidlc-workflows/releases/tag/v2.8.2). Its installer provides both the native executable and matching harness runtime:
@@ -19,19 +45,7 @@ sh /tmp/install-aidlc-2.8.2.sh --version 2.8.2
 
 Check `aidlc --version` and `takt --version`. An already-installed newer AI-DLC release is not a compatible replacement for this prototype.
 
-## Build and test
-
-From this repository:
-
-```sh
-bun install --frozen-lockfile
-bun run test
-bun run typecheck
-bun run build:plugin
-claude plugin validate dist/claude
-```
-
-Tests prepare a runtime cache with the native `aidlc config` command, then run TAKT with deterministic mock responses. They do not need model credentials. Live experiments require authentication for the selected provider and are explicitly selected with `--live`. For Codex, install `@openai/codex@0.154.0` and run `codex login`; confirm with `codex login status`.
+Authenticate the CLI(s) selected as host and worker. For Codex, run `codex login` and confirm with `codex login status`. Build and tests of this plugin are contributor tasks; see [development](contributing.md#開発).
 
 ## Configure an AI-DLC project
 
@@ -45,13 +59,13 @@ aidlc config --harness claude --yes
 
 AI-DLC's default Claude settings request Bedrock. If you use standard Claude authentication, remove `CLAUDE_CODE_USE_BEDROCK` and Bedrock-specific `ANTHROPIC_DEFAULT_*_MODEL` values from that project's `.claude/settings.json`. Keep AI-DLC's hooks. Do this before its source assessment; changing project settings later can invalidate that assessment.
 
-Start Claude Code with the built plugin:
+After preparing the delegation configuration below, start a new Claude Code session:
 
 ```sh
-claude --plugin-dir /absolute/path/to/takt-aidlc/dist/claude
+claude
 ```
 
-Run `/aidlc` normally. Use the usual questions and approval gates through Inception and the required Construction design stages. TAKT starts only at CG entry.
+Run `/aidlc` normally. Use the usual questions and approval gates up to the selected delegation boundary. In CG mode, TAKT starts at CG entry; in Construction mode, it starts after final Inception approval.
 
 ## Choose the delegation scope
 
@@ -59,14 +73,23 @@ Use `delegationScope: "code-generation"` for CG only, or `delegationScope: "cons
 
 ## Configure CG delegation before CG entry
 
-Create `aidlc/takt-handoff/` in the target project and copy `dist/claude/workflows/aidlc-code-generation.yaml` to `aidlc/takt-handoff/workflow.yaml`. Add trusted Bun scripts for your application's build, unit tests, and applicable sensors. These scripts run from frozen copies with the generated workspace as their working directory.
+Download the CG workflow in the target project:
+
+```sh
+mkdir -p aidlc/takt-handoff
+curl --fail --location https://raw.githubusercontent.com/ideo-plus/takt-aidlc/main/workflows/aidlc-code-generation.yaml --output aidlc/takt-handoff/workflow.yaml
+```
+
+If you pinned the marketplace to a tag or commit, use that same ref instead of `main` in the download URL. You can also copy `workflows/aidlc-code-generation.yaml` from the installed plugin. These files are frozen at delegation, so prepare them before entering CG.
+
+Add trusted Bun scripts for your application's build, unit tests, and applicable sensors. These scripts run from frozen copies with the generated workspace as their working directory.
 
 Create `aidlc/takt-handoff/config.json`. This is a template: replace `<intent-dir>`, list every required source/config file, and implement the named scripts for your application.
 
 ```json
 {
   "enabled": true,
-  "handoffStage": "code-generation",
+  "delegationScope": "code-generation",
   "hostHarness": "claude",
   "provider": "codex",
   "model": "gpt-5.6-luna",
@@ -119,28 +142,37 @@ When the normal conductor's single `aidlc engine orchestrate next` or `continue`
 The hook returns a run ID. Inspect it with:
 
 ```sh
-bun /absolute/path/to/takt-aidlc/dist/claude/scripts/handoff.js cg-status /absolute/path/to/target-project <run-id>
+cat aidlc/takt-handoff/cg-runs/<run-id>/status.json
 ```
 
 Results are under `aidlc/takt-handoff/cg-runs/<run-id>/`. `status.json` records `parked`, `running`, `verified`, `blocked`, or `failed`. The generated code is in `attempts/1/work/`; CG artifacts are in its `cg/` directory, and validation records are in `attempts/1/control/`.
 
 `verified` means this TAKT CG execution passed its checks. The original AI-DLC project stays parked at CG. Importing the result, completing native CG, and resuming downstream stages are not automated. Do not run the original CG concurrently. CG retry and automatic stale-lock recovery are not implemented.
 
-## Try Codex independently of the Claude host
+## Updating and migrating
 
-From this repository, use the coherent synthetic five-test fixture:
-
-```sh
-bun run experiment:cg -- --live --provider codex --model gpt-5.6-luna --reasoning-effort max
-```
-
-This calls a real TAKT workflow and real build, tests, and type checks, but starts from a synthetic CG entry and synthetic Intent/design inputs. It does not require the Claude host to be running and does not demonstrate a native AI-DLC session end to end. The default live provider without `--provider codex` is Claude.
-
-For a model-free correction experiment:
+Claude Code:
 
 ```sh
-bun run experiment:cg -- --build-failure --sensor-failure
+claude plugin marketplace update takt-aidlc
+claude plugin update takt-aidlc@takt-aidlc
 ```
+
+Codex:
+
+```sh
+codex plugin marketplace upgrade takt-aidlc
+codex plugin add takt-aidlc@takt-aidlc
+```
+
+Restart the host after updating. Prepare matching workflow templates for new runs; do not change an active run's frozen inputs.
+
+For migration from the previous local development setup:
+
+- Claude Code: stop launching with `--plugin-dir .../dist/claude` when using the installed plugin. Remove only old manually registered takt-aidlc hooks; keep AI-DLC's native hooks.
+- Codex: run `codex plugin remove takt-aidlc@takt-aidlc-local` and `codex plugin marketplace remove takt-aidlc-local` before installing the remote marketplace. The old local marketplace and the new remote marketplace are separate sources; leaving both enabled duplicates hooks.
+
+Local builds and live experiments are documented in [development](contributing.md).
 
 ## Limits and troubleshooting
 

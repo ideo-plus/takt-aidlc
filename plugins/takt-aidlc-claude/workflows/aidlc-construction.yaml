@@ -1,0 +1,163 @@
+name: aidlc-construction
+description: 承認済みInceptionから詳細設計・独立レビュー・実装・修正・機械検証を行う。
+max_steps: 18
+initial_step: design
+
+steps:
+  - name: design
+    session_key: construction-designer
+    edit: false
+    instruction: |
+      あなたは詳細設計担当です。input/manifest.jsonが列挙する承認済みInception文書と対象ソースを読み、実装可能な詳細設計をまとめてください。
+      この工程ではファイルを一切作成・変更しないでください。.kiro/specs等への設計文書の作成も禁止です。設計は応答だけにまとめ、後続のレポート出力フェーズが01-design.jsonを保存します。
+      入力中のSourcesは元プロジェクトでの出典です。存在しない元パスを追わず、input/manifest.jsonが示す固定コピーを参照してください。
+      Unitの依存順、機能、非機能、公開インターフェース、インフラの要否、テスト計画を示してください。
+      小さな変更に不要な設計・基盤を追加しないでください。コードは変更せず、AI-DLCの状態も操作しないでください。
+      既存の設計レビューがある場合は指摘を解消してください。承認済み要件や契約の変更、人間の新しい判断が必要ならneeds_inputとし、具体的な質問を残してください。
+      通常の実装上の選択は根拠を添えて設計してください。人間がこの新しい設計を承認したとは記述しないでください。
+    output_contracts:
+      report:
+        - name: 01-design.json
+          format: |
+            JSONのみを出力。コードフェンスは不要。文章は日本語。
+            {"verdict":"ready または needs_input","units":[{"id":"承認済みUnit ID","dependsOn":[],"files":[]}],"functional":"機能設計","nonfunctional":"非機能条件と実装方針","interfaces":"既存契約と変更の有無","infrastructure":"必要な構成。不要なら理由","testPlan":"受入条件とテストの対応","questions":[]}
+            readyならquestionsは空。needs_inputなら具体的な質問を入れる。
+    quality_gates:
+      - type: command
+        name: design-contract
+        command: bun ../control/construction-gate.ts design
+        timeout_ms: 35000
+    rules:
+      - condition: 設計がreadyで承認済み要件内に収まる
+        next: design-review
+      - condition: 人間の回答が必要（needs_input）
+        next: ABORT
+
+  - name: design-review
+    session_key: construction-design-reviewer
+    edit: false
+    instruction: |
+      あなたは設計者とは別の設計レビュアーです。以下の設計を承認済みInception文書と実コードに照らしてレビューしてください。
+      ファイルは一切作成・変更せず、レビュー結果を応答してください。レポートは後続フェーズが保存します。
+      入力文書のSourcesは元プロジェクトでの出典です。input/manifest.jsonの固定コピーと、現在の作業領域のソースを参照し、存在しない元パスは探索しないでください。
+      {report:01-design.json}
+      要件の抜け、Unit間の依存、非機能条件、不要な基盤追加、テスト可能性を確認します。
+      修正可能な設計上の問題はchanges_requested、人間の判断や要件変更が必要ならneeds_input、未解決の指摘がなければapprovedです。
+      コードや設計を自分で変更せず、具体的な指摘と根拠を出してください。approvedはAIの技術レビュー結果であり、人間の承認ではありません。
+    output_contracts:
+      report:
+        - name: 02-design-review.json
+          format: |
+            JSONのみ。文章は日本語。
+            {"verdict":"approved または changes_requested または needs_input","findings":[{"target":"対象","reason":"問題と根拠","requestedChange":"修正内容"}],"questions":[]}
+            approvedならfindingsとquestionsは空。人間の回答が必要ならquestionsに質問を入れる。
+    quality_gates:
+      - type: command
+        name: design-review-contract
+        command: bun ../control/construction-gate.ts design-review
+        timeout_ms: 35000
+    rules:
+      - condition: 設計レビューがapproved
+        next: implement
+      - condition: 設計レビューがchanges_requested
+        next: design
+      - condition: 人間の回答が必要（needs_input）
+        next: ABORT
+
+  - name: implement
+    session_key: construction-implementer
+    edit: true
+    required_permission_mode: edit
+    instruction: |
+      承認済みInception文書と、技術レビューを通った次の設計に従い、Unitの依存順に実装とテストを完成させてください。
+      {report:01-design.json}
+      作業対象はこの作業領域のソースとテストです。input、.claude、.takt、../control、元プロジェクトは編集しないでください。
+      テストはあなたの応答後に固定の品質ゲートが実行します。実行できないコマンドを実行済みと報告しないでください。
+      テストが失敗して差し戻された場合はconstruction/verification.jsonのstdout・stderrを読み、原因を修正してください。
+      要件変更や環境の問題で実装範囲内に解決できない場合はconstruction/questions.jsonにJSONで{"questions":["具体的な質問"]}を保存し、blockedと報告してください。
+    quality_gates:
+      - type: command
+        name: acceptance-tests
+        command: bun ../control/construction-gate.ts implement
+        timeout_ms: 35000
+    rules:
+      - condition: 実装とテストの作成が完了
+        next: code-review
+      - condition: 承認済みの範囲では解決できない（blocked）
+        next: ABORT
+
+  - name: code-review
+    session_key: construction-code-reviewer
+    edit: false
+    instruction: |
+      あなたは実装者とは別のコードレビュアーです。inputの承認済み要件、以下の設計、実際のソースとテスト、construction/verification.jsonを読み、差分をレビューしてください。
+      ファイルは一切作成・変更せず、レビュー結果を応答してください。レポートは後続フェーズが保存します。
+      入力文書のSourcesは元プロジェクトでの出典です。input/manifest.jsonの固定コピーと、現在の作業領域のソースを参照し、存在しない元パスは探索しないでください。
+      {report:01-design.json}
+      要件漏れ、バグ、テストの妥当性、不要な変更、保守性を確認してください。テスト成功だけを理由に承認しないでください。
+      修正可能な問題はchanges_requested、人間の新しい判断が必要ならneeds_input、未解決指摘がなければapprovedです。
+      コードは編集せず、修正担当が追える具体的な対象・根拠・修正内容を記録してください。
+    output_contracts:
+      report:
+        - name: 03-code-review.json
+          format: |
+            JSONのみ。文章は日本語。
+            {"verdict":"approved または changes_requested または needs_input","findings":[{"target":"ファイルと箇所","reason":"問題の根拠","requestedChange":"求める修正"}],"questions":[]}
+            approvedならfindingsとquestionsは空。needs_inputならquestionsを空にしない。
+    quality_gates:
+      - type: command
+        name: reviewed-source
+        command: bun ../control/construction-gate.ts code-review
+        timeout_ms: 35000
+    rules:
+      - condition: コードレビューがapproved
+        next: finish
+      - condition: コードレビューがchanges_requested
+        next: fix
+      - condition: 人間の回答が必要（needs_input）
+        next: ABORT
+
+  - name: fix
+    session_key: construction-implementer
+    edit: true
+    required_permission_mode: edit
+    instruction: |
+      以下のコードレビュー指摘を修正し、対応するテストを更新してください。承認済みの要件と設計を守ってください。
+      {report:03-code-review.json}
+      input、.claude、.takt、../control、元プロジェクトは編集しないでください。
+      修正後に固定の品質ゲートがテストを再実行します。テスト失敗時はconstruction/verification.jsonを読み、修正してください。
+      自分でレビュー承認を出さず、コードレビュアーに戻してください。要件変更が必要ならconstruction/questions.jsonにJSONで{"questions":["具体的な質問"]}を保存し、blockedとしてください。
+    quality_gates:
+      - type: command
+        name: regression-tests
+        command: bun ../control/construction-gate.ts fix
+        timeout_ms: 35000
+    rules:
+      - condition: 指摘の修正とテストの更新が完了
+        next: code-review
+      - condition: 承認済みの範囲では解決できない（blocked）
+        next: ABORT
+
+  - name: finish
+    session_key: construction-reporter
+    edit: false
+    instruction: |
+      実装済みコード、テスト結果、設計レビュー・コードレビューを確認し、受け渡し報告をまとめてください。
+      ファイルは作成・変更せず、報告を応答してください。レポートは後続フェーズが保存します。
+      {report:03-code-review.json}
+      construction/verification.jsonとconstruction/progress.jsonを参照し、実行した検証と残る制約を区別してください。
+      AI-DLCはparkのままです。マージ、デプロイ、Operationへの進行を行わず、それらを完了済みと書かないでください。
+    output_contracts:
+      report:
+        - name: 04-handoff.json
+          format: |
+            JSONのみ。文章は日本語。
+            {"verdict":"complete","summary":"変更内容と実測の検証結果","limitations":["適用範囲や未確認事項"],"questions":[]}
+    quality_gates:
+      - type: command
+        name: final-evidence
+        command: bun ../control/construction-gate.ts finish
+        timeout_ms: 35000
+    rules:
+      - condition: 受け渡し報告が完了
+        next: COMPLETE

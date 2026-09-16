@@ -6,35 +6,13 @@ Codex CLI 0.154.0、AI-DLC 2.8.2、TAKT 0.65.0を対象に、CG単体とConstruc
 
 ホストとワーカーは別の選択である。`hostHarness: "codex"`はAI-DLC側、`provider: "codex"`はTAKT側を指定する。Construction全体版の設定は[専用の導入手順](construction-phase.md)を参照。以下はCG単体の例。
 
-## ビルドとインストール
+## インストール
 
-このリポジトリでビルドする。
-
-```sh
-bun install --frozen-lockfile
-bun run build:plugin
-```
-
-生成物は次の構成になる。
-
-```text
-dist/
-  claude/                                  Claude Codeプラグイン
-  codex/
-    .agents/plugins/marketplace.json        ローカル配布用の定義
-    plugins/takt-aidlc/                     Codexプラグイン
-      .codex-plugin/plugin.json
-      hooks/hooks.json
-      scripts/handoff.js
-      scripts/cg-gate.ts
-      workflows/aidlc-code-generation.yaml
-```
-
-Codexに配布先を登録し、プラグインをインストールする。`dist/codex/`は必要なら別の場所へ丸ごとコピーできる。
+ビルド済みプラグインをHTTPSで取得する。手動のclone・ビルドは不要。
 
 ```sh
-codex plugin marketplace add /absolute/path/to/takt-aidlc/dist/codex
-codex plugin add takt-aidlc@takt-aidlc-local
+codex plugin marketplace add https://github.com/ideo-plus/takt-aidlc.git
+codex plugin add takt-aidlc@takt-aidlc
 ```
 
 ユーザー設定の`config.toml`で`[features]`の`hooks = true`を有効にする。設定済みのテーブルがあればその中に追記する。インストール後は新しいCodexセッションを開始し、AI-DLC本体とプラグインのフックを確認して信頼する。インストールだけでは未信頼のフックは動かない。[Codexのフック仕様](https://learn.chatgpt.com/docs/hooks)
@@ -56,7 +34,7 @@ AI-DLCの配布設定はBedrockを既定にするため、通常のOpenAI認証�
 ```json
 {
   "enabled": true,
-  "handoffStage": "code-generation",
+  "delegationScope": "code-generation",
   "hostHarness": "codex",
   "provider": "codex",
   "model": "gpt-5.6-luna",
@@ -81,7 +59,7 @@ AI-DLCの配布設定はBedrockを既定にするため、通常のOpenAI認証�
 ## 状態確認
 
 ```sh
-bun /absolute/path/to/takt-aidlc/dist/codex/plugins/takt-aidlc/scripts/handoff.js cg-status /absolute/path/to/project <run-id>
+cat aidlc/takt-handoff/cg-runs/<run-id>/status.json
 ```
 
 結果は`aidlc/takt-handoff/cg-runs/<run-id>/`に保存する。`verified`はTAKTのCG検証完了を表す。元のAI-DLCへのコード取り込み、ネイティブCG完了、後続工程の自動再開は未実装。
