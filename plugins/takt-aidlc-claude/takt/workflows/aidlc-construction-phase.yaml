@@ -74,6 +74,10 @@ steps:
       - condition: レビューがblocked
         next: ABORT
   - name: supervise
+    tags:
+      - review
+      - final-gate
+      - supervise
     session_key: construction-supervisor
     edit: false
     persona: supervisor

@@ -154,6 +154,10 @@ steps:
       - condition: 自律的に解決できずblocked
         next: ABORT
   - name: supervise
+    tags:
+      - review
+      - final-gate
+      - supervise
     session_key: code-generation-supervisor
     edit: false
     persona: supervisor

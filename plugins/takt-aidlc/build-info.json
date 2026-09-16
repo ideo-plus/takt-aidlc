@@ -1,5 +1,5 @@
 {
-  "version": "0.4.0+codex.20260916020816",
+  "version": "0.4.0+codex.20260916021412",
   "aidlcVersion": "2.8.2",
   "bunVersion": "1.3.13",
   "sources": {
@@ -33,8 +33,8 @@
     "takt/facets/policies/aidlc-verification.md": "d09607e990817216d6ba9bfe42fa4698c1f65fa782c423a39bca8312da51f66e",
     "takt/facets/policies/code-generation-hotl.md": "5d987e9b34ed789965fc85528b980e716f2466652da46495b936257832e66a6f",
     "takt/facets/policies/construction-hotl.md": "f2d8d918cd12f618c387a71df8e4387705cc53fff70235cc98e1f5a7d1758d88",
-    "takt/workflows/aidlc-code-generation-stage.yaml": "16a3b9d0a1190caa16a284942b286542a7e1de7cc0702bddc44d3a573a25fa0d",
-    "takt/workflows/aidlc-construction-phase.yaml": "5a8f3f99b4a2223e08eb1b95af26d4b7cf35c3ce976d46ce6056104b9338ef5a",
+    "takt/workflows/aidlc-code-generation-stage.yaml": "36a32a8d892603eff42ac24cfa58583d2e35b6ff4f4b16ada638453dbfe03e63",
+    "takt/workflows/aidlc-construction-phase.yaml": "e7d23183b9fb9f374d058a2ba36985c4f946014a445923b2df99faab82b14aef",
     "src/handoff/cli.ts": "fd07535190235542806a7cf7309acbe77a94066446578cd2747cd66c0edee7c0",
     "src/handoff/approval.ts": "7b6f7d732179856729902b7b0fed1be6b4379e3951786bc692a89f226e080fea",
     "src/hosts/events.ts": "36b12fd46e36ad61ff833d6f2b6b659708f652c59c6f65cc289620ee9e18a11b",
@@ -52,7 +52,7 @@
     "src/code-generation/runner.ts": "15434da82c9f5e2c44f39506299e0240482b98ebcea320e6a3854874615d7bd3",
     "src/code-generation/code-generation-gate.ts": "811fc3c1d8923668283e10c01b54a563571b230a237dbd50e99cc533c09475c2",
     "LICENSE": "20d237c297511eb6a0711b4928d02750bb94a21b594dfcc8ea9ca8435c8487ef",
-    "plugins/codex/takt-aidlc/.codex-plugin/plugin.json": "737c9bb223de3f038a936ec9795324baa0bc1dde48dc94a11530b274be9a07fc",
+    "plugins/codex/takt-aidlc/.codex-plugin/plugin.json": "f861b802451bba00fc0c9bb713330e41fc628dae3ebc001e508b5250fda3cfe5",
     "plugins/codex/takt-aidlc/hooks/hooks.json": "bc39570d69a90ab9dced7eaea1e01173fb00a7b43e2a5c05d00284098b588320"
   },
   "bundleSha256": "739b763c45ab2c8961bba26d85e45dddc16b83d0e95f0e5a3109f2330bd8498d"
