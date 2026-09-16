@@ -1,0 +1,20 @@
+{
+  "name": "takt-aidlc",
+  "interface": {
+    "displayName": "Takt Aidlc"
+  },
+  "plugins": [
+    {
+      "name": "takt-aidlc",
+      "source": {
+        "source": "local",
+        "path": "./plugins/takt-aidlc"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

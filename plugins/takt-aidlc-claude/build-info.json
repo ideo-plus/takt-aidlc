@@ -1,0 +1,31 @@
+{
+  "version": "0.2.1",
+  "aidlcVersion": "2.8.2",
+  "bunVersion": "1.3.13",
+  "sources": {
+    "src/handoff/cli.ts": "a045a681783dc006e9da4c873d2ae20826baeb75e361656ddb8041d509cf0c38",
+    "src/handoff/bridge.ts": "5c93a703d477ed89196641e74f2b6089a26b25af9cf22b2fd24e72f648eff07a",
+    "src/handoff/io.ts": "422660068420141dc0bc789bb35e0fb334e3347c69b4eb4544fe55fb3f74904b",
+    "src/handoff/provider.ts": "e2567beff884fba1d52db08ca8e36c78266adf3dbe20bdad27b48f8e30d49873",
+    "src/construction-phase/context.ts": "74268a1d3a4cff984f3d731f245e7ef67ba2f63c573bbc2bdb7b5f3479b4dbc6",
+    "src/construction-phase/runner.ts": "c43b696ff236713511227eb98c35d4380672245dad9c4723a5af62eb2e2d943c",
+    "src/construction-phase/stage.ts": "e9dffee191b7a638154330f70212b030c112fe5db13f3ac9c826ff6e55a69fc7",
+    "src/construction-phase/stage-gate.ts": "7dab092766b7879d63237876033b093fbaabe576467de4dac6a83a31757ede97",
+    "src/construction-phase/native-trace.ts": "035728c1356868aea242b4efb99582c19eb3b9389a8c3a6ca3b1cc477cfafcc7",
+    "src/construction-phase/cg-gate.ts": "356c0b96544514e9e740230a5f45aa3dcc6631cd38317d41142444367532f275",
+    "workflows/aidlc-construction-stage.yaml": "0ae1e44c616b3048bcbd9a7fc58554469494f28958cd11aa1aacbe9258456840",
+    "src/hosts/harness.ts": "686339a65bdb51428163fdad1eccb4be7473c5ce860663ddfd04756a03d638c5",
+    "src/hosts/codex.ts": "792538ee65c9a7a20ce47063ba84ed20625b84eb7644231da46cb4d3ec5fd554",
+    "src/construction/runtime.ts": "2b02ea4c28761956e24dca72f3c1a55595935aa1dd85d392436771575d51a859",
+    "src/construction/construction-gate.ts": "a7740cb63a105201bb8e020f0ba8478b7ec773b4cf2311c673641a114d0cef93",
+    "src/code-generation/context.ts": "53afa7c7f49ade9a60dcfe75fd669713043b84ceb9957442f8e5c72928fdc650",
+    "src/code-generation/runner.ts": "d6ebd673049652a2046de170820228be3c4956f17b6d714684e970cdf16ffc52",
+    "src/code-generation/cg-gate.ts": "6ddc345648e8f3a6b0cdacf08a07a416e2091d40f68a2d85f9cd2cd07bbed8e9",
+    "workflows/aidlc-code-generation.yaml": "986b13ab0839b6861e9d145a9c8087be6608915e86417655abea82f8b06c08c4",
+    "workflows/aidlc-construction.yaml": "6d868ade346249c7c90e5f66a13780ce92555cf06842e24ee37362dee8ed4983",
+    "LICENSE": "20d237c297511eb6a0711b4928d02750bb94a21b594dfcc8ea9ca8435c8487ef",
+    "plugins/claude/.claude-plugin/plugin.json": "b16cc24887cca2b2b60468612a736621da2c1b5d4a2c142b2601fba92319c9c4",
+    "plugins/claude/hooks/hooks.json": "05440a2c9d2cf4185805d13283ed39dd7f996a3e6b7aa4f3924bc5646964b570"
+  },
+  "bundleSha256": "2038760579e2fe6f347728a8dfff698a665de8178bbba188df548ccdc947c45e"
+}

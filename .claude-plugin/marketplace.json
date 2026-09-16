@@ -1,0 +1,12 @@
+{
+  "name": "takt-aidlc",
+  "owner": { "name": "takt-aidlc contributors" },
+  "metadata": { "description": "AI-DLC delegation to TAKT for Claude Code." },
+  "plugins": [
+    {
+      "name": "takt-aidlc",
+      "source": "./plugins/takt-aidlc-claude",
+      "description": "Delegate AI-DLC Code Generation or Construction to TAKT."
+    }
+  ]
+}

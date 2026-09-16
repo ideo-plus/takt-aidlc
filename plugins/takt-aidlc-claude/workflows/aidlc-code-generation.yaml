@@ -1,0 +1,155 @@
+name: aidlc-code-generation-hotl
+description: 本家AI-DLCのCG定義・Intent・知識・センサーを入力とする、対話承認なしのCG単体。
+initial_step: plan
+max_steps: 20
+steps:
+  - name: plan
+    session_key: cg-planner
+    edit: false
+    instruction: |
+      添付された本家code-generation.mdのStep 1とStep 2に従い、現在のUnitのCG計画とunit-test-instructionsを作ってください。
+      機能設計やインフラ設計をやり直さず、入力の設計を実装手順へ落とします。Inputの現在のIntent・要求・Unit設計を使ってください。
+      Brownfieldでは変更前の影響範囲、予定差分、既存テストの基準を確認する手順も計画します。既存テストがない場合はその事実を記録し、実行結果を捏造しません。
+      Step 3の人間承認は次のTAKT計画レビューへ置換します。人へ質問したり承認待ちにしたりせず、解決できない欠落はblockedとして終了します。
+      この工程でファイルは一切作らず、応答で計画を示してください。原文のTesting Contractは固定されたものを使い、方法・順序・目標を変更しないでください。
+      input/context.jsonに必要な要求ID・Testing Contractのhash・原文パスの索引があります。全要求IDを計画のstepsへ割り当てます。
+      input/context.jsonのchecksに、実際に使う固定スクリプトの元パスがあります。input/project/配下のコピーを読み、これらの実行内容に一致するテスト手順を記載してください。
+      unit-test-instructionsは単一Unitを対象とする実行方法と期待結果を含め、2つ以上のH2を持つMarkdownにしてください。テンプレートがある場合はその見出しを守ります。
+    output_contracts:
+      report:
+        - name: 01-cg-plan.json
+          format: |
+            JSONのみ、文章は日本語。
+            {"verdict":"ready または blocked","reason":"blockedの場合の理由","testingContractHash":"固定Contractのcontract_sha256","steps":[{"id":1,"unit":"現在のUnit","action":"実装手順","requirementIds":["要求ID"],"files":["src/対象ファイル"]}],"unitTestInstructions":"## 実行方法\n...\n## 期待結果\n...","appliedRules":[{"source":"原文パス","rule":"適用した具体的な規則","application":"このCGでどう適用するか"}]}
+            必要に応じてplanMarkdownへ計画本文を追加できます。独自テンプレートがある場合はその構造を守り、各Stepと要求の対応も本文に含めてください。Testing Contractは検証側が原文を追記するため再作成しません。
+    quality_gates:
+      - type: command
+        command: bun ../control/cg-gate.ts plan
+        timeout_ms: 130000
+    rules:
+      - condition: CG計画がready
+        next: plan-review
+      - condition: CG計画がblocked
+        next: ABORT
+
+  - name: plan-review
+    session_key: cg-plan-reviewer
+    edit: false
+    instruction: |
+      本家CGの計画レビュー担当として、次の計画をIntent、現在のUnit設計、CG定義、開発規約、Testing Contract、センサー定義に照合してください。
+      {report:01-cg-plan.json}
+      設計工程を増やさず、CGの計画として必要な実装・テスト・設定・トレーサビリティが揃っているか確認します。
+      人の承認は求めません。修正可能ならchanges_requested、整合していればapproved、入力矛盾等で自律的に決定できなければblockedです。
+      ファイルは作成・変更せず、結果を応答してください。approvedはAIによる技術レビューであり、人間承認ではありません。
+    output_contracts:
+      report:
+        - name: 02-plan-review.json
+          format: |
+            JSONのみ、文章は日本語。
+            {"verdict":"approved または changes_requested または blocked","reason":"停止理由","findings":[{"target":"対象","reason":"根拠","fix":"修正内容"}],"alignment":{"intent":"Intentへの適合","stageDefinition":"本家CG定義への適合","conventions":"規約への適合","testingContract":"テスト方法・順序・目標への適合"}}
+            approvedならfindingsは空にしてください。
+    quality_gates:
+      - type: command
+        command: bun ../control/cg-gate.ts plan-review
+        timeout_ms: 130000
+    rules:
+      - condition: 計画レビューがapproved
+        next: implement
+      - condition: 計画レビューがchanges_requested
+        next: plan
+      - condition: 計画レビューがblocked
+        next: ABORT
+
+  - name: implement
+    session_key: cg-developer
+    edit: true
+    required_permission_mode: edit
+    instruction: |
+      本家CGのStep 4（生成）とStep 5（成果物記録）に従い、次の計画を順番に実装してください。
+      {report:01-cg-plan.json}
+      新たな設計判断は行わず、InputのIntent・Unit設計・CG定義・開発規約・Testing Contractを維持します。
+      input、.claude、.codex、.agents、.kiro、.takt、../control、元のAI-DLCプロジェクトは編集しません。
+      cg/source-manifest.jsonへ{"stage":"code-generation","version":1,"unit":"現在のUnit","writes":[{"path":"作成・変更・削除したソース/テストの相対パス"}]}を保存してください。全変更を列挙します。
+      cg/traceability.jsonへ{"stage":"code-generation","unit":"現在のUnit","upstream_ids":["全要求ID"],"coverage":[{"id":"要求ID","status":"OK","target":"実在するソースまたはテスト"}]}を保存してください。IDはinput/context.jsonを使います。
+      応答後に固定スクリプトがビルド・テスト・設定済みセンサーを実行します。失敗時はcg/build.json、cg/test.json、cg/linter.json、cg/type-check.jsonを読み、修正してください。
+      実行していない検査を成功と報告しないでください。解決不能ならcg/blocked.jsonに{"reason":"理由と不足情報"}を保存しblockedとして終了します。対話承認は求めません。
+    quality_gates:
+      - type: command
+        command: bun ../control/cg-gate.ts implement
+        timeout_ms: 250000
+    rules:
+      - condition: 実装とCG成果物の記録が完了
+        next: code-review
+      - condition: 自律的に解決できずblocked
+        next: ABORT
+
+  - name: code-review
+    session_key: cg-code-reviewer
+    edit: false
+    instruction: |
+      本家CGのレビュー担当として、実コード・テスト・CG成果物を、添付されたIntent・Unit設計・CG定義・規約・Testing Contractに照合してください。
+      {report:01-cg-plan.json}
+      cg/build.json、cg/test.json、cg/sensors.json、cg/source-manifest.json、cg/traceability.jsonを必ず確認し、列挙された変更ファイルを読んでください。
+      テスト成功だけで承認せず、要求漏れ、計画外変更、規約逸脱、誤った検査の適用外扱いを確認します。ファイルは編集しません。
+      approved、changes_requested、blockedのいずれかを返します。人の承認を求めず、ウォーキングスケルトン後も同じ自動判定です。
+    output_contracts:
+      report:
+        - name: 03-code-review.json
+          format: |
+            JSONのみ、文章は日本語。
+            {"verdict":"approved または changes_requested または blocked","reason":"停止理由","findings":[{"target":"箇所","reason":"根拠","fix":"修正内容"}],"alignment":{"intent":"コードのIntent適合","stageDefinition":"CG成果物・センサー要件の充足","conventions":"規約適合","testingContract":"ビルド・テスト実測と方法・順序の適合"}}
+            approvedならfindingsは空にしてください。
+    quality_gates:
+      - type: command
+        command: bun ../control/cg-gate.ts code-review
+        timeout_ms: 130000
+    rules:
+      - condition: コードレビューがapproved
+        next: finish
+      - condition: コードレビューがchanges_requested
+        next: fix
+      - condition: コードレビューがblocked
+        next: ABORT
+
+  - name: fix
+    session_key: cg-developer
+    edit: true
+    required_permission_mode: edit
+    instruction: |
+      本家CGの要求・規約・Testing Contractを守って以下の指摘を修正してください。
+      {report:03-code-review.json}
+      cg/source-manifest.jsonとcg/traceability.jsonも実際の変更に合わせます。input、.claude、.codex、.agents、.takt、../control、元のAI-DLC記録は変更しません。
+      修正後は必ずビルド・テスト・センサーが再実行され、別のコードレビュアーへ戻ります。
+      cg/の検証ログを参照し、目標を下げずに直してください。解決不能ならcg/blocked.jsonへ理由を保存してblockedで終了し、人の承認待ちにしません。
+    quality_gates:
+      - type: command
+        command: bun ../control/cg-gate.ts fix
+        timeout_ms: 250000
+    rules:
+      - condition: 修正とCG成果物の更新が完了
+        next: code-review
+      - condition: 自律的に解決できずblocked
+        next: ABORT
+
+  - name: finish
+    session_key: cg-reporter
+    edit: false
+    instruction: |
+      本家CGのcode-summaryとして、ファイル変更、実装判断、テスト結果、計画との差分をまとめてください。cg/の実測ログとコードレビューを確認します。
+      {report:03-code-review.json}
+      ファイルは編集せず、応答だけを返します。CGが返すのはビルド・テスト・適用するセンサーを通ったコードです。
+      AI-DLCの後続工程や監査記録は更新しません。人間承認はTAKTの自動レビューへ置換したことを明記します。
+    output_contracts:
+      report:
+        - name: 04-cg-summary.json
+          format: |
+            JSONのみ、文章は日本語。
+            {"verdict":"complete","summary":"変更と実測のビルド・テスト・センサー結果、計画との差分","notReproduced":["human-approval","aidlc-lifecycle"]}
+            独自のcode-summaryテンプレートがある場合のみsummaryMarkdownにその構造を満たす本文を追加してください。
+    quality_gates:
+      - type: command
+        command: bun ../control/cg-gate.ts finish
+        timeout_ms: 130000
+    rules:
+      - condition: CGの完了報告が完成
+        next: COMPLETE

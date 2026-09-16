@@ -72,7 +72,15 @@ CG単体の入口確認と、固定入力から動く`executeCgWorkspace`を分�
 }
 ```
 
-配布物の`workflows/aidlc-code-generation.yaml`を`cg-workflow.yaml`へ、`workflows/aidlc-construction-stage.yaml`を`stage-workflow.yaml`へコピーする。旧`aidlc-construction.yaml`は初期試作であり、ここでは使わない。
+対象プロジェクトでWorkflowの雛形を取得する。リポジトリのcloneは不要。
+
+```sh
+mkdir -p aidlc/takt-handoff
+curl --fail --location https://raw.githubusercontent.com/ideo-plus/takt-aidlc/main/workflows/aidlc-code-generation.yaml --output aidlc/takt-handoff/cg-workflow.yaml
+curl --fail --location https://raw.githubusercontent.com/ideo-plus/takt-aidlc/main/workflows/aidlc-construction-stage.yaml --output aidlc/takt-handoff/stage-workflow.yaml
+```
+
+インストール元をタグやコミットに固定した場合は、URLの`main`も同じrefに置き換える。インストール済みプラグインの`workflows/`からコピーしてもよい。旧`aidlc-construction.yaml`は初期試作であり、ここでは使わない。
 
 ホストは`hostHarness`、委譲範囲は`delegationScope`、ワーカーは`provider`で選ぶ。CG単体には`delegationScope: "code-generation"`を使える。既存の`handoffStage: "code-generation"`も維持するが、両フィールドが矛盾すれば拒否する。旧`inception-legacy`と`construction: true`は、この新モードへ自動変換しない。
 
@@ -98,7 +106,7 @@ CI工程は`pipelinePaths`に明示したファイルだけを書き出せる。
 ## 結果
 
 ```sh
-bun /absolute/path/to/plugin/scripts/handoff.js phase-status /absolute/path/to/project <run-id>
+cat aidlc/takt-handoff/phase-runs/<run-id>/status.json
 ```
 
 `aidlc/takt-handoff/phase-runs/<run-id>/`に記録する。

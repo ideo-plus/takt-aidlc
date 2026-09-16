@@ -1,0 +1,39 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${PLUGIN_ROOT}/scripts/handoff.js\" codex-session",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${PLUGIN_ROOT}/scripts/handoff.js\" codex-hook",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${PLUGIN_ROOT}/scripts/handoff.js\" codex-hook",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
