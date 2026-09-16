@@ -49,6 +49,7 @@ Adapt these paths and scripts to the target project:
   "enabled": true,
   "hostHarness": "codex",
   "delegationScope": "construction",
+  "language": "ja",
   "provider": "codex",
   "model": "gpt-5.6-luna",
   "codexReasoningEffort": "max",
@@ -56,8 +57,8 @@ Adapt these paths and scripts to the target project:
     "aidlc/spaces/default/intents/<intent>/inception/requirements-analysis/requirements.md"
   ],
   "sources": ["src/value.ts"],
-  "workflow": "aidlc/takt-handoff/takt/workflows/aidlc-code-generation-stage.yaml",
-  "constructionWorkflow": "aidlc/takt-handoff/takt/workflows/aidlc-construction-phase.yaml",
+  "workflow": "aidlc/takt-handoff/takt/ja/workflows/aidlc-code-generation-stage.yaml",
+  "constructionWorkflow": "aidlc/takt-handoff/takt/ja/workflows/aidlc-construction-phase.yaml",
   "buildScript": "aidlc/takt-handoff/unit-build.ts",
   "verifyScript": "aidlc/takt-handoff/unit-test.ts",
   "sensorScripts": {
@@ -76,8 +77,10 @@ Adapt these paths and scripts to the target project:
 }
 ```
 
-Follow [TAKT bundle download](getting-started.md#download-the-takt-bundle) and place the complete `takt/`, including `facets/`, under `aidlc/takt-handoff/`. No clone or build of this repository is required.
-Use `takt/workflows/aidlc-code-generation-stage.yaml` for CG and `takt/workflows/aidlc-construction-phase.yaml` for artifact creation and review. Local instructions, policies, knowledge, and output contracts are frozen inputs. Personas use TAKT 0.65.0 built-ins.
+`language` accepts `ja` (the default) or `en`. For English execution, set `language: "en"` and point `workflow` and, in Construction mode, `constructionWorkflow` to `takt/en/workflows/`. Built-in facets and injected runtime policies use the same language. Original AI-DLC sources remain frozen inputs without translation.
+
+Follow [TAKT bundle download](getting-started.md#download-the-takt-bundle) and place the complete `takt/`, including both language trees, under `aidlc/takt-handoff/`. No clone or build of this repository is required.
+Use `takt/ja/workflows/aidlc-code-generation-stage.yaml` for CG and `takt/ja/workflows/aidlc-construction-phase.yaml` for artifact creation and review. Local instructions, policies, knowledge, and output contracts are frozen inputs. Personas use TAKT 0.65.0 built-ins.
 
 `hostHarness` selects the host, `delegationScope` the scope, and `provider` the worker. Scope is required and must be `code-generation` or `construction`.
 

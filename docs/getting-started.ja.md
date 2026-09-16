@@ -110,7 +110,7 @@ cp -R /path/from-the-cli/takt aidlc/takt-handoff/
 
 `delegationScope`は必須で、`code-generation`または`construction`を指定します。
 
-どちらの方法でも`aidlc/takt-handoff/takt/`が作られます。`takt/workflows/`のYAMLは`../facets/`を参照するため、YAMLだけをコピーすると不足します。マーケットプレイスをタグやコミットに固定している場合は、インストール済みのコピーを使うか、APIコマンドの`main`を同じrefへ置き換えてください。
+どちらの方法でも`aidlc/takt-handoff/takt/`が作られます。`takt/ja/workflows/`と`takt/en/workflows/`のYAMLは`../facets/`を参照するため、YAMLだけをコピーすると不足します。マーケットプレイスをタグやコミットに固定している場合は、インストール済みのコピーを使うか、APIコマンドの`main`を同じrefへ置き換えてください。
 
 [TAKT定義のガイド](../takt/README.ja.md)に、指示・ポリシー・ペルソナ・知識・出力契約を説明しています。ペルソナはTAKT 0.65.0の組み込みを使い、AI-DLC固有の指示・規則・知識・出力形式はローカルのMarkdownで補います。参照するMarkdownもYAMLと一緒に固定・検査するため、委譲前に準備してください。
 
@@ -129,6 +129,7 @@ CGへ入る前に、上のTAKT定義を取得します。
   "enabled": true,
   "delegationScope": "code-generation",
   "hostHarness": "claude",
+  "language": "ja",
   "provider": "codex",
   "model": "gpt-5.6-luna",
   "codexReasoningEffort": "max",
@@ -140,7 +141,7 @@ CGへ入る前に、上のTAKT定義を取得します。
     "aidlc/spaces/default/intents/<intent-dir>/inception/delivery-planning/bolt-plan.md"
   ],
   "sources": ["src/value.ts"],
-  "workflow": "aidlc/takt-handoff/takt/workflows/aidlc-code-generation-stage.yaml",
+  "workflow": "aidlc/takt-handoff/takt/ja/workflows/aidlc-code-generation-stage.yaml",
   "buildScript": "aidlc/takt-handoff/build.ts",
   "verifyScript": "aidlc/takt-handoff/test.ts",
   "sensorScripts": {
@@ -151,6 +152,8 @@ CGへ入る前に、上のTAKT定義を取得します。
   "timeoutMs": 1800000
 }
 ```
+
+`language`は`ja`（省略時の既定）または`en`です。英語で実行する場合は`language: "en"`とし、`workflow`およびConstructionの`constructionWorkflow`も`takt/en/workflows/`を指定してください。組み込みファセットと実行時の追加ポリシーも同じ言語になります。AI-DLCの原文は翻訳せず固定入力として渡します。
 
 明示した成果物に加えて、現在のIntent、Unit設計、本家CG定義、知識、センサー、memory、テンプレートが入力になります。ソースはglobではなく通常ファイルを個別に指定します。実際のアプリではpackage manifest、lockfile、必要な設定も含めてください。依存のインストールはビルドスクリプトが担当します。
 
@@ -207,7 +210,7 @@ codex plugin marketplace upgrade takt-aidlc
 codex plugin add takt-aidlc@takt-aidlc
 ```
 
-更新後はホストを再起動します。新しい実行では、ファセットを含む`takt/`も同じバージョンに揃えてください。実行中の固定入力は変更しません。リポジトリ直下の`workflows/`は`takt/workflows/`へ移動しています。新しい雛形を使うときは設定内の`workflow`と、Constructionの場合は`constructionWorkflow`も更新します。
+更新後はホストを再起動します。新しい実行では、ファセットを含む`takt/`も同じバージョンに揃えてください。実行中の固定入力は変更しません。Workflowは`takt/ja/workflows/`と`takt/en/workflows/`に配置します。設定内の`workflow`と、Constructionの場合は`constructionWorkflow`を選んだ言語のパスへ更新し、`language`も揃えてください。旧パスへの読替えはありません。
 
 以前のローカル開発版から切り替える場合：
 

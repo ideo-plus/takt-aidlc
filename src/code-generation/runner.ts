@@ -4,8 +4,7 @@ import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cleanEnvironment, command, digest, fileInside, readJson, requireSuccess, snapshot, unchanged, writeJson, type Snapshot } from '../handoff/io';
 import { collectCgContext, type CgContext } from './context';
-import adaptation from '../../takt/facets/policies/code-generation-hotl.ja.md' with { type: 'text' };
-import supervisionContract from '../../takt/facets/policies/aidlc-supervision.ja.md' with { type: 'text' };
+import { runtimePolicies, taktLanguage, type TaktLanguage } from '../takt/language';
 import { workflowFiles, materializeWorkflow } from '../takt/workflow';
 import { prepareProvider } from '../handoff/provider';
 import { sources } from './code-generation-gate';
@@ -13,6 +12,7 @@ import { hostHarness, harnessDirectory, delegationScope, type HostHarness } from
 
 export type CgConfig = {
   hostHarness?: HostHarness;
+  language?: TaktLanguage;
   enabled: boolean; delegationScope: 'code-generation'; provider: 'mock' | 'claude' | 'codex';
   artifacts: string[]; sources: string[]; workflow: string; buildScript: string; verifyScript: string;
   sensorScripts: Partial<Record<'linter' | 'type-check', string>>;
@@ -34,6 +34,7 @@ export function loadConfig(project: string) {
   const configPath = fileInside(project, 'aidlc/takt-handoff/config.json');
   const c = readJson<CgConfig>(configPath);
   hostHarness(c.hostHarness);
+  taktLanguage(c.language);
   if (!c.enabled || delegationScope(c) !== 'code-generation' || !['claude', 'codex', 'mock'].includes(c.provider)) throw new Error('CG設定が無効です');
   if (!Number.isInteger(c.timeoutMs) || c.timeoutMs < 1000 || c.timeoutMs > 3600000) throw new Error('CGの時間上限は1秒〜1時間です');
   if (c.model !== undefined && (typeof c.model !== 'string' || !c.model.trim())) throw new Error('modelが不正です');
@@ -167,6 +168,7 @@ export async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOrigi
     const gate = join(control, 'code-generation-gate.ts'); copyFileSync(join(import.meta.dir, 'code-generation-gate.ts'), gate);
     const frozen = (path: string) => fileInside(snapshotRoot, path);
     const cgConfig = m.config;
+    const { codeGeneration: adaptation, supervision: supervisionContract } = runtimePolicies(cgConfig.language);
     writeJson(join(control, 'context.json'), {
       workspace, inputs, cg: m.cg, initialSources: sources(workspace),
       buildScript: frozen(cgConfig.buildScript), buildHash: m.files[cgConfig.buildScript],
@@ -205,7 +207,7 @@ export async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOrigi
     const ctx = readJson<any>(join(control, 'context.json')); ctx.initialSources = sources(workspace); writeJson(join(control, 'context.json'), ctx);
     protectedControl['context.json'] = digest(readFileSync(join(control, 'context.json')));
     for (const args of [['init', '-q'], ['config', 'core.hooksPath', '/dev/null'], ['add', '.'], ['-c', 'user.name=TAKT CG', '-c', 'user.email=cg@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', 'chore: seed CG workspace']]) requireSuccess(await command(['git', ...args], workspace, env, 10000));
-    const result = await command(['takt', '--pipeline', '--skip-git', '--provider', cgConfig.provider, '--workflow', join(control, 'workflow.yaml'), '--task', 'AI-DLCのCG単体をHOTLで実行。inputのIntent・設計と、注入された本家CG/知識/センサー定義に従い、ビルド・テスト成功まで完了しないこと。'], workspace, env, cgConfig.timeoutMs, {outputPrefix:join(attempt,'takt-output')});
+    const result = await command(['takt', '--pipeline', '--skip-git', '--provider', cgConfig.provider, '--workflow', join(control, 'workflow.yaml'), '--task', cgConfig.language === 'en' ? 'Execute standalone AI-DLC CG in HOTL mode. Follow the input Intent and designs and injected native CG, knowledge, and sensor definitions. Do not complete until builds and tests pass.' : 'AI-DLCのCG単体をHOTLで実行。inputのIntent・設計と、注入された本家CG/知識/センサー定義に従い、ビルド・テスト成功まで完了しないこと。'], workspace, env, cgConfig.timeoutMs, {outputPrefix:join(attempt,'takt-output')});
     writeJson(join(attempt, 'takt.json'), result);
     verifyOriginal(); unchanged(workspace, inputs); unchanged(control, protectedControl);
     const evidence = await command([process.execPath, gate, 'result'], workspace, env, 10000); writeJson(join(attempt, 'cg-result.json'), evidence);

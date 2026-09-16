@@ -81,7 +81,7 @@ test('承認にechoやリダイレクトを付けたら実行前に形式修正�
 test('CG設定はInception承認で起動せず、CG入口から一度だけ自動実行する', async () => {
   const f = await cgFixture();
   expect(existsSync(join(moved, 'scripts/code-generation-gate.ts'))).toBe(true);
-  expect(existsSync(join(moved, 'takt/workflows/aidlc-code-generation-stage.yaml'))).toBe(true);
+  expect(existsSync(join(moved, 'takt/ja/workflows/aidlc-code-generation-stage.yaml'))).toBe(true);
   const denied = invoke(f.project, 'PreToolUse', { ...f.event, hook_event_name: 'PreToolUse', tool_input: { command: 'aidlc engine orchestrate next 2>&1; echo ok' } });
   expect(JSON.parse(denied.stdout).hookSpecificOutput.permissionDecision).toBe('deny');
   const inceptionResponse = invoke(f.project, 'PostToolUse', { ...f.event, tool_input: { command: 'aidlc engine orchestrate report --stage delivery-planning --result approved' }, tool_response: { stdout: '{"kind":"done"}' } });

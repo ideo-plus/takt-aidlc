@@ -6,26 +6,30 @@ This directory contains definitions for delegating AI-DLC work to TAKT. Workflow
 
 ```text
 takt/
-├── workflows/
-│   ├── aidlc-code-generation-stage.yaml   CG only; also reused by Construction
-│   └── aidlc-construction-phase.yaml      Construction creation and review
-└── facets/
-    ├── instructions/       Step-specific procedures
-    ├── policies/           HOTL, scope, and quality rules
-    ├── personas/           Rationale for selecting built-in personas
-    ├── knowledge/          Input, artifact, and verification concepts
-    └── output-contracts/   Report formats and required fields
+├── ja/
+│   ├── facets/
+│   │   ├── instructions/
+│   │   ├── policies/
+│   │   ├── personas/
+│   │   ├── knowledge/
+│   │   └── output-contracts/
+│   └── workflows/
+│       ├── aidlc-code-generation-stage.yaml
+│       └── aidlc-construction-phase.yaml
+└── en/
+    ├── facets/       (same structure)
+    └── workflows/    (same filenames)
 ```
 
 ## YAML and Markdown responsibilities
 
 YAML defines steps, transitions, permissions, quality gates, and facet references. Markdown holds instructions and report formats. Roles use TAKT's built-in personas; shared rules and knowledge are reused across steps.
 
-Local files are declared under `policies`, `knowledge`, `instructions`, and `report_formats`, then referenced by alias. Personas are named directly: `planner`, `coder`, `architecture-reviewer`, `coding-reviewer`, `supervisor`, and `exec-assistant`. See the [selection rationale and upstream sources](facets/personas/README.md). Files referenced by `report_formats` live under `facets/output-contracts/`.
+Local files are declared under `policies`, `knowledge`, `instructions`, and `report_formats`, then referenced by alias. Personas are named directly: `planner`, `coder`, `architecture-reviewer`, `coding-reviewer`, `supervisor`, and `exec-assistant`. See the [selection rationale and upstream sources](en/facets/personas/README.md). Files referenced by `report_formats` live under `<language>/facets/output-contracts/`.
 
-Distribution YAML lives in `takt/workflows/` and references `../facets/`. Before execution, the runner copies YAML and local facets into a private control area and rewrites relative references. TAKT resolves built-ins. The original directory layout is preserved.
+Distribution YAML lives in `takt/<language>/workflows/` and references `../facets/`. Before execution, the runner copies YAML and local facets into a private control area and rewrites relative references. TAKT resolves built-ins. The original directory layout is preserved.
 
-Every Markdown file has English (`.md`) and Japanese (`.ja.md`) versions. Shipped workflows and runtime policy imports select Japanese variants to preserve the tested execution language. English variants document the same contracts.
+The `ja/` and `en/` trees have matching filenames. Each workflow references facets in its own language using `../facets/`. Set `language` in `aidlc/takt-handoff/config.json` to `ja` (default) or `en`, and select `workflow` and, for Construction, `constructionWorkflow` from that language directory. The same setting selects TAKT built-ins and the CLI’s embedded HOTL/supervision policies. Original AI-DLC inputs remain unchanged. Human-facing guides outside the locale trees use `.md` and `.ja.md` pairs.
 
 ## Reusing built-in facets
 
@@ -58,11 +62,11 @@ The supervisor judges requirements from code without reviewing build/test logs. 
 
 Local knowledge explains the integration; it does not replace native stage definitions, Intent, or unit designs. The runtime still freezes and injects original AI-DLC sources and the Testing Contract into the assigned steps.
 
-HOTL adaptations live in `policies/code-generation-hotl.ja.md` and `policies/construction-hotl.ja.md`. The CLI embeds those same files and places them around original sources so native human-approval and state-update procedures are not executed accidentally.
+HOTL adaptations live in `<language>/facets/policies/code-generation-hotl.md` and `<language>/facets/policies/construction-hotl.md`. The CLI embeds those same files and places them around original sources so native human-approval and state-update procedures are not executed accidentally.
 
 ## Project placement
 
-Copy the complete `takt/`, including `facets/`, to `aidlc/takt-handoff/takt/` in the target project. Follow the [setup guide](https://github.com/ideo-plus/takt-aidlc/blob/main/docs/getting-started.md#download-the-takt-bundle). Copying YAML alone leaves missing references and stops delegation checks.
+Copy the complete `takt/`, including both language trees, to `aidlc/takt-handoff/takt/` in the target project. Follow the [setup guide](https://github.com/ideo-plus/takt-aidlc/blob/main/docs/getting-started.md#download-the-takt-bundle). Copying YAML alone leaves missing references and stops delegation checks.
 
 The runner records declared Markdown in the input inventory and hashes, copies facets from frozen inputs when relocating YAML, and checks their hashes after execution. Put custom file references in top-level YAML declarations. Expand local Markdown include/extends directives into self-contained files.
 
@@ -77,6 +81,6 @@ bun run build:marketplace
 bun run check:marketplace
 ```
 
-`check:takt` resolves local dependencies and validates the original YAML with TAKT 0.65.0's `workflow doctor`. It calls no models and does not change user TAKT settings. Built-in personas avoid the need to relocate definitions just to satisfy persona path restrictions.
+`check:takt` resolves local dependencies and validates both languages’ original YAML with TAKT 0.65.0's `workflow doctor`. It calls no models and does not change user TAKT settings. Built-in personas avoid the need to relocate definitions just to satisfy persona path restrictions.
 
 Tests cover facet resolution, relocated loading, input-change detection, and both delegation modes.

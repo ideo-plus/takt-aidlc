@@ -282,6 +282,90 @@ async function approvedBoundary(project, host = "claude") {
 import { chmodSync, copyFileSync as copyFileSync2, mkdirSync as mkdirSync5, readFileSync as readFileSync5, writeFileSync as writeFileSync4 } from "fs";
 import { dirname as dirname5, join as join6 } from "path";
 
+// takt/ja/facets/policies/code-generation-hotl.md
+var code_generation_hotl_default = `# AI-DLC CG\u306EHOTL\u5B9F\u884C\u5951\u7D04
+TAKT\u304C\u62C5\u3046\u306E\u306FCode Generation\u30B9\u30C6\u30FC\u30B8\u3060\u3051\u3067\u3059\u3002\u8A2D\u8A08\u5DE5\u7A0B\u3084Build and Test\u30B9\u30C6\u30FC\u30B8\u5168\u4F53\u3092\u5B9F\u884C\u3057\u307E\u305B\u3093\u3002
+\u4EE5\u4E0B\u306E\u8CC7\u6599\u306F\u56FA\u5B9A\u3057\u305FAI-DLC\u306E\u539F\u6587\u3067\u3059\u3002Intent\u3001\u65E2\u5B58\u8A2D\u8A08\u3001\u958B\u767A\u898F\u7D04\u3001CG\u306E\u5B9F\u88C5\u624B\u9806\u3068\u6210\u679C\u7269\u8981\u4EF6\u306B\u5F93\u3063\u3066\u304F\u3060\u3055\u3044\u3002
+\u305F\u3060\u3057\u4EBA\u9593\u306E\u5BFE\u8A71\u627F\u8A8D\u30FB\u30A6\u30A9\u30FC\u30AD\u30F3\u30B0\u30B9\u30B1\u30EB\u30C8\u30F3\u5F8C\u306E\u627F\u8A8D\u30FBAI-DLC\u30A8\u30F3\u30B8\u30F3\u306E\u72B6\u614B\u66F4\u65B0\u306F\u5B9F\u884C\u3057\u307E\u305B\u3093\u3002\u30E6\u30FC\u30B6\u30FC\u306E\u65B9\u91DD\u306B\u3088\u308A\u3001CG\u5185\u306E\u8A08\u753B\u78BA\u8A8D\u3068\u30EC\u30D3\u30E5\u30FC\u306FTAKT\u306E\u81EA\u52D5\u5224\u5B9A\u3078\u7F6E\u304D\u63DB\u3048\u307E\u3059\u3002
+\u672C\u5BB6\u306ETask\u59D4\u8B72\u306FTAKT\u306E\u62C5\u5F53\u30B9\u30C6\u30C3\u30D7\u3078\u306E\u59D4\u8B72\u3068\u3057\u3066\u6271\u3044\u307E\u3059\u3002\u30CD\u30A4\u30C6\u30A3\u30D6\u306EPlan Approval receipt\u3084dispatch marker\u306F\u751F\u6210\u30FB\u8981\u6C42\u305B\u305A\u3001\u3053\u3053\u3067\u306F\u56FA\u5B9A\u5165\u529B\u306Ehash\u3001\u8A08\u753B\u306ETesting Contract hash\u3001TAKT\u306E\u8A08\u753B\u30EC\u30D3\u30E5\u30FC\u7D50\u679C\u3092\u751F\u6210\u306E\u524D\u63D0\u306B\u3057\u307E\u3059\u3002
+\u30BB\u30F3\u30B5\u30FC\u5B9A\u7FA9\u3082\u958B\u767A\u5951\u7D04\u3067\u3059\u3002\u5B9A\u7FA9\u3055\u308C\u305F\u691C\u67FB\u3092\u5B9F\u884C\u3057\u3001\u305D\u306E\u5B9F\u6E2C\u7D50\u679C\u3092\u6B8B\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u305F\u3060\u3057AI-DLC\u306E\u30CD\u30A4\u30C6\u30A3\u30D6\u76E3\u67FB\u8A18\u9332\u3092\u634F\u9020\u305B\u305A\u3001\u4EBA\u9593\u306EApprove Plan\u3092\u5F97\u305F\u3068\u3082\u8A18\u9332\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002\u5143\u306Eaidlc/\u30FB.claude/\u30FB.codex/\u30FB.agents/\u3092\u66F4\u65B0\u305B\u305A\u3001CG\u306E\u5831\u544A\u306FTAKT\u306E\u30EC\u30DD\u30FC\u30C8\u3068cg/\u306B\u4FDD\u5B58\u3057\u307E\u3059\u3002
+\u539F\u6587\u306E<record>\u306A\u3069\u306F\u5143\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3067\u306E\u51FA\u5178\u3067\u3059\u3002\u6DFB\u4ED8\u3057\u305F\u56FA\u5B9A\u30B3\u30D4\u30FC\u3068\u4F5C\u696D\u9818\u57DF\u306E\u30BD\u30FC\u30B9\u3092\u53C2\u7167\u3057\u3001\u5143\u306E\u8A18\u9332\u9818\u57DF\u3078\u66F8\u304D\u8FBC\u307E\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002
+\u898F\u7D04\u306Fstrict-additive\u3068\u3057\u3066\u8AAD\u307F\u3001\u7A7A\u306E\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u4F8B\u3092\u78BA\u5B9A\u4E8B\u9805\u3068\u898B\u306A\u3055\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002\u4EBA\u304C\u660E\u793A\u3057\u305F\u65E2\u5B58\u306E\u8981\u6C42\u30FB\u4F8B\u5916\u3092\u512A\u5148\u3057\u3001\u4E0D\u660E\u306A\u5224\u65AD\u306F\u634F\u9020\u305B\u305Ablocked\u3068\u3057\u3066\u7D42\u4E86\u3057\u3066\u304F\u3060\u3055\u3044\u3002
+Testing Contract\u306E\u65B9\u6CD5\u30FB\u9806\u5E8F\u30FB\u54C1\u8CEA\u76EE\u6A19\u3092\u5F31\u3081\u3066\u306F\u3044\u3051\u307E\u305B\u3093\u3002\u30D3\u30EB\u30C9\u3068\u30C6\u30B9\u30C8\u306E\u4E21\u65B9\u304C\u6210\u529F\u3059\u308B\u307E\u3067CG\u5B8C\u4E86\u3092\u8FD4\u3057\u3066\u306F\u3044\u3051\u307E\u305B\u3093\u3002
+AI-DLC\u539F\u6587\u306B\u3042\u308BBash\u7B49\u306E\u6A29\u9650\u306F\u5143\u306E\u62C5\u5F53\u8005\u306E\u8AAC\u660E\u3067\u3059\u3002\u73FE\u5728\u8A31\u53EF\u3055\u308C\u305F\u30C4\u30FC\u30EB\u3060\u3051\u3092\u4F7F\u3063\u3066\u304F\u3060\u3055\u3044\u3002
+`;
+
+// takt/en/facets/policies/code-generation-hotl.md
+var code_generation_hotl_default2 = `# AI-DLC CG HOTL execution contract
+TAKT owns only the Code Generation stage, not design stages or the entire Build and Test stage.
+The following materials are frozen AI-DLC original sources. Follow the Intent, existing designs, development conventions, CG procedures, and artifact requirements.
+Do not perform interactive human approval, approval after the walking skeleton, or AI-DLC engine state updates. Under the user's policy, TAKT automatically evaluates CG plans and reviews.
+Treat native Task delegation as delegation to the corresponding TAKT step. Do not create or require native Plan Approval receipts or dispatch markers. Generation prerequisites here are frozen-input hashes, the plan's Testing Contract hash, and TAKT plan-review results.
+Sensor definitions are part of the development contract. Run the defined checks and record measurements, without fabricating native AI-DLC audit records or claiming human Approve Plan. Do not update original aidlc/, .claude/, .codex/, or .agents/; save CG output to TAKT reports and cg/.
+Original placeholders such as <record> identify provenance in the source project. Use attached frozen copies and workspace source; do not write to original record locations.
+Read conventions as strict-additive. Do not treat empty template examples as settled facts. Prioritize explicit human requirements and exceptions; stop as blocked instead of inventing undecided matters.
+Do not weaken the Testing Contract's method, ordering, or targets. Do not report CG complete until both build and tests succeed.
+Permissions such as Bash in original AI-DLC sources describe the original role. Use only tools permitted for the current role.
+`;
+
+// takt/ja/facets/policies/construction-hotl.md
+var construction_hotl_default = `# Construction HOTL\u306E\u5B9F\u884C\u5951\u7D04
+
+\u5165\u529B\u306EIntent\u30FB\u672C\u5BB6\u5DE5\u7A0B\u5B9A\u7FA9\u30FB\u898F\u7D04\u30FB\u77E5\u8B58\u30FB\u30BB\u30F3\u30B5\u30FC\u306B\u5F93\u3046\u3002
+\u5BFE\u8A71\u627F\u8A8D\u3001\u30A6\u30A9\u30FC\u30AD\u30F3\u30B0\u30B9\u30B1\u30EB\u30C8\u30F3\u5F8C\u306E\u627F\u8A8D\u3001\u5B66\u3073\u306E\u8CEA\u554F\u3001\u30CD\u30A4\u30C6\u30A3\u30D6\u306E\u72B6\u614B\u30FB\u76E3\u67FB\u8A18\u9332\u306E\u66F4\u65B0\u306F\u884C\u308F\u306A\u3044\u3002
+\u4EBA\u9593\u306E\u78BA\u8A8D\u306F\u81EA\u52D5\u306E\u6280\u8853\u30EC\u30D3\u30E5\u30FC\u3078\u7F6E\u304D\u63DB\u3048\u3001\u5165\u529B\u304B\u3089\u6C7A\u3081\u3089\u308C\u306A\u3044\u3053\u3068\u306Fblocked\u3068\u3057\u3066\u7406\u7531\u3092\u6B8B\u3059\u3002
+\u6210\u679C\u7269\u306E\u5143\u306Erecord\u30D1\u30B9\u306Finput/project\u306E\u56FA\u5B9A\u30B3\u30D4\u30FC\u3078\u5BFE\u5FDC\u3059\u308B\u3002
+\u30D5\u30A1\u30A4\u30EB\u306F\u5FDC\u7B54\u306Eartifacts/writes\u304B\u3089\u691C\u8A3C\u30B2\u30FC\u30C8\u304C\u751F\u6210\u3059\u308B\u3002\u76F4\u63A5\u7DE8\u96C6\u3057\u306A\u3044\u3002
+\u54C1\u8CEA\u6761\u4EF6\u3092\u5F31\u3081\u305A\u3001\u5B9F\u6E2C\u3057\u3066\u3044\u306A\u3044\u691C\u67FB\u3092\u6210\u529F\u3068\u8A18\u9332\u3057\u306A\u3044\u3002
+`;
+
+// takt/en/facets/policies/construction-hotl.md
+var construction_hotl_default2 = `# Construction HOTL execution contract
+
+Follow the input Intent, native stage definition, conventions, knowledge, and sensors.
+Do not perform interactive approval, approval after the walking skeleton, learning questions, or native state/audit updates.
+Replace human checks with automatic technical review. If inputs cannot resolve a decision, return blocked with a reason.
+Original record paths correspond to frozen copies under input/project.
+Quality gates generate files from the response's artifacts/writes. Do not edit them directly.
+Do not weaken quality conditions or claim success for checks that were not measured.
+`;
+
+// takt/ja/facets/policies/aidlc-supervision.md
+var aidlc_supervision_default = `# AI-DLC\u306E\u8981\u4EF6\u5145\u8DB3\u5224\u5B9A
+
+\u73FE\u5728\u306EIntent\u3001\u627F\u8A8D\u6E08\u307F\u306E\u8981\u6C42\u30FB\u8A2D\u8A08\u3001\u73FE\u5728\u306E\u30B3\u30FC\u30C9\u3001\u524D\u6BB5\u306E\u6307\u6458\u3092\u7167\u5408\u3057\u3066\u3001\u8981\u6C42\u304C\u6E80\u305F\u3055\u308C\u305F\u304B\u3092\u72EC\u7ACB\u306B\u5224\u5B9A\u3059\u308B\u3002
+\u539F\u6587\u306B\u542B\u307E\u308C\u308B\u5B9F\u88C5\u3001\u30D3\u30EB\u30C9\u3001\u30C6\u30B9\u30C8\u3001\u30BB\u30F3\u30B5\u30FC\u5B9F\u884C\u3001\u5BFE\u8A71\u627F\u8A8D\u306E\u624B\u9806\u306F\u3001\u3053\u306E\u62C5\u5F53\u306E\u5B9F\u884C\u6307\u793A\u3067\u306F\u306A\u3044\u3002
+\u6A5F\u68B0\u30B2\u30FC\u30C8\u306E\u5B9F\u884C\u72B6\u6CC1\u30FB\u7D50\u679C\u30FB\u30ED\u30B0\u3092\u8981\u6C42\u307E\u305F\u306F\u5BE9\u67FB\u3057\u306A\u3044\u3002\u6A5F\u68B0\u691C\u8A3C\u306E\u5408\u5426\u306Frunner\u304C\u5225\u306B\u5224\u5B9A\u3059\u308B\u3002
+\u8AAD\u307F\u53D6\u308A\u5C02\u7528\u3068\u3057\u3001\u30B3\u30FC\u30C9\u30FB\u5165\u529B\u30FBAI-DLC\u306E\u72B6\u614B\u3084\u76E3\u67FB\u8A18\u9332\u3092\u5909\u66F4\u3057\u306A\u3044\u3002\u4EBA\u9593\u627F\u8A8D\u3092\u8A18\u9332\u3057\u306A\u3044\u3002
+\u4FEE\u6B63\u53EF\u80FD\u306A\u672A\u5145\u8DB3\u306Fchanges_requested\u3068\u3057\u3066\u5BFE\u8C61\u3068\u53D7\u5165\u6761\u4EF6\u3092\u793A\u3059\u3002\u5916\u90E8\u5224\u65AD\u304C\u5FC5\u8981\u306A\u77DB\u76FE\u30FB\u4E0D\u8DB3\u306Fblocked\u3068\u3057\u3066\u7D42\u4E86\u3057\u3001\u5BFE\u8A71\u5F85\u3061\u306B\u3057\u306A\u3044\u3002
+approved\u306F\u3053\u306E\u62C5\u5F53\u306E\u8981\u4EF6\u5145\u8DB3\u5224\u5B9A\u3067\u3042\u308A\u3001CG\u3084Construction\u5168\u4F53\u306E\u5B8C\u4E86\u3092\u610F\u5473\u3057\u306A\u3044\u3002
+`;
+
+// takt/en/facets/policies/aidlc-supervision.md
+var aidlc_supervision_default2 = `# AI-DLC requirement validation
+
+Independently compare the current Intent, approved requirements/designs, current code, and earlier findings to determine whether requirements are fulfilled.
+Implementation, build, test, sensor-execution, and interactive-approval procedures in original sources are not execution instructions for this role.
+Do not request or review machine-gate execution status, results, or logs. The runner evaluates machine checks separately.
+Remain read-only. Do not modify code, inputs, AI-DLC state, or audit records. Do not record human approval.
+Return changes_requested for correctable gaps with targets and acceptance conditions. Return blocked for contradictions or missing information requiring external judgment; do not wait for interaction.
+approved is this role's requirement judgment, not completion of CG or the full Construction phase.
+`;
+
+// src/takt/language.ts
+function taktLanguage(value) {
+  if (value === undefined)
+    return "ja";
+  if (value === "ja" || value === "en")
+    return value;
+  throw new Error("language\u306Fja\u307E\u305F\u306Fen\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044");
+}
+var policies = {
+  ja: { codeGeneration: code_generation_hotl_default, construction: construction_hotl_default, supervision: aidlc_supervision_default },
+  en: { codeGeneration: code_generation_hotl_default2, construction: construction_hotl_default2, supervision: aidlc_supervision_default2 }
+};
+var runtimePolicies = (language) => policies[taktLanguage(language)];
+
 // src/handoff/provider.ts
 import { mkdirSync as mkdirSync2, writeFileSync as writeFileSync2 } from "fs";
 import { join as join3 } from "path";
@@ -292,7 +376,7 @@ function prepareProvider(attempt, config, scenario) {
   mkdirSync2(configDir, { recursive: true });
   writeFileSync2(join3(configDir, "config.yaml"), Bun.YAML.stringify({
     provider: config.provider,
-    language: "ja",
+    language: taktLanguage(config.language),
     workflow_command_gates: { custom_scripts: true },
     ...config.model ? { model: config.model } : {},
     ...config.codexReasoningEffort ? {
@@ -404,17 +488,6 @@ function sources(root) {
 }
 if (false) {}
 
-// takt/facets/policies/aidlc-supervision.ja.md
-var aidlc_supervision_ja_default = `# AI-DLC\u306E\u8981\u4EF6\u5145\u8DB3\u5224\u5B9A
-
-\u73FE\u5728\u306EIntent\u3001\u627F\u8A8D\u6E08\u307F\u306E\u8981\u6C42\u30FB\u8A2D\u8A08\u3001\u73FE\u5728\u306E\u30B3\u30FC\u30C9\u3001\u524D\u6BB5\u306E\u6307\u6458\u3092\u7167\u5408\u3057\u3066\u3001\u8981\u6C42\u304C\u6E80\u305F\u3055\u308C\u305F\u304B\u3092\u72EC\u7ACB\u306B\u5224\u5B9A\u3059\u308B\u3002
-\u539F\u6587\u306B\u542B\u307E\u308C\u308B\u5B9F\u88C5\u3001\u30D3\u30EB\u30C9\u3001\u30C6\u30B9\u30C8\u3001\u30BB\u30F3\u30B5\u30FC\u5B9F\u884C\u3001\u5BFE\u8A71\u627F\u8A8D\u306E\u624B\u9806\u306F\u3001\u3053\u306E\u62C5\u5F53\u306E\u5B9F\u884C\u6307\u793A\u3067\u306F\u306A\u3044\u3002
-\u6A5F\u68B0\u30B2\u30FC\u30C8\u306E\u5B9F\u884C\u72B6\u6CC1\u30FB\u7D50\u679C\u30FB\u30ED\u30B0\u3092\u8981\u6C42\u307E\u305F\u306F\u5BE9\u67FB\u3057\u306A\u3044\u3002\u6A5F\u68B0\u691C\u8A3C\u306E\u5408\u5426\u306Frunner\u304C\u5225\u306B\u5224\u5B9A\u3059\u308B\u3002
-\u8AAD\u307F\u53D6\u308A\u5C02\u7528\u3068\u3057\u3001\u30B3\u30FC\u30C9\u30FB\u5165\u529B\u30FBAI-DLC\u306E\u72B6\u614B\u3084\u76E3\u67FB\u8A18\u9332\u3092\u5909\u66F4\u3057\u306A\u3044\u3002\u4EBA\u9593\u627F\u8A8D\u3092\u8A18\u9332\u3057\u306A\u3044\u3002
-\u4FEE\u6B63\u53EF\u80FD\u306A\u672A\u5145\u8DB3\u306Fchanges_requested\u3068\u3057\u3066\u5BFE\u8C61\u3068\u53D7\u5165\u6761\u4EF6\u3092\u793A\u3059\u3002\u5916\u90E8\u5224\u65AD\u304C\u5FC5\u8981\u306A\u77DB\u76FE\u30FB\u4E0D\u8DB3\u306Fblocked\u3068\u3057\u3066\u7D42\u4E86\u3057\u3001\u5BFE\u8A71\u5F85\u3061\u306B\u3057\u306A\u3044\u3002
-approved\u306F\u3053\u306E\u62C5\u5F53\u306E\u8981\u4EF6\u5145\u8DB3\u5224\u5B9A\u3067\u3042\u308A\u3001CG\u3084Construction\u5168\u4F53\u306E\u5B8C\u4E86\u3092\u610F\u5473\u3057\u306A\u3044\u3002
-`;
-
 // src/construction-phase/supervision.ts
 async function executeConstructionSupervision(args) {
   const { attempt, store, files, sourcePaths, requirementIds, units, config, verify } = args;
@@ -448,13 +521,14 @@ async function executeConstructionSupervision(args) {
     throw new Error("Construction\u306Esupervise\u30B9\u30C6\u30C3\u30D7\u304C\u5FC5\u8981\u3067\u3059");
   workflow.initial_step = "supervise";
   workflow.steps = [supervisor];
-  const bundle = `${aidlc_supervision_ja_default}
+  const { supervision: contract } = runtimePolicies(config.language);
+  const bundle = `${contract}
 ${paths.map((path) => `
 ## Original source: ${path}
 SHA256: ${files[path]}
 ${readFileSync5(fileInside(store, path), "utf8")}
 `).join("")}
-${aidlc_supervision_ja_default}`;
+${contract}`;
   writeFileSync4(join6(control, "supervision-sources.md"), bundle);
   workflow.instructions["construction-supervision-sources"] = "./supervision-sources.md";
   supervisor.instruction = ["construction-supervision-sources", ...[supervisor.instruction].flat()];
@@ -470,7 +544,7 @@ ${aidlc_supervision_ja_default}`;
     requireSuccess(await command(["git", ...gitArgs], workspace, env, 1e4));
   }
   verify();
-  const run = await command(["takt", "--pipeline", "--skip-git", "--provider", config.provider, "--workflow", join6(control, "workflow.yaml"), "--task", "Construction\u5168\u4F53\u306EIntent\u30FB\u53D7\u5165\u6761\u4EF6\u3068\u6700\u7D42\u30B3\u30FC\u30C9\u3092\u72EC\u7ACB\u306B\u7167\u5408\u3057\u3001\u8981\u4EF6\u5145\u8DB3\u3068Unit\u9593\u306E\u6574\u5408\u6027\u3092\u5224\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\u3002"], workspace, env, args.timeout, { outputPrefix: join6(attempt, "takt-output") });
+  const run = await command(["takt", "--pipeline", "--skip-git", "--provider", config.provider, "--workflow", join6(control, "workflow.yaml"), "--task", config.language === "en" ? "Independently compare the final code with the Construction Intent and acceptance conditions. Judge requirement fulfillment and consistency across units." : "Construction\u5168\u4F53\u306EIntent\u30FB\u53D7\u5165\u6761\u4EF6\u3068\u6700\u7D42\u30B3\u30FC\u30C9\u3092\u72EC\u7ACB\u306B\u7167\u5408\u3057\u3001\u8981\u4EF6\u5145\u8DB3\u3068Unit\u9593\u306E\u6574\u5408\u6027\u3092\u5224\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\u3002"], workspace, env, args.timeout, { outputPrefix: join6(attempt, "takt-output") });
   writeJson(join6(attempt, "takt.json"), run);
   if (run.timedOut || run.outputLimitExceeded)
     requireSuccess(run);
@@ -706,19 +780,6 @@ function collectCgContext(project, artifacts, unit, checks = {}, host = "claude"
   return { version: 1, hostHarness: host, record, unit, files, roles, testingContract, testingContractText: result.stdout, requirementIds, intentFile, stageFile, sensors, templates, checks, mode: "hotl" };
 }
 
-// takt/facets/policies/code-generation-hotl.ja.md
-var code_generation_hotl_ja_default = `# AI-DLC CG\u306EHOTL\u5B9F\u884C\u5951\u7D04
-TAKT\u304C\u62C5\u3046\u306E\u306FCode Generation\u30B9\u30C6\u30FC\u30B8\u3060\u3051\u3067\u3059\u3002\u8A2D\u8A08\u5DE5\u7A0B\u3084Build and Test\u30B9\u30C6\u30FC\u30B8\u5168\u4F53\u3092\u5B9F\u884C\u3057\u307E\u305B\u3093\u3002
-\u4EE5\u4E0B\u306E\u8CC7\u6599\u306F\u56FA\u5B9A\u3057\u305FAI-DLC\u306E\u539F\u6587\u3067\u3059\u3002Intent\u3001\u65E2\u5B58\u8A2D\u8A08\u3001\u958B\u767A\u898F\u7D04\u3001CG\u306E\u5B9F\u88C5\u624B\u9806\u3068\u6210\u679C\u7269\u8981\u4EF6\u306B\u5F93\u3063\u3066\u304F\u3060\u3055\u3044\u3002
-\u305F\u3060\u3057\u4EBA\u9593\u306E\u5BFE\u8A71\u627F\u8A8D\u30FB\u30A6\u30A9\u30FC\u30AD\u30F3\u30B0\u30B9\u30B1\u30EB\u30C8\u30F3\u5F8C\u306E\u627F\u8A8D\u30FBAI-DLC\u30A8\u30F3\u30B8\u30F3\u306E\u72B6\u614B\u66F4\u65B0\u306F\u5B9F\u884C\u3057\u307E\u305B\u3093\u3002\u30E6\u30FC\u30B6\u30FC\u306E\u65B9\u91DD\u306B\u3088\u308A\u3001CG\u5185\u306E\u8A08\u753B\u78BA\u8A8D\u3068\u30EC\u30D3\u30E5\u30FC\u306FTAKT\u306E\u81EA\u52D5\u5224\u5B9A\u3078\u7F6E\u304D\u63DB\u3048\u307E\u3059\u3002
-\u672C\u5BB6\u306ETask\u59D4\u8B72\u306FTAKT\u306E\u62C5\u5F53\u30B9\u30C6\u30C3\u30D7\u3078\u306E\u59D4\u8B72\u3068\u3057\u3066\u6271\u3044\u307E\u3059\u3002\u30CD\u30A4\u30C6\u30A3\u30D6\u306EPlan Approval receipt\u3084dispatch marker\u306F\u751F\u6210\u30FB\u8981\u6C42\u305B\u305A\u3001\u3053\u3053\u3067\u306F\u56FA\u5B9A\u5165\u529B\u306Ehash\u3001\u8A08\u753B\u306ETesting Contract hash\u3001TAKT\u306E\u8A08\u753B\u30EC\u30D3\u30E5\u30FC\u7D50\u679C\u3092\u751F\u6210\u306E\u524D\u63D0\u306B\u3057\u307E\u3059\u3002
-\u30BB\u30F3\u30B5\u30FC\u5B9A\u7FA9\u3082\u958B\u767A\u5951\u7D04\u3067\u3059\u3002\u5B9A\u7FA9\u3055\u308C\u305F\u691C\u67FB\u3092\u5B9F\u884C\u3057\u3001\u305D\u306E\u5B9F\u6E2C\u7D50\u679C\u3092\u6B8B\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u305F\u3060\u3057AI-DLC\u306E\u30CD\u30A4\u30C6\u30A3\u30D6\u76E3\u67FB\u8A18\u9332\u3092\u634F\u9020\u305B\u305A\u3001\u4EBA\u9593\u306EApprove Plan\u3092\u5F97\u305F\u3068\u3082\u8A18\u9332\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002\u5143\u306Eaidlc/\u30FB.claude/\u30FB.codex/\u30FB.agents/\u3092\u66F4\u65B0\u305B\u305A\u3001CG\u306E\u5831\u544A\u306FTAKT\u306E\u30EC\u30DD\u30FC\u30C8\u3068cg/\u306B\u4FDD\u5B58\u3057\u307E\u3059\u3002
-\u539F\u6587\u306E<record>\u306A\u3069\u306F\u5143\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3067\u306E\u51FA\u5178\u3067\u3059\u3002\u6DFB\u4ED8\u3057\u305F\u56FA\u5B9A\u30B3\u30D4\u30FC\u3068\u4F5C\u696D\u9818\u57DF\u306E\u30BD\u30FC\u30B9\u3092\u53C2\u7167\u3057\u3001\u5143\u306E\u8A18\u9332\u9818\u57DF\u3078\u66F8\u304D\u8FBC\u307E\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002
-\u898F\u7D04\u306Fstrict-additive\u3068\u3057\u3066\u8AAD\u307F\u3001\u7A7A\u306E\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u4F8B\u3092\u78BA\u5B9A\u4E8B\u9805\u3068\u898B\u306A\u3055\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002\u4EBA\u304C\u660E\u793A\u3057\u305F\u65E2\u5B58\u306E\u8981\u6C42\u30FB\u4F8B\u5916\u3092\u512A\u5148\u3057\u3001\u4E0D\u660E\u306A\u5224\u65AD\u306F\u634F\u9020\u305B\u305Ablocked\u3068\u3057\u3066\u7D42\u4E86\u3057\u3066\u304F\u3060\u3055\u3044\u3002
-Testing Contract\u306E\u65B9\u6CD5\u30FB\u9806\u5E8F\u30FB\u54C1\u8CEA\u76EE\u6A19\u3092\u5F31\u3081\u3066\u306F\u3044\u3051\u307E\u305B\u3093\u3002\u30D3\u30EB\u30C9\u3068\u30C6\u30B9\u30C8\u306E\u4E21\u65B9\u304C\u6210\u529F\u3059\u308B\u307E\u3067CG\u5B8C\u4E86\u3092\u8FD4\u3057\u3066\u306F\u3044\u3051\u307E\u305B\u3093\u3002
-AI-DLC\u539F\u6587\u306B\u3042\u308BBash\u7B49\u306E\u6A29\u9650\u306F\u5143\u306E\u62C5\u5F53\u8005\u306E\u8AAC\u660E\u3067\u3059\u3002\u73FE\u5728\u8A31\u53EF\u3055\u308C\u305F\u30C4\u30FC\u30EB\u3060\u3051\u3092\u4F7F\u3063\u3066\u304F\u3060\u3055\u3044\u3002
-`;
-
 // src/code-generation/runner.ts
 var cgStorage = (project) => join9(project, "aidlc/takt-handoff");
 function cgEnabled(project) {
@@ -732,6 +793,7 @@ function loadConfig(project) {
   const configPath = fileInside(project, "aidlc/takt-handoff/config.json");
   const c = readJson(configPath);
   hostHarness(c.hostHarness);
+  taktLanguage(c.language);
   if (!c.enabled || delegationScope(c) !== "code-generation" || !["claude", "codex", "mock"].includes(c.provider))
     throw new Error("CG\u8A2D\u5B9A\u304C\u7121\u52B9\u3067\u3059");
   if (!Number.isInteger(c.timeoutMs) || c.timeoutMs < 1000 || c.timeoutMs > 3600000)
@@ -913,6 +975,7 @@ async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOriginal }) 
   copyFileSync3(join9(import.meta.dir, "code-generation-gate.ts"), gate);
   const frozen = (path) => fileInside(snapshotRoot, path);
   const cgConfig = m.config;
+  const { codeGeneration: adaptation, supervision: supervisionContract } = runtimePolicies(cgConfig.language);
   writeJson(join9(control, "context.json"), {
     workspace,
     inputs,
@@ -939,7 +1002,7 @@ SHA256: ${m.files[path]}
 
 ${readFileSync8(frozen(path), "utf8")}`).join(`
 `);
-    const contract = role === "supervise" ? aidlc_supervision_ja_default : code_generation_hotl_ja_default;
+    const contract = role === "supervise" ? supervisionContract : adaptation;
     const content = `${contract}
 ${originals}
 ## Frozen Testing Contract
@@ -956,7 +1019,7 @@ ${contract}`;
     if (!role)
       throw new Error(`CG\u5916\u306E\u5DE5\u7A0B: ${step.name}`);
     const paths = [...new Set(m.cg.roles[role])];
-    step.instruction = [`code-generation-source-${role}`, role === "supervise" ? aidlc_supervision_ja_default : code_generation_hotl_ja_default, ...[step.instruction].flat()];
+    step.instruction = [`code-generation-source-${role}`, role === "supervise" ? supervisionContract : adaptation, ...[step.instruction].flat()];
     injection[step.name] = { sources: paths.map((path) => ({ path, sha256: m.files[path] })), sourceBundleHash: digest(readFileSync8(join9(control, `context/${role}.md`))) };
   }
   writeFileSync7(join9(control, "workflow.yaml"), Bun.YAML.stringify(workflow));
@@ -976,7 +1039,7 @@ cg/
   protectedControl["context.json"] = digest(readFileSync8(join9(control, "context.json")));
   for (const args of [["init", "-q"], ["config", "core.hooksPath", "/dev/null"], ["add", "."], ["-c", "user.name=TAKT CG", "-c", "user.email=cg@example.invalid", "-c", "commit.gpgsign=false", "commit", "-qm", "chore: seed CG workspace"]])
     requireSuccess(await command(["git", ...args], workspace, env, 1e4));
-  const result = await command(["takt", "--pipeline", "--skip-git", "--provider", cgConfig.provider, "--workflow", join9(control, "workflow.yaml"), "--task", "AI-DLC\u306ECG\u5358\u4F53\u3092HOTL\u3067\u5B9F\u884C\u3002input\u306EIntent\u30FB\u8A2D\u8A08\u3068\u3001\u6CE8\u5165\u3055\u308C\u305F\u672C\u5BB6CG/\u77E5\u8B58/\u30BB\u30F3\u30B5\u30FC\u5B9A\u7FA9\u306B\u5F93\u3044\u3001\u30D3\u30EB\u30C9\u30FB\u30C6\u30B9\u30C8\u6210\u529F\u307E\u3067\u5B8C\u4E86\u3057\u306A\u3044\u3053\u3068\u3002"], workspace, env, cgConfig.timeoutMs, { outputPrefix: join9(attempt, "takt-output") });
+  const result = await command(["takt", "--pipeline", "--skip-git", "--provider", cgConfig.provider, "--workflow", join9(control, "workflow.yaml"), "--task", cgConfig.language === "en" ? "Execute standalone AI-DLC CG in HOTL mode. Follow the input Intent and designs and injected native CG, knowledge, and sensor definitions. Do not complete until builds and tests pass." : "AI-DLC\u306ECG\u5358\u4F53\u3092HOTL\u3067\u5B9F\u884C\u3002input\u306EIntent\u30FB\u8A2D\u8A08\u3068\u3001\u6CE8\u5165\u3055\u308C\u305F\u672C\u5BB6CG/\u77E5\u8B58/\u30BB\u30F3\u30B5\u30FC\u5B9A\u7FA9\u306B\u5F93\u3044\u3001\u30D3\u30EB\u30C9\u30FB\u30C6\u30B9\u30C8\u6210\u529F\u307E\u3067\u5B8C\u4E86\u3057\u306A\u3044\u3053\u3068\u3002"], workspace, env, cgConfig.timeoutMs, { outputPrefix: join9(attempt, "takt-output") });
   writeJson(join9(attempt, "takt.json"), result);
   verifyOriginal();
   unchanged(workspace, inputs);
@@ -1025,6 +1088,7 @@ function phaseConfig(project) {
   const path = fileInside(project, "aidlc/takt-handoff/config.json");
   const c = readJson(path);
   hostHarness(c.hostHarness);
+  taktLanguage(c.language);
   if (!c.enabled || delegationScope(c) !== "construction")
     throw new Error("Construction\u8A2D\u5B9A\u304C\u7121\u52B9\u3067\u3059");
   if (!["mock", "claude", "codex"].includes(c.provider) || !Number.isInteger(c.timeoutMs) || c.timeoutMs < 1000 || c.timeoutMs > 3600000)
@@ -1218,19 +1282,6 @@ import {
   writeFileSync as writeFileSync8
 } from "fs";
 import { dirname as dirname8, join as join11 } from "path";
-
-// takt/facets/policies/construction-hotl.ja.md
-var construction_hotl_ja_default = `# Construction HOTL\u306E\u5B9F\u884C\u5951\u7D04
-
-\u5165\u529B\u306EIntent\u30FB\u672C\u5BB6\u5DE5\u7A0B\u5B9A\u7FA9\u30FB\u898F\u7D04\u30FB\u77E5\u8B58\u30FB\u30BB\u30F3\u30B5\u30FC\u306B\u5F93\u3046\u3002
-\u5BFE\u8A71\u627F\u8A8D\u3001\u30A6\u30A9\u30FC\u30AD\u30F3\u30B0\u30B9\u30B1\u30EB\u30C8\u30F3\u5F8C\u306E\u627F\u8A8D\u3001\u5B66\u3073\u306E\u8CEA\u554F\u3001\u30CD\u30A4\u30C6\u30A3\u30D6\u306E\u72B6\u614B\u30FB\u76E3\u67FB\u8A18\u9332\u306E\u66F4\u65B0\u306F\u884C\u308F\u306A\u3044\u3002
-\u4EBA\u9593\u306E\u78BA\u8A8D\u306F\u81EA\u52D5\u306E\u6280\u8853\u30EC\u30D3\u30E5\u30FC\u3078\u7F6E\u304D\u63DB\u3048\u3001\u5165\u529B\u304B\u3089\u6C7A\u3081\u3089\u308C\u306A\u3044\u3053\u3068\u306Fblocked\u3068\u3057\u3066\u7406\u7531\u3092\u6B8B\u3059\u3002
-\u6210\u679C\u7269\u306E\u5143\u306Erecord\u30D1\u30B9\u306Finput/project\u306E\u56FA\u5B9A\u30B3\u30D4\u30FC\u3078\u5BFE\u5FDC\u3059\u308B\u3002
-\u30D5\u30A1\u30A4\u30EB\u306F\u5FDC\u7B54\u306Eartifacts/writes\u304B\u3089\u691C\u8A3C\u30B2\u30FC\u30C8\u304C\u751F\u6210\u3059\u308B\u3002\u76F4\u63A5\u7DE8\u96C6\u3057\u306A\u3044\u3002
-\u54C1\u8CEA\u6761\u4EF6\u3092\u5F31\u3081\u305A\u3001\u5B9F\u6E2C\u3057\u3066\u3044\u306A\u3044\u691C\u67FB\u3092\u6210\u529F\u3068\u8A18\u9332\u3057\u306A\u3044\u3002
-`;
-
-// src/construction-phase/stage.ts
 async function executeStage(args) {
   const {
     attempt,
@@ -1328,8 +1379,8 @@ async function executeStage(args) {
     for (const rule of step.rules ?? [])
       if (rule.next === "supervise")
         rule.next = "COMPLETE";
-  const contract = `${construction_hotl_ja_default}
-\u73FE\u5728\u306E\u5DE5\u7A0B\u306F${stage.slug}\u3001Unit\u306F${unit ?? "\u5168Unit"}\u3067\u3059\u3002
+  const contract = `${runtimePolicies(c.language).construction}
+Current stage: ${stage.slug}; Unit: ${unit ?? "all units"}.
 `;
   const bundlePaths = paths.filter((path) => path !== cg.stageFile && !/^\.(?:claude|codex)\/tools\//.test(path));
   const bundle = contract + bundlePaths.map((p) => `
@@ -1394,7 +1445,7 @@ ${cg.testingContractText}
     "--workflow",
     join11(control, "workflow.yaml"),
     "--task",
-    `Construction\u306E${stage.slug}\u3092HOTL\u3067\u5B9F\u884C\u3057\u3001\u6210\u679C\u7269\u3068\u691C\u8A3C\u7D50\u679C\u3092\u6280\u8853\u30EC\u30D3\u30E5\u30FC\u3059\u308B`
+    c.language === "en" ? `Execute Construction ${stage.slug} in HOTL mode and review artifacts and verification results.` : `Construction\u306E${stage.slug}\u3092HOTL\u3067\u5B9F\u884C\u3057\u3001\u6210\u679C\u7269\u3068\u691C\u8A3C\u7D50\u679C\u3092\u6280\u8853\u30EC\u30D3\u30E5\u30FC\u3059\u308B`
   ], workspace, env, timeout, { outputPrefix: join11(attempt, "takt-output") });
   writeJson(join11(attempt, "takt.json"), run);
   verify();

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { materializeWorkflow, workflowFiles } from '../src/takt/workflow';
@@ -11,15 +11,30 @@ import { phaseFixture } from '../experiments/construction-phase/fixture';
 import { capturePhase, preparePhase, executePhase } from '../src/construction-phase/runner';
 
 const repo = resolve(import.meta.dir, '..');
-test('TAKT本体が組み込みペルソナを選び、移動したローカルfacetも読み込める', () => {
+test('日英のファイル構成とWorkflowの実行契約が一致する', () => {
+  const inventory = (language: string) => readdirSync(join(repo, 'takt', language), { recursive: true, withFileTypes: true })
+    .filter(entry => entry.isFile()).map(entry => join(entry.parentPath, entry.name).slice(join(repo, 'takt', language).length + 1)).sort();
+  expect(inventory('en')).toEqual(inventory('ja'));
+  for (const name of ['aidlc-code-generation-stage', 'aidlc-construction-phase']) {
+    const definitions = ['ja', 'en'].map(language => {
+      const definition = Bun.YAML.parse(readFileSync(join(repo, `takt/${language}/workflows/${name}.yaml`), 'utf8')) as any;
+      delete definition.description;
+      for (const step of definition.steps) for (const rule of step.rules) delete rule.condition;
+      return definition;
+    });
+    expect(definitions[0]).toEqual(definitions[1]);
+  }
+});
+
+test.each(['ja', 'en'] as const)('%s: TAKT本体が同じ言語の組み込みとローカルfacetを読み込める', (language) => {
   const temp = mkdtempSync(join(tmpdir(), 'takt-facets-'));
   try {
     cpSync(join(repo, 'takt'), join(temp, 'snapshot/takt'), { recursive: true });
     const config = join(temp, 'config'); mkdirSync(config);
-    writeFileSync(join(config, 'config.yaml'), 'language: ja\nprovider: mock\nworkflow_command_gates:\n  custom_scripts: true\n');
+    writeFileSync(join(config, 'config.yaml'), `language: ${language}\nprovider: mock\nworkflow_command_gates:\n  custom_scripts: true\n`);
     const targets: string[] = [];
     for (const name of ['aidlc-code-generation-stage', 'aidlc-construction-phase']) {
-      const path = `takt/workflows/${name}.yaml`;
+      const path = `takt/${language}/workflows/${name}.yaml`;
       targets.push(join(repo, path));
       const control = join(temp, name);
       const { workflow } = materializeWorkflow(join(temp, 'snapshot'), path, control);
@@ -52,23 +67,23 @@ test('TAKT本体が組み込みペルソナを選び、移動したローカルf
         ] : []),
       ];
       for (const [kind, name] of builtinFacets) {
-        expect(text).toMatch(new RegExp(`ref: ${name}\\s+source: builtin\\s+path: [^\\n]+/builtins/ja/facets/${kind}/${name}\\.md`));
+        expect(text).toMatch(new RegExp(`ref: ${name}\\s+source: builtin\\s+path: [^\\n]+/builtins/${language}/facets/${kind}/${name}\\.md`));
       }
       for (const match of resolved) {
         expect(match[2]).toBe('builtin');
-        expect(match[3]).toContain(`/builtins/ja/facets/personas/${match[1]}.md`);
+        expect(match[3]).toContain(`/builtins/${language}/facets/personas/${match[1]}.md`);
       }
     }
-    const files = workflowFiles(repo, 'takt/workflows/aidlc-code-generation-stage.yaml');
+    const files = workflowFiles(repo, `takt/${language}/workflows/aidlc-code-generation-stage.yaml`);
     for (const kind of ['instructions', 'policies', 'knowledge', 'output-contracts']) {
-      expect(files.some(path => path.startsWith(`takt/facets/${kind}/`))).toBe(true);
+      expect(files.some(path => path.startsWith(`takt/${language}/facets/${kind}/`))).toBe(true);
     }
   } finally { rmSync(temp, { recursive: true, force: true }); }
 }, 30000);
 
 test('facetの欠落はpark前に拒否し、park後の変更は実行を失敗させる', async () => {
   const f = await cgFixture();
-  const path = `${f.control}/takt/facets/instructions/code-generation-plan.ja.md`;
+  const path = `${f.control}/takt/ja/facets/instructions/code-generation-plan.md`;
   const content = readFileSync(join(f.project, path), 'utf8');
   const state = readFileSync(f.state, 'utf8');
   unlinkSync(join(f.project, path));
@@ -103,7 +118,7 @@ test('Constructionでも工程用facetを固定し、park後の変更を拒否�
   await capturePhase(f.project, f.event);
   f.approve();
   const run = (await preparePhase(f.project, f.event))!;
-  const path = `${f.control}/takt/facets/instructions/construction-draft.ja.md`;
+  const path = `${f.control}/takt/ja/facets/instructions/construction-draft.md`;
   expect(readJson<any>(join(run.run, 'manifest.json')).files[path]).toBeTruthy();
   writeFileSync(join(f.project, path), '変更された工程指示');
   expect((await executePhase(f.project, run.id)).state).toBe('failed');

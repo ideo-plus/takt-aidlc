@@ -7,15 +7,19 @@ AI-DLCの作業をTAKTへ委譲する定義を、このディレクトリにま�
 
 ```text
 takt/
-├── workflows/
-│   ├── aidlc-code-generation-stage.yaml       CG単体。Construction全体でも共用
-│   └── aidlc-construction-phase.yaml         Constructionフェーズの作成・レビュー
-└── facets/
-    ├── instructions/               各ステップで実行する手順
-    ├── policies/                   HOTL・変更範囲・品質判定の共通ルール
-    ├── personas/                   組み込みペルソナの選択理由
-    ├── knowledge/                  固定入力・成果物・検証記録の読み方
-    └── output-contracts/           レポートの形式と必須項目
+├── ja/
+│   ├── facets/
+│   │   ├── instructions/
+│   │   ├── policies/
+│   │   ├── personas/
+│   │   ├── knowledge/
+│   │   └── output-contracts/
+│   └── workflows/
+│       ├── aidlc-code-generation-stage.yaml
+│       └── aidlc-construction-phase.yaml
+└── en/
+    ├── facets/       （同じ構造）
+    └── workflows/    （同じファイル名）
 ```
 
 <a id="yaml-and-markdown-responsibilities"></a>
@@ -25,12 +29,12 @@ takt/
 YAMLにはステップ、遷移、編集権限、品質ゲート、利用するファセットの参照を置く。
 指示本文とレポート形式はMarkdownへ置き、役割にはTAKTの組み込みペルソナを使い、共有ルールと知識は複数のステップから参照する。
 TAKTのYAMLでは`policies`、`knowledge`、`instructions`、`report_formats`にローカルファイルを宣言し、ステップから別名で参照する。
-ペルソナは`planner`、`coder`、`architecture-reviewer`、`coding-reviewer`、`supervisor`、`exec-assistant`を名前指定する。[選択理由と本家の参照先](facets/personas/README.ja.md)を参照。
-`report_formats`が指すファイルの配置先は`facets/output-contracts/`。
+ペルソナは`planner`、`coder`、`architecture-reviewer`、`coding-reviewer`、`supervisor`、`exec-assistant`を名前指定する。[選択理由と本家の参照先](ja/facets/personas/README.md)を参照。
+`report_formats`が指すファイルの配置先は`<language>/facets/output-contracts/`。
 
-配布用YAMLは`takt/workflows/`に置き、`../facets/`を参照する。連携CLIは実行前にYAMLとローカルファセットを専用の制御領域へ配置し、相対参照を更新する。組み込みペルソナはTAKTが解決する。元のディレクトリ構成は変更しない。
+配布用YAMLは`takt/<language>/workflows/`に置き、`../facets/`を参照する。連携CLIは実行前にYAMLとローカルファセットを専用の制御領域へ配置し、相対参照を更新する。組み込みペルソナはTAKTが解決する。元のディレクトリ構成は変更しない。
 
-各Markdownは英語版（`.md`）と日本語版（`.ja.md`）を用意しています。配布Workflowと実行時のポリシーは日本語版を参照し、検証済みの実行言語を維持します。英語版も同じ契約を説明します。
+`ja/`と`en/`に同じファイル名で揃えます。各Workflowは`../facets/`で同じ言語のファセットを参照します。`aidlc/takt-handoff/config.json`の`language`に`ja`（既定）または`en`を指定し、`workflow`とConstruction用の`constructionWorkflow`も同じ言語のディレクトリから選びます。この設定はTAKTの組み込みファセットとCLIに組み込むHOTL・superviseポリシーにも適用します。AI-DLCの原文は変更しません。言語別ディレクトリの外にあるガイド類は`.md`と`.ja.md`の対です。
 
 <a id="reusing-built-in-facets"></a>
 
@@ -69,13 +73,13 @@ supervisorは要件充足をコードから判定し、ビルド・テストの�
 
 ここにある知識は連携方式の説明であり、本家の工程定義・Intent・Unit設計の代わりではない。
 対象プロジェクトのAI-DLC原文とTesting Contractは、従来どおり実行時に固定して担当ステップへ注入する。
-HOTLへの置換規則は`policies/code-generation-hotl.ja.md`と`policies/construction-hotl.ja.md`にあり、連携CLIにも同じファイルから組み込む。原文の前後に付けることで、人間承認や本家の状態更新を誤って実行しないようにする。
+HOTLへの置換規則は`<language>/facets/policies/code-generation-hotl.md`と`<language>/facets/policies/construction-hotl.md`にあり、連携CLIにも同じファイルから組み込む。原文の前後に付けることで、人間承認や本家の状態更新を誤って実行しないようにする。
 
 <a id="project-placement"></a>
 
 ## プロジェクトへの配置
 
-`takt/`を、`facets/`も含めて対象プロジェクトの`aidlc/takt-handoff/takt/`へ配置する。
+`takt/`を、両言語のディレクトリも含めて対象プロジェクトの`aidlc/takt-handoff/takt/`へ配置する。
 取得手順は[導入ガイド](https://github.com/ideo-plus/takt-aidlc/blob/main/docs/getting-started.ja.md#download-the-takt-bundle)を参照。
 YAMLだけをコピーすると参照先が足りないため、委譲前の検証で停止する。
 
@@ -95,6 +99,6 @@ bun run build:marketplace
 bun run check:marketplace
 ```
 
-`check:takt`はローカルファセットの依存を確認し、元のYAMLをTAKT 0.65.0の`workflow doctor`で検証する。モデルは呼ばず、利用者のTAKT設定も変更しない。組み込みペルソナを使うため、ペルソナのパス制約を避けるための配置変更は不要。
+`check:takt`はローカルファセットの依存を確認し、両言語の元のYAMLをTAKT 0.65.0の`workflow doctor`で検証する。モデルは呼ばず、利用者のTAKT設定も変更しない。組み込みペルソナを使うため、ペルソナのパス制約を避けるための配置変更は不要。
 
 テストではファセットの参照解決、移動後の読み込み、入力変更の検出、両委譲モードの実行を確認する。

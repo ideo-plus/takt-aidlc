@@ -12,8 +12,9 @@ export function supervisionReport(ids: string[], path = 'src/value.ts') {
     requirements: ids.map(id => ({ id, status: 'met', evidence: [{ path, reason: '現在の公開値と処理が受入条件に一致する' }] })), findings: [] as any[] };
 }
 
-export async function cgFixture(options: { constructionEntry?: boolean; hostHarness?: 'claude' | 'codex'; live?: boolean; provider?: 'claude' | 'codex'; model?: string; reasoningEffort?: string; buildFailure?: boolean; sensorFailure?: boolean; blocked?: boolean; maxSteps?: number; supervisionRepair?: boolean; supervisionBlocked?: boolean } = {}) {
+export async function cgFixture(options: { language?: 'ja' | 'en'; constructionEntry?: boolean; hostHarness?: 'claude' | 'codex'; live?: boolean; provider?: 'claude' | 'codex'; model?: string; reasoningEffort?: string; buildFailure?: boolean; sensorFailure?: boolean; blocked?: boolean; maxSteps?: number; supervisionRepair?: boolean; supervisionBlocked?: boolean } = {}) {
   const f = await fixture({ approved: false });
+  const language = options.language ?? 'ja';
   for (const directory of ['aidlc-common', 'agents', 'knowledge', 'sensors']) cpSync(join(testRuntime, '.claude', directory), join(f.project, '.claude', directory), { recursive: true });
   if (options.hostHarness === 'codex') {
     await prepareTestRuntime('codex');
@@ -35,14 +36,14 @@ export async function cgFixture(options: { constructionEntry?: boolean; hostHarn
   put(join(f.project, 'aidlc/spaces/default/memory/team.md'), '# Team\n\n## Testing Posture\n- **Methodology**: test-after\n- **Ordering**: 値を変更してから5件のテストを作り、ビルドと単一Unitのテストを実行する。\n- standard戦略に従って5テストを使い、行カバレッジ80%以上を満たす。\n\n## Code Style\n既存の名前付きexportを維持する。Lint基盤は追加しない。\n');
   const control = 'aidlc/takt-handoff';
   cpSync(join(repo, 'takt'), join(f.project, control, 'takt'), { recursive: true });
-  let workflow = readFileSync(join(repo, 'takt/workflows/aidlc-code-generation-stage.yaml'), 'utf8');
+  let workflow = readFileSync(join(repo, `takt/${language}/workflows/aidlc-code-generation-stage.yaml`), 'utf8');
   if (options.maxSteps) workflow = workflow.replace('max_steps: 20', `max_steps: ${options.maxSteps}`);
-  put(join(f.project, control, 'takt/workflows/aidlc-code-generation-stage.yaml'), workflow);
+  put(join(f.project, control, `takt/${language}/workflows/aidlc-code-generation-stage.yaml`), workflow);
   put(join(f.project, control, 'build.ts'), `import { join } from 'node:path';\nconst result = await Bun.build({entrypoints:[join(process.cwd(),'src/value.ts')],target:'bun',outdir:join(process.cwd(),'cg/build')});\nif(!result.success){console.error(result.logs);process.exit(1)}\nconsole.log('Bun build passed');\n`);
   put(join(f.project, control, 'test.ts'), readFileSync(join(repo, 'experiments/code-generation/verify-app.ts'), 'utf8').replace("['test', '--coverage'", "['test', 'src/value.test.ts', '--coverage'"));
   put(join(f.project, control, 'typecheck.ts'), `import {spawnSync} from 'node:child_process';\nconst r=spawnSync(process.execPath,[${JSON.stringify(join(repo, 'node_modules/typescript/bin/tsc'))},'--ignoreConfig','--noEmit','--strict','--skipLibCheck','--target','esnext','--module','esnext','--moduleResolution','bundler','--types','bun-types','src/value.ts','src/value.test.ts'],{encoding:'utf8'});\nconsole.log(JSON.stringify({pass:r.status===0,errors:r.stdout||r.stderr}));\n`);
   const artifacts = names.map(name => `${record}/inception/${name}`);
-  const config = { hostHarness: options.hostHarness ?? 'claude', enabled: true, delegationScope: 'code-generation', artifacts, sources: ['src/value.ts'], workflow: `${control}/takt/workflows/aidlc-code-generation-stage.yaml`, buildScript: `${control}/build.ts`, verifyScript: `${control}/test.ts`, sensorScripts: { 'type-check': `${control}/typecheck.ts` }, sensorExceptions: { linter: { reason: 'このIntentの確定方針でLintを導入しない', source: `${record}/inception/practices-discovery/team-practices.md` } }, provider: options.live ? (options.provider ?? 'claude') : 'mock', disableBedrock: true, timeoutMs: 900000, mockScenario: `${control}/scenario.json` };
+  const config = { language, hostHarness: options.hostHarness ?? 'claude', enabled: true, delegationScope: 'code-generation', artifacts, sources: ['src/value.ts'], workflow: `${control}/takt/${language}/workflows/aidlc-code-generation-stage.yaml`, buildScript: `${control}/build.ts`, verifyScript: `${control}/test.ts`, sensorScripts: { 'type-check': `${control}/typecheck.ts` }, sensorExceptions: { linter: { reason: 'このIntentの確定方針でLintを導入しない', source: `${record}/inception/practices-discovery/team-practices.md` } }, provider: options.live ? (options.provider ?? 'claude') : 'mock', disableBedrock: true, timeoutMs: 900000, mockScenario: `${control}/scenario.json` };
   if (options.live && options.provider === 'codex') Object.assign(config, { model: options.model ?? 'gpt-5.6-luna', codexReasoningEffort: options.reasoningEffort ?? 'max', timeoutMs: 1800000 });
   else if (options.model) Object.assign(config, { model: options.model });
   writeJson(join(f.project, control, 'config.json'), config);

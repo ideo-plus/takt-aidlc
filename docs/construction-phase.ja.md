@@ -55,6 +55,7 @@ CG単体の入口確認と、固定入力から動く`executeCgWorkspace`を分�
   "enabled": true,
   "hostHarness": "codex",
   "delegationScope": "construction",
+  "language": "ja",
   "provider": "codex",
   "model": "gpt-5.6-luna",
   "codexReasoningEffort": "max",
@@ -62,8 +63,8 @@ CG単体の入口確認と、固定入力から動く`executeCgWorkspace`を分�
     "aidlc/spaces/default/intents/<intent>/inception/requirements-analysis/requirements.md"
   ],
   "sources": ["src/value.ts"],
-  "workflow": "aidlc/takt-handoff/takt/workflows/aidlc-code-generation-stage.yaml",
-  "constructionWorkflow": "aidlc/takt-handoff/takt/workflows/aidlc-construction-phase.yaml",
+  "workflow": "aidlc/takt-handoff/takt/ja/workflows/aidlc-code-generation-stage.yaml",
+  "constructionWorkflow": "aidlc/takt-handoff/takt/ja/workflows/aidlc-construction-phase.yaml",
   "buildScript": "aidlc/takt-handoff/unit-build.ts",
   "verifyScript": "aidlc/takt-handoff/unit-test.ts",
   "sensorScripts": {
@@ -82,8 +83,10 @@ CG単体の入口確認と、固定入力から動く`executeCgWorkspace`を分�
 }
 ```
 
-[TAKT定義の取得手順](getting-started.ja.md#download-the-takt-bundle)に従い、`takt/`を`facets/`ごと`aidlc/takt-handoff/`へ配置する。リポジトリのclone・ビルドは不要。
-CGには`takt/workflows/aidlc-code-generation-stage.yaml`、工程の作成・レビューには`takt/workflows/aidlc-construction-phase.yaml`を使う。ローカルの指示・ポリシー・知識・出力契約も固定入力になる。ペルソナはTAKT 0.65.0の組み込みを使う。
+`language`は`ja`（省略時の既定）または`en`です。英語で実行する場合は`language: "en"`とし、`workflow`およびConstructionの`constructionWorkflow`も`takt/en/workflows/`を指定してください。組み込みファセットと実行時の追加ポリシーも同じ言語になります。AI-DLCの原文は翻訳せず固定入力として渡します。
+
+[TAKT定義の取得手順](getting-started.ja.md#download-the-takt-bundle)に従い、`takt/`を両言語のファセットごと`aidlc/takt-handoff/`へ配置する。リポジトリのclone・ビルドは不要。
+CGには`takt/ja/workflows/aidlc-code-generation-stage.yaml`、工程の作成・レビューには`takt/ja/workflows/aidlc-construction-phase.yaml`を使う。ローカルの指示・ポリシー・知識・出力契約も固定入力になる。ペルソナはTAKT 0.65.0の組み込みを使う。
 
 ホストは`hostHarness`、委譲範囲は`delegationScope`、ワーカーは`provider`で選ぶ。委譲範囲の指定は必須で、`code-generation`または`construction`を指定する。
 

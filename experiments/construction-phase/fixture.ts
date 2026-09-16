@@ -10,6 +10,7 @@ import { readJson, writeJson } from "../../src/handoff/io";
 import { put } from "../../tests/handoff-fixture";
 export async function phaseFixture(
   options: {
+    language?: "ja" | "en";
     host?: "claude" | "codex";
     twoUnits?: boolean;
     repairs?: boolean;
@@ -23,6 +24,7 @@ export async function phaseFixture(
 ) {
   const f = await cgFixture({
     hostHarness: options.host,
+    language: options.language,
     constructionEntry: true,
     buildFailure: options.repairs,
     sensorFailure: options.repairs,
@@ -75,7 +77,7 @@ export async function phaseFixture(
     ...f.config,
     provider: "mock",
     delegationScope: "construction",
-    constructionWorkflow: `${control}/takt/workflows/aidlc-construction-phase.yaml`,
+    constructionWorkflow: `${control}/takt/${f.config.language}/workflows/aidlc-construction-phase.yaml`,
     phaseBuildScript: `${control}/phase-build.ts`,
     phaseVerifyScript: `${control}/phase-test.ts`,
     pipelinePaths: [".github/workflows/ci.yml"],

@@ -1,3 +1,4 @@
+import { taktLanguage } from '../takt/language';
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -61,6 +62,7 @@ export function phaseConfig(project: string) {
   const path = fileInside(project, "aidlc/takt-handoff/config.json");
   const c = readJson<PhaseConfig>(path);
   hostHarness(c.hostHarness);
+  taktLanguage(c.language);
   if (!c.enabled || delegationScope(c) !== "construction")
     throw new Error("Construction設定が無効です");
   if (

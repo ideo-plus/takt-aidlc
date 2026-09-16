@@ -1,3 +1,0 @@
-Return JSON only; write prose in Japanese.
-{"verdict":"ready or blocked","reason":"reason when blocked","testingContractHash":"contract_sha256 from the frozen contract","steps":[{"id":1,"unit":"current unit","action":"implementation step","requirementIds":["requirement ID"],"files":["src/target-file"]}],"unitTestInstructions":"## Execution\n...\n## Expected results\n...","appliedRules":[{"source":"original source path","rule":"specific applied rule","application":"how it applies to this CG run"}]}
-Optionally add the plan text in planMarkdown. Follow any custom template and include step-to-requirement mappings. Do not recreate the Testing Contract; the checker appends its original text.

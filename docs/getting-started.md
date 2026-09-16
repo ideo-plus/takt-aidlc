@@ -100,7 +100,7 @@ Alternatively, download the repository archive over HTTPS with an authenticated 
 
 `delegationScope` is required; only `code-generation` and `construction` are supported.
 
-Both methods create `aidlc/takt-handoff/takt/`. YAML files in `takt/workflows/` reference `../facets/`; copying a YAML file alone is insufficient. If the marketplace is pinned to a tag or commit, use the installed copy or replace `main` with the same ref in the API command.
+Both methods create `aidlc/takt-handoff/takt/`. YAML files in `takt/ja/workflows/` and `takt/en/workflows/` reference `../facets/`; copying a YAML file alone is insufficient. If the marketplace is pinned to a tag or commit, use the installed copy or replace `main` with the same ref in the API command.
 
 The [TAKT directory guide](../takt/README.md) explains instructions, policies, personas, knowledge, and output contracts. Personas use the built-ins shipped with TAKT 0.65.0; local Markdown files contain the AI-DLC-specific instructions, policies, knowledge, and report formats. Prepare or customize these files before delegation; referenced Markdown files are frozen and checked alongside the YAML.
 
@@ -117,6 +117,7 @@ Create `aidlc/takt-handoff/config.json`. This is a template: replace `<intent-di
   "enabled": true,
   "delegationScope": "code-generation",
   "hostHarness": "claude",
+  "language": "ja",
   "provider": "codex",
   "model": "gpt-5.6-luna",
   "codexReasoningEffort": "max",
@@ -128,7 +129,7 @@ Create `aidlc/takt-handoff/config.json`. This is a template: replace `<intent-di
     "aidlc/spaces/default/intents/<intent-dir>/inception/delivery-planning/bolt-plan.md"
   ],
   "sources": ["src/value.ts"],
-  "workflow": "aidlc/takt-handoff/takt/workflows/aidlc-code-generation-stage.yaml",
+  "workflow": "aidlc/takt-handoff/takt/ja/workflows/aidlc-code-generation-stage.yaml",
   "buildScript": "aidlc/takt-handoff/build.ts",
   "verifyScript": "aidlc/takt-handoff/test.ts",
   "sensorScripts": {
@@ -139,6 +140,8 @@ Create `aidlc/takt-handoff/config.json`. This is a template: replace `<intent-di
   "timeoutMs": 1800000
 }
 ```
+
+`language` accepts `ja` (the default) or `en`. For English execution, set `language: "en"` and point `workflow` and, in Construction mode, `constructionWorkflow` to `takt/en/workflows/`. Built-in facets and injected runtime policies use the same language. Original AI-DLC sources remain frozen inputs without translation.
 
 The integration adds the current Intent, unit designs, native CG definition, knowledge, sensors, memory, and templates to these explicit artifacts. Source paths are individual regular files, not globs. Include package manifests, lockfiles, and required configuration for real applications; dependency installation is your build script's responsibility.
 
@@ -191,7 +194,7 @@ codex plugin marketplace upgrade takt-aidlc
 codex plugin add takt-aidlc@takt-aidlc
 ```
 
-Restart the host after updating. Prepare a matching `takt/` bundle, including facets, for new runs; do not change an active run's frozen inputs. The former repository-level `workflows/` directory has moved to `takt/workflows/`. When switching to these templates, update `workflow` and (for Construction) `constructionWorkflow` in the config.
+Restart the host after updating. Prepare a matching `takt/` bundle, including facets, for new runs; do not change an active run's frozen inputs. Workflow definitions now live in `takt/ja/workflows/` and `takt/en/workflows/`. Update `workflow` and (for Construction) `constructionWorkflow` to the selected language directory and set the matching `language`. Old paths are not supported.
 
 For migration from the previous local development setup:
 

@@ -1,0 +1,210 @@
+name: aidlc-code-generation-stage
+description: Standalone CG using native AI-DLC definitions, Intent, knowledge, and sensors, without interactive approval.
+initial_step: plan
+max_steps: 20
+policies:
+  aidlc-verification: ../facets/policies/aidlc-verification.md
+  code-generation-hotl: ../facets/policies/code-generation-hotl.md
+  aidlc-supervision: ../facets/policies/aidlc-supervision.md
+knowledge:
+  aidlc-frozen-inputs: ../facets/knowledge/aidlc-frozen-inputs.md
+  code-generation-artifacts: ../facets/knowledge/code-generation-artifacts.md
+instructions:
+  code-generation-plan: ../facets/instructions/code-generation-plan.md
+  code-generation-plan-review: ../facets/instructions/code-generation-plan-review.md
+  code-generation-implement: ../facets/instructions/code-generation-implement.md
+  code-generation-code-review: ../facets/instructions/code-generation-code-review.md
+  code-generation-fix: ../facets/instructions/code-generation-fix.md
+  code-generation-finish: ../facets/instructions/code-generation-finish.md
+  code-generation-supervise: ../facets/instructions/code-generation-supervise.md
+report_formats:
+  code-generation-plan: ../facets/output-contracts/code-generation-plan.md
+  code-generation-plan-review: ../facets/output-contracts/code-generation-plan-review.md
+  code-generation-code-review: ../facets/output-contracts/code-generation-code-review.md
+  code-generation-finish: ../facets/output-contracts/code-generation-finish.md
+  code-generation-supervise: ../facets/output-contracts/code-generation-supervise.md
+steps:
+  - name: plan
+    session_key: code-generation-planner
+    edit: false
+    persona: planner
+    policy:
+      - aidlc-verification
+      - code-generation-hotl
+    knowledge:
+      - aidlc-frozen-inputs
+      - code-generation-artifacts
+    instruction: code-generation-plan
+    output_contracts:
+      report:
+        - name: 01-code-generation-plan.json
+          format: code-generation-plan
+    quality_gates:
+      - type: command
+        command: bun ../control/code-generation-gate.ts plan
+        timeout_ms: 130000
+    rules:
+      - condition: CG plan is ready
+        next: plan-review
+      - condition: CG plan is blocked
+        next: ABORT
+  - name: plan-review
+    session_key: code-generation-plan-reviewer
+    edit: false
+    persona: architecture-reviewer
+    policy:
+      - evidence-based-judgment
+      - aidlc-verification
+      - code-generation-hotl
+    knowledge:
+      - architecture
+      - aidlc-frozen-inputs
+      - code-generation-artifacts
+    instruction:
+      - architecture-review
+      - code-generation-plan-review
+    output_contracts:
+      report:
+        - name: 02-code-generation-plan-review.json
+          format: code-generation-plan-review
+    quality_gates:
+      - type: command
+        command: bun ../control/code-generation-gate.ts plan-review
+        timeout_ms: 130000
+    rules:
+      - condition: Plan review is approved
+        next: implement
+      - condition: Plan review requests changes
+        next: plan
+      - condition: Plan review is blocked
+        next: ABORT
+  - name: implement
+    session_key: code-generation-developer
+    edit: true
+    required_permission_mode: edit
+    persona: coder
+    policy:
+      - aidlc-verification
+      - code-generation-hotl
+    knowledge:
+      - aidlc-frozen-inputs
+      - code-generation-artifacts
+    instruction: code-generation-implement
+    quality_gates:
+      - type: command
+        command: bun ../control/code-generation-gate.ts implement
+        timeout_ms: 250000
+    rules:
+      - condition: Implementation and CG artifacts are complete
+        next: code-review
+      - condition: Blocked because autonomous resolution is not possible
+        next: ABORT
+  - name: code-review
+    session_key: code-generation-code-reviewer
+    edit: false
+    persona: coding-reviewer
+    policy:
+      - review
+      - contract-change
+      - evidence-based-judgment
+      - aidlc-verification
+      - code-generation-hotl
+    knowledge:
+      - architecture
+      - aidlc-frozen-inputs
+      - code-generation-artifacts
+      - unit-testing
+    instruction:
+      - coding-review
+      - code-generation-code-review
+    output_contracts:
+      report:
+        - name: 03-code-generation-code-review.json
+          format: code-generation-code-review
+    quality_gates:
+      - type: command
+        command: bun ../control/code-generation-gate.ts code-review
+        timeout_ms: 130000
+    rules:
+      - condition: Code review is approved
+        next: supervise
+      - condition: Code review requests changes
+        next: fix
+      - condition: Code review is blocked
+        next: ABORT
+  - name: fix
+    session_key: code-generation-developer
+    edit: true
+    required_permission_mode: edit
+    persona: coder
+    policy:
+      - aidlc-verification
+      - code-generation-hotl
+    knowledge:
+      - aidlc-frozen-inputs
+      - code-generation-artifacts
+    instruction: code-generation-fix
+    quality_gates:
+      - type: command
+        command: bun ../control/code-generation-gate.ts fix
+        timeout_ms: 250000
+    rules:
+      - condition: Corrections and CG artifact updates are complete
+        next: code-review
+      - condition: Blocked because autonomous resolution is not possible
+        next: ABORT
+  - name: supervise
+    tags:
+      - review
+      - final-gate
+      - supervise
+    session_key: code-generation-supervisor
+    edit: false
+    persona: supervisor
+    policy:
+      - contract-change
+      - evidence-based-judgment
+      - aidlc-supervision
+    knowledge:
+      - aidlc-frozen-inputs
+    pass_previous_response: false
+    instruction:
+      - supervise
+      - code-generation-supervise
+    output_contracts:
+      report:
+        - name: 04-code-generation-supervision.json
+          format: code-generation-supervise
+    quality_gates:
+      - type: command
+        command: bun ../control/code-generation-gate.ts supervise
+        timeout_ms: 130000
+    rules:
+      - condition: Requirement fulfillment is approved
+        next: finish
+      - condition: Repairable requirement gaps require changes
+        next: fix
+      - condition: Blocked pending external judgment
+        next: ABORT
+  - name: finish
+    session_key: code-generation-reporter
+    edit: false
+    persona: exec-assistant
+    policy:
+      - aidlc-verification
+      - code-generation-hotl
+    knowledge:
+      - aidlc-frozen-inputs
+      - code-generation-artifacts
+    instruction: code-generation-finish
+    output_contracts:
+      report:
+        - name: 05-code-generation-summary.json
+          format: code-generation-finish
+    quality_gates:
+      - type: command
+        command: bun ../control/code-generation-gate.ts finish
+        timeout_ms: 130000
+    rules:
+      - condition: CG completion report is complete
+        next: COMPLETE

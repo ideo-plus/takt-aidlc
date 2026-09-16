@@ -1,3 +1,4 @@
+import { taktLanguage } from '../takt/language';
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanEnvironment, withoutBedrock, quote } from "./io";
@@ -16,7 +17,7 @@ export function prepareProvider(
     join(configDir, "config.yaml"),
     Bun.YAML.stringify({
       provider: config.provider,
-      language: "ja",
+      language: taktLanguage(config.language),
       workflow_command_gates: { custom_scripts: true },
       ...(config.model ? { model: config.model } : {}),
       ...(config.codexReasoningEffort

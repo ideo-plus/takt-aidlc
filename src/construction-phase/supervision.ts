@@ -5,7 +5,7 @@ import { prepareProvider } from '../handoff/provider';
 import { materializeWorkflow } from '../takt/workflow';
 import { sources, cgGateSource } from '../code-generation/code-generation-gate';
 import type { PhaseConfig } from './context';
-import contract from '../../takt/facets/policies/aidlc-supervision.ja.md' with { type: 'text' };
+import { runtimePolicies } from '../takt/language';
 
 export async function executeConstructionSupervision(args: {
   attempt: string; store: string; files: Snapshot; sourcePaths: string[]; inputPaths: string[];
@@ -35,6 +35,7 @@ export async function executeConstructionSupervision(args: {
   if (!supervisor) throw new Error('Constructionのsuperviseステップが必要です');
   workflow.initial_step = 'supervise';
   workflow.steps = [supervisor];
+  const { supervision: contract } = runtimePolicies(config.language);
   const bundle = `${contract}\n${paths.map(path => `\n## Original source: ${path}\nSHA256: ${files[path]}\n${readFileSync(fileInside(store, path), 'utf8')}\n`).join('')}\n${contract}`;
   writeFileSync(join(control, 'supervision-sources.md'), bundle);
   workflow.instructions['construction-supervision-sources'] = './supervision-sources.md';
@@ -50,7 +51,7 @@ export async function executeConstructionSupervision(args: {
     requireSuccess(await command(['git', ...gitArgs], workspace, env, 10000));
   }
   verify();
-  const run = await command(['takt', '--pipeline', '--skip-git', '--provider', config.provider, '--workflow', join(control, 'workflow.yaml'), '--task', 'Construction全体のIntent・受入条件と最終コードを独立に照合し、要件充足とUnit間の整合性を判定してください。'], workspace, env, args.timeout, { outputPrefix: join(attempt, 'takt-output') });
+  const run = await command(['takt', '--pipeline', '--skip-git', '--provider', config.provider, '--workflow', join(control, 'workflow.yaml'), '--task', config.language === 'en' ? 'Independently compare the final code with the Construction Intent and acceptance conditions. Judge requirement fulfillment and consistency across units.' : 'Construction全体のIntent・受入条件と最終コードを独立に照合し、要件充足とUnit間の整合性を判定してください。'], workspace, env, args.timeout, { outputPrefix: join(attempt, 'takt-output') });
   writeJson(join(attempt, 'takt.json'), run);
   if (run.timedOut || run.outputLimitExceeded) requireSuccess(run);
   verify(); unchanged(workspace, inputs); unchanged(control, protectedFiles);

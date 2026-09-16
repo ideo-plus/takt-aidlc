@@ -32,7 +32,7 @@ Users install prebuilt plugins through the GitHub marketplace. Include regenerat
 
 | Path | Purpose |
 |---|---|
-| `takt/workflows/` / `takt/facets/` | Workflow YAML, local facets, and the rationale for built-in personas |
+| `takt/{ja,en}/workflows/` / `takt/{ja,en}/facets/` | Workflow YAML, local facets, and the rationale for built-in personas |
 | `plugins/claude/` / `plugins/codex/` | Editable manifests and hooks |
 | `dist/claude/` / `dist/codex/` | Local build output, excluded from Git |
 | `plugins/takt-aidlc-claude/` / `plugins/takt-aidlc-codex/` | Committed distribution output; do not edit directly |
@@ -69,4 +69,4 @@ When reporting results, distinguish a normal native AI-DLC approval journey from
 
 Use English Conventional Commits messages. Write pull request descriptions in Japanese, covering behavior changes, validation, and unverified scope.
 
-Keep every Markdown document paired: English in `.md` and Japanese in `.ja.md`. Update both versions and their language-specific links together. This includes guides, facets, experiment inputs, and records. Shipped workflows use Japanese facets; experiment helpers copy Japanese inputs to the native AI-DLC filenames. Regenerate distribution copies after changing bundled Markdown.
+Keep English and Japanese versions together. TAKT definitions use matching paths under `takt/en/{facets,workflows}/` and `takt/ja/{facets,workflows}/`; Markdown filenames have no locale suffix there. Guides, experiment inputs, and records elsewhere use English `.md` and Japanese `.ja.md` pairs. Update both versions and their links together. Each workflow references its own language’s facets. Keep workflow step IDs, transitions, and report schemas identical across languages. Experiment helpers copy Japanese inputs to native AI-DLC filenames. Regenerate distribution copies after changing bundled Markdown.

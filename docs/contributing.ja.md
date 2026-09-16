@@ -38,7 +38,7 @@ bun run build:marketplace
 
 | パス | 用途 |
 |---|---|
-| `takt/workflows/` / `takt/facets/` | TAKTのYAML、ローカルファセット、組み込みペルソナの選択理由 |
+| `takt/{ja,en}/workflows/` / `takt/{ja,en}/facets/` | TAKTのYAML、ローカルファセット、組み込みペルソナの選択理由 |
 | `plugins/claude/` / `plugins/codex/` | マニフェストとフックの編集元 |
 | `dist/claude/` / `dist/codex/` | ローカル開発用の生成先（Git管理外） |
 | `plugins/takt-aidlc-claude/` / `plugins/takt-aidlc-codex/` | 公開する生成物（Git管理対象、直接編集しない） |
@@ -77,4 +77,4 @@ bun run experiment:cg -- --live --provider codex --model gpt-5.6-luna --reasonin
 
 コミットメッセージは英語のConventional Commits形式にします。レビュー用の説明は日本語で、変更した動作、検証方法、未確認の範囲をまとめてください。
 
-すべてのMarkdownを、英語版の`.md`と日本語版の`.ja.md`で揃えてください。ガイド、ファセット、実験入力、記録も対象です。両言語の本文とリンクを同時に更新します。配布Workflowは日本語ファセットを使い、実験用ヘルパーは日本語入力を本家AI-DLCのファイル名へコピーします。同梱Markdownを変更したら配布物も再生成してください。
+日英両方を揃えてください。TAKT定義は`takt/en/{facets,workflows}/`と`takt/ja/{facets,workflows}/`に同じパスで置き、Markdownのファイル名に言語接尾辞は付けません。それ以外のガイド、実験入力、記録は英語版`.md`と日本語版`.ja.md`で揃えます。両言語の本文とリンクを同時に更新し、各Workflowは同じ言語のファセットを参照します。ステップID・遷移・レポート形式は両言語で共通にします。実験用ヘルパーは日本語入力を本家AI-DLCのファイル名へコピーします。同梱Markdownを変更したら配布物も再生成してください。
