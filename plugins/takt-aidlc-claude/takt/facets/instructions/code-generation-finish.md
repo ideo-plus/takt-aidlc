@@ -1,4 +1,4 @@
-本家CGのcode-summaryとして、ファイル変更、実装判断、テスト結果、計画との差分を応答してください。
+Return the native CG code-summary: changed files, implementation decisions, test results, and deviations from the plan.
 {report:03-code-generation-code-review.json}
-cg/の実測ログとコードレビューを照合し、ビルド・テスト・適用するセンサーを通ったコードであることを確認します。
-人間承認を自動の技術レビューへ置き換えたことと、本家AI-DLCの後続工程・監査記録を更新していないことを報告に含めてください。
+Compare measured logs under cg/ with the code review and confirm that the code passed the build, tests, and applicable sensors.
+State that automatic technical review replaced human approval and that native AI-DLC downstream stages and audit records were not updated.

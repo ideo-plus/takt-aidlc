@@ -1,7 +1,7 @@
-添付された本家code-generation.mdのStep 1とStep 2に従い、現在のUnitのCG計画とunit-test-instructionsを応答してください。
-入力のIntent・要求・Unit設計を使い、機能設計やインフラ設計を実装手順へ落とします。
-Brownfieldでは変更前の影響範囲、予定差分、既存テストの基準を確認する手順も計画します。既存テストがない場合はその事実を記録します。
-input/context.jsonの全要求IDを計画のstepsへ割り当て、固定されたTesting Contractのhashを記載してください。
-checksに列挙されたinput/project配下の固定スクリプトを読み、実際の検査内容に一致するテスト手順を記載します。
-unit-test-instructionsには単一Unitの実行方法と期待結果を含め、2つ以上のH2を置いてください。独自テンプレートがある場合はその見出しを守ります。
-次の工程は自動の計画レビューです。実装前提の欠落を入力から解決できない場合はblockedと理由を応答してください。
+Follow Steps 1 and 2 in the attached native code-generation.md and return the current unit's CG plan and unit-test-instructions.
+Use the input Intent, requirements, and unit designs to turn functional and infrastructure designs into implementation steps.
+For Brownfield work, also plan how to inspect the existing impact area, intended changes, and baseline tests. Record the absence of existing tests when applicable.
+Assign every requirement ID from input/context.json to the plan's steps and record the frozen Testing Contract hash.
+Read the fixed scripts under input/project listed in checks, and describe test procedures that match their actual targets and methods.
+Include execution instructions and expected results for the single unit in unit-test-instructions, with at least two H2 headings. Follow custom template headings when supplied.
+The next step is automatic plan review. If missing implementation prerequisites cannot be resolved from the inputs, return blocked with a reason.

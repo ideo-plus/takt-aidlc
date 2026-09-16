@@ -1,5 +1,5 @@
-実コード・テスト・CG成果物を、添付されたIntent・Unit設計・CG定義・規約・Testing Contractに照合してください。
+Compare the actual code, tests, and CG artifacts with the attached Intent, unit designs, CG definition, conventions, and Testing Contract.
 {report:01-code-generation-plan.json}
-cg/build.json、cg/test.json、cg/sensors.json、cg/source-manifest.json、cg/traceability.jsonを確認し、列挙された変更ファイルを読んでください。
-要求漏れ、計画外変更、規約逸脱、誤った検査の適用外扱いを確認します。
-approved、changes_requested、blockedのいずれかを返してください。
+Inspect cg/build.json, cg/test.json, cg/sensors.json, cg/source-manifest.json, and cg/traceability.json, then read the listed changed files.
+Check missing requirements, unplanned changes, convention violations, and unjustified sensor exemptions.
+Return approved, changes_requested, or blocked.

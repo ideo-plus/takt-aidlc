@@ -1,8 +1,8 @@
-# 検証とレビューの判断基準
+# Verification and review criteria
 
-- 実行していない検査を成功と報告しない。期待結果、実測結果、未確認事項を区別する。
-- ビルド・テスト・適用するセンサーの品質目標を下げない。検査を省略する場合は、固定した開発方針の根拠が必要。
-- テスト成功だけでレビューを承認しない。要求の充足、変更範囲、規約、テストの妥当性を確認する。
-- approvedはAIによる技術レビューの結果であり、人間承認ではない。実装者は自分でレビュー承認を出さない。
-- input、.claude、.codex、.agents、.kiro、.takt、../controlと元プロジェクトの状態・監査記録を変更しない。
-- 読み取り専用の工程では成果物を応答し、ファイルへの保存はTAKTのレポート処理と検証ゲートに任せる。
+- Do not report an unexecuted check as successful. Separate expectations, measurements, and unverified scope.
+- Do not lower build, test, or applicable sensor targets. An exemption requires evidence in the frozen project practices.
+- Do not approve a review solely because tests pass. Check requirements, scope, conventions, and test validity.
+- approved denotes AI technical review, not human approval. Implementers must not approve their own review.
+- Do not modify input, .claude, .codex, .agents, .kiro, .takt, ../control, or original-project state/audit records.
+- Read-only stages return artifacts in their response. TAKT reporting and quality gates save them to files.

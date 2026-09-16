@@ -5,7 +5,7 @@ import { prepareProvider } from '../handoff/provider';
 import { materializeWorkflow } from '../takt/workflow';
 import { sources, cgGateSource } from '../code-generation/code-generation-gate';
 import type { PhaseConfig } from './context';
-import contract from '../../takt/facets/policies/aidlc-supervision.md' with { type: 'text' };
+import contract from '../../takt/facets/policies/aidlc-supervision.ja.md' with { type: 'text' };
 
 export async function executeConstructionSupervision(args: {
   attempt: string; store: string; files: Snapshot; sourcePaths: string[]; inputPaths: string[];

@@ -1,10 +1,10 @@
-# Unit依存関係（合成CGテスト入力）
+# Unit dependencies: synthetic CG test input
 
-## 依存関係
+## Dependencies
 
-単一Unitのため依存なし。
+A single unit has no dependencies.
 
-## 機械可読定義
+## Machine-readable definition
 
 ```yaml
 units:

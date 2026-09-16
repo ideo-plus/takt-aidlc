@@ -1,19 +1,19 @@
-# 開発方針（合成入力）
+# Development practices: synthetic input
 
-## 実装と検証
+## Implementation and verification
 
-既存のexport const形式とセミコロンを維持する。test-afterとして値を変更してから5件のテストを作り、固定されたBunのビルド、単一Unitテスト、TypeScriptの型検査を実行する。値42、公開API維持、行カバレッジ80%以上を変更しない。
+Preserve export const and semicolons. Under test-after, change the value, write five tests, then run the fixed Bun build, single-unit tests, and TypeScript checks. Preserve value 42, the public API, and the 80% minimum line coverage.
 
-Bun 1.3.13、TypeScript 6.0.3を使用する。アプリのpackage.json、外部実行時依存、Lint基盤は追加しない。型検査は連携側の固定ツールを使う。
+Use Bun 1.3.13 and TypeScript 6.0.3. Do not add application package.json, external runtime dependencies, or a lint framework. Type checking uses fixed integration tooling.
 
-## 設計文書
+## Design documents
 
-この試験では単一の定数モジュールについて、機能、非機能、インフラの適用範囲を4つの設計工程で明文化する。不要なDB、API、クラウド資源を発明せず、適用外の理由を記録する。工程選択は試験計画で実行に固定している。
+This trial documents functional, nonfunctional, and infrastructure applicability for one constant module across four design stages. Do not invent unnecessary databases, APIs, or cloud resources; record why they do not apply. The trial plan explicitly selects the stages for execution.
 
-設計文書の例は文章、表、JSONまたはYAMLで表す。実装片のTypeScript/JavaScriptはCGで生成する。これにより設計のスニペット型検査は適用対象なしになるが、生成したアプリとテストの型検査は必須のまま維持する。
+Use prose, tables, JSON, or YAML for design examples. Generate TypeScript/JavaScript implementation snippets during CG. Design snippet type checks therefore have no applicable target, while type checking of the generated application and tests remains required.
 
 ## CI
 
-GitHub Actionsのpushとpull_requestで、checkout、Bun 1.3.13のセットアップ、アプリのビルド、5件のUnitテストとカバレッジ検証、ソースの型検査を実行する。mainへの自動マージやデプロイは行わない。
+On GitHub Actions push and pull_request events, check out the repository, set up Bun 1.3.13, build the app, run five unit tests and coverage checks, and type-check source. Do not automatically merge into main or deploy.
 
-checkoutはactions/checkout@11d5960a326750d5838078e36cf38b85af677262、Bunはoven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6を使う。CIの型検査は一時取得したtypescript@6.0.3でsrc/value.tsを対象にできる。ローカルの固定型検査はテストファイルも対象にする。CIにはローカル実験ディレクトリや絶対パスを埋め込まない。
+Use actions/checkout@11d5960a326750d5838078e36cf38b85af677262 and oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6. CI may temporarily fetch typescript@6.0.3 to check src/value.ts. The fixed local checker also checks test files. Do not embed local experiment directories or absolute paths in CI.

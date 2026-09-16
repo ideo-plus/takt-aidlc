@@ -1,51 +1,53 @@
-# Construction全体版の検証
+# Complete Construction verification
 
-## 結果
+[日本語](RESULTS.ja.md)
 
-合成入力とmockワーカーを使い、次の2つの成功経路を確認した。[機械可読の結果](results/2026-09-15.json)に工程順と最終検証を記録している。
+## Results
 
-1. **2 Unitを依存順に実行。** 各UnitでFunctional Design、NFR Requirements、NFR Design、Infrastructure Design、共通CGを実行し、最後にBuild and TestとCI Pipelineを通した。設計の差し戻しとCGのビルド・型検査失敗も、修正してから先へ進んだ。
-2. **全体検証からCGへ戻って修正。** consumerの単体テストは成功していても、先行Unitから再exportすべき契約に違反していれば全体検証が失敗する。Build and Testが所有Unitの修正を要求し、そのUnitの共通CGを再実行した後、全体検証とCIを通過した。
+Synthetic inputs and mock workers exercised two successful paths. The [machine-readable record](results/2026-09-15.json) preserves stage order and final checks.
 
-どちらも、最終ソースで全Unitのビルド・テスト・型検査と、全体ビルド・テストが終了コード0だった。元の入力ファイルは保持された。
+1. **Two units in dependency order.** Each ran Functional Design, NFR Requirements, NFR Design, Infrastructure Design, and shared CG, followed by global Build and Test and CI Pipeline. Design revisions and CG build/type-check failures were corrected before proceeding.
+2. **Return from global verification to CG.** A consumer could pass its unit tests while violating the requirement to re-export from the earlier unit. Global verification failed, Build and Test requested repair by the owning unit, shared CG ran again, and global verification plus CI then passed.
 
-## 確認した停止条件
+Both paths passed every unit's build, tests, and type checking, followed by global build/tests on final source. Original inputs were preserved.
 
-- Inceptionの最終承認記録がなければparkしない。
-- 委譲範囲の設定競合や、Unitの不正な依存を拒否する。
-- park後に元の入力が変わった場合は実行を成功にしない。
-- 未確定の設計は`blocked`で終了し、人間の回答待ちを作らない。
-- 最終の全体テストが失敗した場合は`failed`になる。
-- 実行・スキップの選択、Unit種別、Test Strategyに応じて対象を絞る。
+## Stop conditions checked
 
-## ホストと配布物
+- Do not park without final Inception approval records.
+- Reject conflicting scope settings and invalid unit dependencies.
+- Do not succeed if original inputs change after parking.
+- End unresolved designs as `blocked` without creating a wait for human answers.
+- Mark failed final global tests as `failed`.
+- Honor execution/skip choices, unit kinds, and Test Strategy.
 
-Claude Code形式とCodex形式の両方で、配布物のフックへInception承認イベントを渡し、Construction workerが起動することを確認した。Codexの配布物は実際のCodex CLIで隔離した設定領域へインストールする。重複通知でも実行回数は1回だった。
+## Hosts and distributions
 
-Construction全体版の試験は、ホストの実モデルにInceptionの承認コマンドを実行させる試験ではない。フックへ渡す承認イベントと監査記録は、明示した合成データである。製品コードは人間の承認やネイティブCG開始の監査行を生成しない。
+Passing synthetic Inception approval events through both Claude Code and Codex distribution hooks started Construction workers. The Codex distribution was installed through the real CLI in isolated settings. Duplicate notifications still produced one run.
 
-## 何を実行したか
+This full-phase test did not ask a live host model to perform Inception approval. Hook events and audit entries were explicitly synthetic. Product code does not create human-approval or native CG-start audit rows.
 
-実際のTAKTエンジン、AI-DLCの状態・承認照合と公式park、Bunのビルドとテスト、TypeScriptの型検査、品質ゲート、成果物とソースのhash照合を実行した。
+## What actually ran
 
-モデルの応答は固定したmockであり、設計内容の意味的な品質や実モデルの全工程完走を証明するものではない。AI-DLC本体のステージ定義をインストラクションへ渡し、独立した技術レビューへ回す構造を確認する試験である。
+The real TAKT engine, AI-DLC state/approval checks and official park, Bun build/tests, TypeScript checks, quality gates, and artifact/source hash checks were executed.
 
-実装中には、読み取り専用の固定入力から次工程用ストアへコードを反映する際の権限エラーを修正した。固定入力は保持し、コントローラーが検証済みのコードを反映する時だけストアの該当ファイルを更新する。
+Fixed mock responses do not prove semantic design quality or full live-model completion. The test checks the structure that injects native stage definitions and routes artifacts through independent technical review.
 
-## 再現
+Implementation uncovered a permissions error when publishing code from read-only frozen inputs into the store for later stages. The fix preserves frozen inputs and allows the controller to update only the store file receiving verified code.
+
+## Reproduction
 
 ```sh
 bun run experiment:construction-phase -- --codex --repairs
 ```
 
-このコマンドはCodex用の本家ランタイムを入力に使い、合成承認とTAKT mockで実行する。実モデルの認証は不要。ログは`.experiments/`へ保存する。
+This uses native Codex runtime inputs, synthetic approval, and a mock TAKT worker. Model credentials are unnecessary. Logs go under `.experiments/`.
 
-設定と制約は[Construction導入手順](../../docs/construction-phase.md)を参照。元のAI-DLCへの結果取り込みとOperationの自動開始は未実装である。
+See [Construction setup](../../docs/construction-phase.md). Importing results into original AI-DLC and automatically starting Operation are not implemented.
 
-## 実モデル試験で見つかった検証処理の差
+## Validation differences found in live-model trials
 
-Luna Maxが作ったFunctional Designは本家traceabilityセンサーで合格したが、当初の連携側ゲートではNFRのID不足として失敗した。原因はCG用の要求ID集合を設計工程にも使っていたことと、BRへの対応先を単なるファイル名に限定していたことだった。
+A Functional Design produced by Luna Max passed the native traceability sensor but failed the initial integration gate for missing NFR IDs. The gate had reused CG's ID set for design stages and treated BR targets as simple filenames.
 
-工程ごとのID解決と本家センサーによる検証へ修正した。CGに渡すIDも、レビュー済みの設計から再解決する。元のAI-DLC記録には書き込まず、専用の投影先で検査する。最初のLuna成果物を回帰テストに残し、合格と孤立BRの検出を確認している。実モデル試行の最終結果は[Luna Max実機記録](LIVE-2026-09-16.md)を参照。1時間で設計2工程まで完了し、CG以降には未到達だった。
+The integration now resolves IDs per stage and invokes the native sensor. CG IDs are resolved again from reviewed designs. Checks run in a private projection without writing original AI-DLC records. The first Luna artifact remains a regression fixture: it passes, while an added orphan BR is detected. See the [Luna Max live record](LIVE-2026-09-16.md): two design stages completed in one hour; CG was not reached.
 
-2回目の実モデル試行はFunctional Designの成果物検証を通過したが、技術レビュー開始時の詳細ログが旧ラッパーの2MB制限に達して停止した。時間切れのフラグへ誤分類され、レポート未生成のエラーにも隠れていた。ログをファイルへ保存してメモリには末尾を保持し、出力制限と時間制限を分けて報告するよう修正した。
+The second live attempt passed Functional Design artifact validation but stopped when verbose review-start output exceeded the old wrapper's 2 MB cap. This was misclassified as a timeout and then masked by a missing-report error. Output is now streamed to files with bounded in-memory tails, and output limits are distinguished from time limits.

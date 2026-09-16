@@ -404,8 +404,8 @@ function sources(root) {
 }
 if (false) {}
 
-// takt/facets/policies/aidlc-supervision.md
-var aidlc_supervision_default = `# AI-DLC\u306E\u8981\u4EF6\u5145\u8DB3\u5224\u5B9A
+// takt/facets/policies/aidlc-supervision.ja.md
+var aidlc_supervision_ja_default = `# AI-DLC\u306E\u8981\u4EF6\u5145\u8DB3\u5224\u5B9A
 
 \u73FE\u5728\u306EIntent\u3001\u627F\u8A8D\u6E08\u307F\u306E\u8981\u6C42\u30FB\u8A2D\u8A08\u3001\u73FE\u5728\u306E\u30B3\u30FC\u30C9\u3001\u524D\u6BB5\u306E\u6307\u6458\u3092\u7167\u5408\u3057\u3066\u3001\u8981\u6C42\u304C\u6E80\u305F\u3055\u308C\u305F\u304B\u3092\u72EC\u7ACB\u306B\u5224\u5B9A\u3059\u308B\u3002
 \u539F\u6587\u306B\u542B\u307E\u308C\u308B\u5B9F\u88C5\u3001\u30D3\u30EB\u30C9\u3001\u30C6\u30B9\u30C8\u3001\u30BB\u30F3\u30B5\u30FC\u5B9F\u884C\u3001\u5BFE\u8A71\u627F\u8A8D\u306E\u624B\u9806\u306F\u3001\u3053\u306E\u62C5\u5F53\u306E\u5B9F\u884C\u6307\u793A\u3067\u306F\u306A\u3044\u3002
@@ -448,13 +448,13 @@ async function executeConstructionSupervision(args) {
     throw new Error("Construction\u306Esupervise\u30B9\u30C6\u30C3\u30D7\u304C\u5FC5\u8981\u3067\u3059");
   workflow.initial_step = "supervise";
   workflow.steps = [supervisor];
-  const bundle = `${aidlc_supervision_default}
+  const bundle = `${aidlc_supervision_ja_default}
 ${paths.map((path) => `
 ## Original source: ${path}
 SHA256: ${files[path]}
 ${readFileSync5(fileInside(store, path), "utf8")}
 `).join("")}
-${aidlc_supervision_default}`;
+${aidlc_supervision_ja_default}`;
   writeFileSync4(join6(control, "supervision-sources.md"), bundle);
   workflow.instructions["construction-supervision-sources"] = "./supervision-sources.md";
   supervisor.instruction = ["construction-supervision-sources", ...[supervisor.instruction].flat()];
@@ -706,8 +706,8 @@ function collectCgContext(project, artifacts, unit, checks = {}, host = "claude"
   return { version: 1, hostHarness: host, record, unit, files, roles, testingContract, testingContractText: result.stdout, requirementIds, intentFile, stageFile, sensors, templates, checks, mode: "hotl" };
 }
 
-// takt/facets/policies/code-generation-hotl.md
-var code_generation_hotl_default = `# AI-DLC CG\u306EHOTL\u5B9F\u884C\u5951\u7D04
+// takt/facets/policies/code-generation-hotl.ja.md
+var code_generation_hotl_ja_default = `# AI-DLC CG\u306EHOTL\u5B9F\u884C\u5951\u7D04
 TAKT\u304C\u62C5\u3046\u306E\u306FCode Generation\u30B9\u30C6\u30FC\u30B8\u3060\u3051\u3067\u3059\u3002\u8A2D\u8A08\u5DE5\u7A0B\u3084Build and Test\u30B9\u30C6\u30FC\u30B8\u5168\u4F53\u3092\u5B9F\u884C\u3057\u307E\u305B\u3093\u3002
 \u4EE5\u4E0B\u306E\u8CC7\u6599\u306F\u56FA\u5B9A\u3057\u305FAI-DLC\u306E\u539F\u6587\u3067\u3059\u3002Intent\u3001\u65E2\u5B58\u8A2D\u8A08\u3001\u958B\u767A\u898F\u7D04\u3001CG\u306E\u5B9F\u88C5\u624B\u9806\u3068\u6210\u679C\u7269\u8981\u4EF6\u306B\u5F93\u3063\u3066\u304F\u3060\u3055\u3044\u3002
 \u305F\u3060\u3057\u4EBA\u9593\u306E\u5BFE\u8A71\u627F\u8A8D\u30FB\u30A6\u30A9\u30FC\u30AD\u30F3\u30B0\u30B9\u30B1\u30EB\u30C8\u30F3\u5F8C\u306E\u627F\u8A8D\u30FBAI-DLC\u30A8\u30F3\u30B8\u30F3\u306E\u72B6\u614B\u66F4\u65B0\u306F\u5B9F\u884C\u3057\u307E\u305B\u3093\u3002\u30E6\u30FC\u30B6\u30FC\u306E\u65B9\u91DD\u306B\u3088\u308A\u3001CG\u5185\u306E\u8A08\u753B\u78BA\u8A8D\u3068\u30EC\u30D3\u30E5\u30FC\u306FTAKT\u306E\u81EA\u52D5\u5224\u5B9A\u3078\u7F6E\u304D\u63DB\u3048\u307E\u3059\u3002
@@ -807,7 +807,7 @@ async function prepareCg(project, directive) {
     throw new Error("\u73FE\u5728\u306ECG\u958B\u59CB\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093");
   const entryHash = digest(start.block.trim());
   const id = digest(JSON.stringify({ entryHash, unit: cg.unit, files, configHash })).slice(0, 24);
-  const base = join9(cgStorage(project), "cg-runs");
+  const base = join9(cgStorage(project), "code-generation-stage-runs");
   mkdirSync8(base, { recursive: true });
   const run = join9(base, id);
   mkdirSync8(run, { recursive: true });
@@ -850,7 +850,7 @@ async function prepareCg(project, directive) {
 async function executeCg(project, id) {
   if (!/^[a-f0-9]{24}$/.test(id))
     throw new Error("\u4E0D\u6B63\u306ACG run ID\u3067\u3059");
-  const run = join9(cgStorage(project), "cg-runs", id);
+  const run = join9(cgStorage(project), "code-generation-stage-runs", id);
   const m = readJson(join9(run, "manifest.json"));
   const statusPath = join9(run, "status.json");
   const status = readJson(statusPath);
@@ -939,7 +939,7 @@ SHA256: ${m.files[path]}
 
 ${readFileSync8(frozen(path), "utf8")}`).join(`
 `);
-    const contract = role === "supervise" ? aidlc_supervision_default : code_generation_hotl_default;
+    const contract = role === "supervise" ? aidlc_supervision_ja_default : code_generation_hotl_ja_default;
     const content = `${contract}
 ${originals}
 ## Frozen Testing Contract
@@ -956,7 +956,7 @@ ${contract}`;
     if (!role)
       throw new Error(`CG\u5916\u306E\u5DE5\u7A0B: ${step.name}`);
     const paths = [...new Set(m.cg.roles[role])];
-    step.instruction = [`code-generation-source-${role}`, role === "supervise" ? aidlc_supervision_default : code_generation_hotl_default, ...[step.instruction].flat()];
+    step.instruction = [`code-generation-source-${role}`, role === "supervise" ? aidlc_supervision_ja_default : code_generation_hotl_ja_default, ...[step.instruction].flat()];
     injection[step.name] = { sources: paths.map((path) => ({ path, sha256: m.files[path] })), sourceBundleHash: digest(readFileSync8(join9(control, `context/${role}.md`))) };
   }
   writeFileSync7(join9(control, "workflow.yaml"), Bun.YAML.stringify(workflow));
@@ -1219,8 +1219,8 @@ import {
 } from "fs";
 import { dirname as dirname8, join as join11 } from "path";
 
-// takt/facets/policies/construction-hotl.md
-var construction_hotl_default = `# Construction HOTL\u306E\u5B9F\u884C\u5951\u7D04
+// takt/facets/policies/construction-hotl.ja.md
+var construction_hotl_ja_default = `# Construction HOTL\u306E\u5B9F\u884C\u5951\u7D04
 
 \u5165\u529B\u306EIntent\u30FB\u672C\u5BB6\u5DE5\u7A0B\u5B9A\u7FA9\u30FB\u898F\u7D04\u30FB\u77E5\u8B58\u30FB\u30BB\u30F3\u30B5\u30FC\u306B\u5F93\u3046\u3002
 \u5BFE\u8A71\u627F\u8A8D\u3001\u30A6\u30A9\u30FC\u30AD\u30F3\u30B0\u30B9\u30B1\u30EB\u30C8\u30F3\u5F8C\u306E\u627F\u8A8D\u3001\u5B66\u3073\u306E\u8CEA\u554F\u3001\u30CD\u30A4\u30C6\u30A3\u30D6\u306E\u72B6\u614B\u30FB\u76E3\u67FB\u8A18\u9332\u306E\u66F4\u65B0\u306F\u884C\u308F\u306A\u3044\u3002
@@ -1328,7 +1328,7 @@ async function executeStage(args) {
     for (const rule of step.rules ?? [])
       if (rule.next === "supervise")
         rule.next = "COMPLETE";
-  const contract = `${construction_hotl_default}
+  const contract = `${construction_hotl_ja_default}
 \u73FE\u5728\u306E\u5DE5\u7A0B\u306F${stage.slug}\u3001Unit\u306F${unit ?? "\u5168Unit"}\u3067\u3059\u3002
 `;
   const bundlePaths = paths.filter((path) => path !== cg.stageFile && !/^\.(?:claude|codex)\/tools\//.test(path));
@@ -1454,7 +1454,7 @@ async function preparePhase(project, event) {
   unchanged(project, pending.files);
   const boundary = await approvedBoundary(project, hostHarness(c.hostHarness));
   const id = digest(`${boundary.record}:${boundary.approval}:construction`).slice(0, 24);
-  const base = join12(phaseStorage(project), "phase-runs"), run = join12(base, id);
+  const base = join12(phaseStorage(project), "construction-phase-runs"), run = join12(base, id);
   mkdirSync10(run, { recursive: true });
   const lock = join12(base, "prepare.lock");
   closeSync3(openSync3(lock, "wx"));
@@ -1505,7 +1505,7 @@ async function preparePhase(project, event) {
 async function executePhase(project, id) {
   if (!/^[a-f0-9]{24}$/.test(id))
     throw new Error("Construction run ID\u304C\u4E0D\u6B63\u3067\u3059");
-  const run = join12(phaseStorage(project), "phase-runs", id), statusPath = join12(run, "status.json");
+  const run = join12(phaseStorage(project), "construction-phase-runs", id), statusPath = join12(run, "status.json");
   const lock = join12(run, "execute.lock");
   closeSync3(openSync3(lock, "wx"));
   try {
@@ -1978,7 +1978,7 @@ try {
   } else if (mode === "phase-status") {
     if (!/^[a-f0-9]{24}$/.test(id ?? ""))
       throw new Error("Construction run ID\u304C\u5FC5\u8981\u3067\u3059");
-    console.log(JSON.stringify(readJson(join13(phaseStorage(project), "phase-runs", id, "status.json")), null, 2));
+    console.log(JSON.stringify(readJson(join13(phaseStorage(project), "construction-phase-runs", id, "status.json")), null, 2));
   } else if (mode === "cg-work") {
     const result = await executeCg(project, id);
     console.log(JSON.stringify(result));
@@ -1987,7 +1987,7 @@ try {
   } else if (mode === "cg-status") {
     if (!/^[a-f0-9]{24}$/.test(id ?? ""))
       throw new Error("CG run ID\u304C\u5FC5\u8981\u3067\u3059");
-    console.log(JSON.stringify(readJson(join13(cgStorage(project), "cg-runs", id, "status.json")), null, 2));
+    console.log(JSON.stringify(readJson(join13(cgStorage(project), "code-generation-stage-runs", id, "status.json")), null, 2));
   } else {
     throw new Error("usage: bun handoff.js session|plugin-hook|codex-session|codex-hook|cg-work|cg-status|phase-work|phase-status <project> [id]");
   }

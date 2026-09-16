@@ -1,5 +1,7 @@
 # Installation and project setup
 
+[日本語](getting-started.ja.md)
+
 ## Install the plugin
 
 Install the prebuilt plugin from the GitHub marketplace. You do not need to clone this repository, run `bun install`, or build it.
@@ -18,7 +20,7 @@ codex plugin marketplace add https://github.com/ideo-plus/takt-aidlc.git
 codex plugin add takt-aidlc@takt-aidlc
 ```
 
-The CLIs fetch the Git repository themselves; Git and HTTPS access to GitHub are required. Start a new session after installation. For Codex, enable and trust hooks as described in the [host guide](codex-host.md#インストール). Then configure the target project below; installing the plugin alone does not enable delegation.
+The CLIs fetch the Git repository themselves; Git and HTTPS access to GitHub are required. Start a new session after installation. For Codex, enable and trust hooks as described in the [host guide](codex-host.md#installation). Then configure the target project below; installing the plugin alone does not enable delegation.
 
 The remote source formats are documented in the [Claude Code marketplace guide](https://code.claude.com/docs/en/discover-plugins) and [OpenAI plugin guide](https://developers.openai.com/plugins/build/plugins).
 
@@ -45,7 +47,7 @@ sh /tmp/install-aidlc-2.8.2.sh --version 2.8.2
 
 Check `aidlc --version` and `takt --version`. An already-installed newer AI-DLC release is not a compatible replacement for this prototype.
 
-Authenticate the CLI(s) selected as host and worker. For Codex, run `codex login` and confirm with `codex login status`. Build and tests of this plugin are contributor tasks; see [development](contributing.md#開発).
+Authenticate the CLI(s) selected as host and worker. For Codex, run `codex login` and confirm with `codex login status`. Build and tests of this plugin are contributor tasks; see [development](contributing.md#development).
 
 ## Configure an AI-DLC project
 
@@ -166,10 +168,10 @@ When the normal conductor's single `aidlc engine orchestrate next` or `continue`
 The hook returns a run ID. Inspect it with:
 
 ```sh
-cat aidlc/takt-handoff/cg-runs/<run-id>/status.json
+cat aidlc/takt-handoff/code-generation-stage-runs/<run-id>/status.json
 ```
 
-Results are under `aidlc/takt-handoff/cg-runs/<run-id>/`. `status.json` records `parked`, `running`, `verified`, `blocked`, or `failed`. The generated code is in `attempts/1/work/`; CG artifacts are in its `cg/` directory, and validation records are in `attempts/1/control/`.
+Results are under `aidlc/takt-handoff/code-generation-stage-runs/<run-id>/`. `status.json` records `parked`, `running`, `verified`, `blocked`, or `failed`. The generated code is in `attempts/1/work/`; CG artifacts are in its `cg/` directory, and validation records are in `attempts/1/control/`.
 
 `verified` means this TAKT CG execution passed its checks. The original AI-DLC project stays parked at CG. Importing the result, completing native CG, and resuming downstream stages are not automated. Do not run the original CG concurrently. CG retry and automatic stale-lock recovery are not implemented.
 

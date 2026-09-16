@@ -1,39 +1,40 @@
-# Claude Codeホストプラグイン
+# Claude Code host plugin
 
-## インストールと起動
+[日本語](claude-plugin.ja.md)
+
+## Installation and startup
 
 ```sh
 claude plugin marketplace add https://github.com/ideo-plus/takt-aidlc.git
 claude plugin install takt-aidlc@takt-aidlc
 ```
 
-ビルド済みの配布物をCLIが取得するため、手動のclone・ビルドは不要。対象プロジェクトで[設定](getting-started.md)を済ませてから、新しい`claude`セッションを開始し、`/aidlc`で進める。通常利用で`--plugin-dir`は指定しない。
+The CLI downloads a prebuilt plugin. No manual clone or build is required. Complete the [project setup](getting-started.md), start a new `claude` session in that project, and run `/aidlc`. Normal use does not require `--plugin-dir`.
 
-配布物にはフック定義、`scripts/handoff.js`、品質ゲート、TAKT Workflow、MITライセンスを含む。開発時のローカル読み込みは[開発手順](contributing.md)を参照。
+The distribution includes hooks, `scripts/handoff.js`, quality gates, TAKT workflows, and the MIT license. See [development](contributing.md) for loading local builds.
 
-## フックの役割
+## Hook responsibilities
 
-| フック | CGモードでの動作 |
+| Hook | Behavior in CG mode |
 |---|---|
-| SessionStart | CGだけをTAKTへ委譲し、委譲後はホストのターンを停止する方針を通知する |
-| PreToolUse | `next` / `continue`の直接呼び出しにシェル連結がある場合、実行前に拒否する |
-| PostToolUse | CGの`run-stage`応答と現在の状態・開始記録を確認し、入力固定、公式park、TAKT起動を行う |
+| SessionStart | Explains CG delegation and tells the host to end its turn after handoff |
+| PreToolUse | Rejects recognized `next` / `continue` commands with shell chaining before execution |
+| PostToolUse | Verifies the CG directive, current state, and start record; freezes inputs, parks AI-DLC, and starts TAKT |
 
-`aidlc/takt-handoff/config.json`の`enabled: true`で有効にし、`delegationScope: "code-generation"`または`"construction"`を選ぶ。CG単体モードはCG入口、Construction全体モードはInception最終承認後に起動する。同じ入口のイベントを重複受信しても、新しいTAKT実行を重ねない。
+Enable delegation with `enabled: true` in `aidlc/takt-handoff/config.json`, and choose `delegationScope: "code-generation"` or `"construction"`. CG mode starts at CG entry; Construction mode starts after final Inception approval. Repeated events for the same boundary do not create another TAKT run.
 
-設定は[導入手順](getting-started.md)、実行内容は[CGの動作](code-generation-stage.md)と[Constructionの動作](construction-phase.md)を参照。TAKTワーカーのproviderはClaude／Codexから独立して選べる。Codex上でAI-DLCを動かす場合は[Codexホスト用プラグイン](codex-host.md)を使う。
+See [setup](getting-started.md), [CG behavior](code-generation-stage.md), and [Construction behavior](construction-phase.md). Select the TAKT worker provider independently as Claude or Codex. To run AI-DLC itself on Codex, use the [Codex host plugin](codex-host.md).
 
-## 状態確認
+## Inspecting a run
 
 ```sh
-cat aidlc/takt-handoff/cg-runs/<run-id>/status.json
+cat aidlc/takt-handoff/code-generation-stage-runs/<run-id>/status.json
 ```
 
-CGのCLI再試行は未実装。`enabled: false`は新しい委譲を抑止するが、実行中のworkerは停止しない。
+CG retry through the CLI is not implemented. Setting `enabled: false` prevents new handoffs but does not stop an active worker.
 
+For standard Claude authentication, follow the Bedrock adjustments in [setup](getting-started.md). `disableBedrock: true` affects TAKT child processes.
 
-Bedrockを使わない場合、ホストの設定調整は[導入手順](getting-started.md)に従う。`disableBedrock: true`が対象とするのはTAKTの子プロセスである。
+## Verification
 
-## 検証
-
-移動した配布物のフックからmockのCGを起動する自動テスト、CG以外で起動しないテスト、重複イベントのテストがある。実モデルのCGは[検証記録](../experiments/code-generation/RESULTS.md)を参照。
+Automated tests start a mock CG run through hooks in a relocated distribution, reject unrelated stages, and check duplicate events. See the [CG verification record](../experiments/code-generation/RESULTS.md) for live-model evidence.

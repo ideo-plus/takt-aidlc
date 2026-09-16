@@ -30,7 +30,7 @@ export async function cgFixture(options: { constructionEntry?: boolean; hostHarn
   put(f.state, state);
   if(!options.constructionEntry) f.audit.appendAuditEntry('STAGE_STARTED', { Stage: 'code-generation', Details: 'SYNTHETIC CG ENTRY — not a human approval' }, f.project);
   const names = ['requirements-analysis/requirements.md', 'practices-discovery/team-practices.md', 'units-generation/unit-of-work.md', 'units-generation/unit-of-work-dependency.md', 'delivery-planning/bolt-plan.md'];
-  for (const name of names) put(join(f.project, record, 'inception', name), readFileSync(join(repo, 'experiments/code-generation/input', name), 'utf8'));
+  for (const name of names) put(join(f.project, record, 'inception', name), readFileSync(join(repo, 'experiments/code-generation/input', name.replace(/\.md$/, '.ja.md')), 'utf8'));
   writeJson(join(f.project, record, 'project-description.json'), 'CG-INTENT-SENTINEL: 合成テスト入力。answerを41から42へ変更する。既存の設計・規約に従い、CG単体をHOTLで実行する。standardの5テストとビルドを必ず通す。');
   put(join(f.project, 'aidlc/spaces/default/memory/team.md'), '# Team\n\n## Testing Posture\n- **Methodology**: test-after\n- **Ordering**: 値を変更してから5件のテストを作り、ビルドと単一Unitのテストを実行する。\n- standard戦略に従って5テストを使い、行カバレッジ80%以上を満たす。\n\n## Code Style\n既存の名前付きexportを維持する。Lint基盤は追加しない。\n');
   const control = 'aidlc/takt-handoff';

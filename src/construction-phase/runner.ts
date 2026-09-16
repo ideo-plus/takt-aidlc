@@ -120,7 +120,7 @@ export async function preparePhase(project: string, event: HookEvent) {
   const id = digest(
     `${boundary.record}:${boundary.approval}:construction`,
   ).slice(0, 24);
-  const base = join(phaseStorage(project), "phase-runs"),
+  const base = join(phaseStorage(project), "construction-phase-runs"),
     run = join(base, id);
   mkdirSync(run, { recursive: true });
   const lock = join(base, "prepare.lock");
@@ -182,7 +182,7 @@ export async function preparePhase(project: string, event: HookEvent) {
 export async function executePhase(project: string, id: string) {
   if (!/^[a-f0-9]{24}$/.test(id))
     throw new Error("Construction run IDが不正です");
-  const run = join(phaseStorage(project), "phase-runs", id),
+  const run = join(phaseStorage(project), "construction-phase-runs", id),
     statusPath = join(run, "status.json");
   const lock = join(run, "execute.lock");
   closeSync(openSync(lock, "wx"));

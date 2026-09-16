@@ -1,4 +1,4 @@
-input/supervision-context.json、固定したIntent・Inception成果物・Unit設計、最終コード、各Unitのレビューと要件充足判定を読み、Construction全体の要件を独立に判定してください。
-全Unitの責任範囲と連携を確認し、Unit単体では成立していても統合後に欠ける要求を調べます。すべてのrequirementIdsに、現在のコード・テスト・構成ファイルと成立理由を対応付けてください。
-前段の報告は補助とし、現在のコードを優先します。ビルド・テスト・センサーの実行状況やログは審査しません。
-approved、changes_requested、blockedのいずれかを返します。修正可能なら、repairUnitsに変更を担当するUnitを列挙し、指摘に修正対象と受入条件を示してください。対話承認や本家の状態更新は行いません。
+Read input/supervision-context.json, the frozen Intent, Inception artifacts, unit designs, final code, and unit reviews/requirement assessments. Independently judge requirements for the whole Construction phase.
+Check every unit's responsibility and integration, including requirements that pass within individual units but fail after integration. Map every requirementId to current code, tests, or configuration and explain why it is fulfilled.
+Treat earlier reports as supporting material and prioritize current code. Do not review the execution status or logs of builds, tests, or sensors.
+Return approved, changes_requested, or blocked. For correctable issues, list owning units in repairUnits and identify the repair targets and acceptance conditions in findings. Do not request interactive approval or update native state.

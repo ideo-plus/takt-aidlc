@@ -1,4 +1,4 @@
-次の計画をIntent、現在のUnit設計、CG定義、開発規約、Testing Contract、センサー定義に照合してください。
+Compare the following plan with the Intent, current unit designs, CG definition, development conventions, Testing Contract, and sensor definitions.
 {report:01-code-generation-plan.json}
-CGに必要な実装・テスト・設定・トレーサビリティが揃っているか確認します。設計工程を追加しません。
-修正可能ならchanges_requested、整合していればapproved、入力矛盾等で自律的に決定できなければblockedを返してください。
+Check that CG has the necessary implementation, tests, configuration, and traceability. Do not add design stages.
+Return changes_requested for correctable issues, approved when aligned, or blocked when contradictory inputs prevent an autonomous decision.

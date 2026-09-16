@@ -1,7 +1,7 @@
-# CGの入力と検証記録
+# CG inputs and verification records
 
-input/context.jsonには現在のUnit、要求ID、Testing Contract、原文パス、固定スクリプトの索引がある。
-固定スクリプトのコピーはinput/project配下にある。テスト手順の説明とスクリプトの実際の対象・方法を照合できる。
-cg/source-manifest.jsonは実際の変更ファイル、cg/traceability.jsonは要求とソース・テストの対応を表す。
-cg/build.json、cg/test.json、cg/sensors.jsonには品質ゲートの実測が記録される。センサー別の詳細はcg/linter.jsonとcg/type-check.jsonにある。
-verifiedはTAKTの検証完了を意味し、本家CGの完了や元プロジェクトへの取り込みを意味しない。
+input/context.json indexes the current unit, requirement IDs, Testing Contract, original source paths, and fixed scripts.
+Script copies are under input/project. Their actual targets and methods can be compared with the written testing procedures.
+cg/source-manifest.json lists actual file changes; cg/traceability.json maps requirements to source and tests.
+cg/build.json, cg/test.json, and cg/sensors.json contain measured quality-gate results. Sensor details are in cg/linter.json and cg/type-check.json.
+verified means TAKT validation completed. It does not mean native CG completed or code was imported into the original project.

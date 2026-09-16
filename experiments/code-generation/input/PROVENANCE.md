@@ -1,3 +1,3 @@
-# CG専用の合成テスト入力
+# Synthetic inputs for CG-only testing
 
-この入力はCGのHOTL実装を検証するために作った合成データであり、人間がAI-DLCで承認した記録ではない。以前の3テストの実験文書にはstandardの5〜8テストという本家契約との矛盾があったため、成功経路の試験はこの整合した入力へ分けた。元の承認済み文書は変更していない。
+These inputs are synthetic data created to test HOTL CG, not records of human approval in AI-DLC. The earlier three-test experiment conflicted with the native Standard contract of five to eight tests, so success-path testing uses this separate, consistent input set. Original approved documents were not changed.

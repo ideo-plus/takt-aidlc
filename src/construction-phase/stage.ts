@@ -27,7 +27,7 @@ import { sources, cgGateSource } from "../code-generation/code-generation-gate";
 import type { CgContext } from "../code-generation/context";
 import type { PhaseConfig, StageDefinition } from "./context";
 import { materializeWorkflow } from "../takt/workflow";
-import stageContract from '../../takt/facets/policies/construction-hotl.md' with { type: 'text' };
+import stageContract from '../../takt/facets/policies/construction-hotl.ja.md' with { type: 'text' };
 
 export async function executeStage(args: {
   attempt: string;

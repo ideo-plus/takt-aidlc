@@ -1,30 +1,31 @@
-# ペルソナの選択
+# Persona selection
 
-独自ペルソナは定義せず、TAKT 0.65.0に同梱されたペルソナをYAMLの`persona`で名前指定する。
-このディレクトリには選択理由だけを置き、本家の定義を複製しない。
+[日本語](README.ja.md)
 
-| 担当 | 組み込みペルソナ | 選択理由 |
+Workflows name personas shipped with TAKT 0.65.0 directly in `persona`. No custom persona is defined here. This directory records selection rationale without duplicating upstream definitions.
+
+| Responsibility | Built-in persona | Reason |
 |---|---|---|
-| CG計画・Construction成果物作成 | `planner` | 要求分析と設計・実装計画を担当し、コード実装は担当しない |
-| 実装・指摘修正 | `coder` | 確定した設計に沿う実装、テスト作成、修正を担当する |
-| 計画・設計・Construction工程のレビュー | `architecture-reviewer` | 設計、構造、仕様への適合を確認し、自分でコードを変更しない |
-| コードレビュー | `coding-reviewer` | 実装のバグ、回帰、テスト不足を差分と実証に基づいて確認する |
-| 要件充足の最終判定 | `supervisor` | 現在のコードと元要件・受入条件・前段の指摘を独立に照合する |
-| 完了報告 | `exec-assistant` | 汎用の報告役として使い、必要な確認と報告形式をinstructionで指定する |
+| CG planning / Construction artifact creation | `planner` | Analyzes requirements and plans design/implementation without implementing code |
+| Implementation / corrections | `coder` | Implements agreed designs, writes tests, and addresses findings |
+| Plan, design, and Construction stage review | `architecture-reviewer` | Checks structure, design, and specification alignment without editing code |
+| Code review | `coding-reviewer` | Identifies bugs, regressions, and missing tests using code differences and evidence |
+| Final requirement validation | `supervisor` | Independently compares current code with original requirements, acceptance conditions, and earlier findings |
+| Completion report | `exec-assistant` | Provides a general reporting role with exact checks and format supplied by instructions |
 
-`supervisor`はsuperviseステップで使う。機械ゲートの実行状況・結果・ログの審査は担当せず、要件充足と指摘の解消を判定する。ログをまとめる完了報告は`exec-assistant`が担当する。
-AI-DLC固有の制約、HOTLへの置換、担当範囲、品質判定、出力形式はそれぞれpolicies・instructions・output-contractsで指定する。
+`supervisor` is used in supervise steps. It judges requirement fulfillment and finding resolution, not machine-gate execution status/results/logs. `exec-assistant` summarizes those logs in the completion report.
+AI-DLC-specific restrictions, HOTL adaptations, scope, quality criteria, and formats are specified in policies, instructions, and output contracts.
 
-## 解決方法と検証
+## Resolution and verification
 
-TAKTは名前参照をプロジェクト、グローバル設定、組み込みの順に探索する。連携実行は専用のTAKT設定と新しい作業領域を使う。
-テストでは、元のYAMLと実行用のコピーに対して`workflow inspect`を実行し、全ステップのペルソナが`source: builtin`かつ本家`builtins/ja/facets/personas/`へ解決されることを確認する。
-組み込みの定義はTAKTの依存物であり、本プロジェクトの入力Markdownのスナップショットには含めない。対象バージョンは0.65.0に固定する。
+TAKT resolves names through project, global, then built-in facets. Delegation runs with a private TAKT configuration and a new workspace.
+Tests run `workflow inspect` on original YAML and relocated execution copies and require every step's persona to resolve as `source: builtin` under native `builtins/ja/facets/personas/`.
+Built-ins are dependencies of TAKT, not local input Markdown snapshots. The supported version is pinned to 0.65.0.
 
-## 参照した本家実装
+## Upstream sources inspected
 
-- [組み込みペルソナ（v0.65.0）](https://github.com/nrslib/takt/tree/v0.65.0/builtins/ja/facets/personas)
-- [ペルソナとファセットのローダー](https://github.com/nrslib/takt/blob/v0.65.0/src/infra/config/loaders/resource-resolver.ts)
-- [探索順序](https://github.com/nrslib/takt/blob/v0.65.0/src/infra/config/loaders/workflowPackageScope.ts)
+- [Built-in personas at v0.65.0](https://github.com/nrslib/takt/tree/v0.65.0/builtins/ja/facets/personas)
+- [Persona/facet loader](https://github.com/nrslib/takt/blob/v0.65.0/src/infra/config/loaders/resource-resolver.ts)
+- [Resolution order](https://github.com/nrslib/takt/blob/v0.65.0/src/infra/config/loaders/workflowPackageScope.ts)
 
-`main`の一覧も照合したうえで、動作判定には導入対象の0.65.0に同梱された定義を使っている。
+The main-branch catalog was also checked; behavior was validated against the definitions shipped with the supported 0.65.0 installation.

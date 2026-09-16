@@ -1,8 +1,8 @@
-# Construction HOTLの実行契約
+# Construction HOTL execution contract
 
-入力のIntent・本家工程定義・規約・知識・センサーに従う。
-対話承認、ウォーキングスケルトン後の承認、学びの質問、ネイティブの状態・監査記録の更新は行わない。
-人間の確認は自動の技術レビューへ置き換え、入力から決められないことはblockedとして理由を残す。
-成果物の元のrecordパスはinput/projectの固定コピーへ対応する。
-ファイルは応答のartifacts/writesから検証ゲートが生成する。直接編集しない。
-品質条件を弱めず、実測していない検査を成功と記録しない。
+Follow the input Intent, native stage definition, conventions, knowledge, and sensors.
+Do not perform interactive approval, approval after the walking skeleton, learning questions, or native state/audit updates.
+Replace human checks with automatic technical review. If inputs cannot resolve a decision, return blocked with a reason.
+Original record paths correspond to frozen copies under input/project.
+Quality gates generate files from the response's artifacts/writes. Do not edit them directly.
+Do not weaken quality conditions or claim success for checks that were not measured.

@@ -1,86 +1,90 @@
-# 最終承認後の自動引き継ぎを実機で確認した
+# Live verification of automatic handoff after final approval
 
-## 最新の結果
+[日本語](STATUS.ja.md)
 
-2026年9月15日、修正済みプラグインで**最終承認後の手動復旧なしに、park・TAKT起動・実装・検証まで完了**した。[最新の実験結果](results/2026-09-15-recheck.json)を保存した。
+> Historical record. The prototype execution scripts have been removed. Commands and paths below describe the recorded experiment, not the current setup.
 
-| 確認項目 | 結果 |
+## Latest result
+
+On September 15, 2026, the corrected plugin completed **park, TAKT startup, implementation, and validation without manual recovery after final approval**. The [latest trial results](results/2026-09-15-recheck.json) are preserved.
+
+| Check | Result |
 |---|---|
-| 実際の最終承認コマンド | 1回で成功、正常な`done`応答 |
-| 承認後の手動park・フック再送・worker起動 | なし |
-| TAKT実行 | 1回、実モデル（Claude）で成功 |
-| アプリの検証 | 3テスト成功、行カバレッジ100%（1/1） |
-| 元のコードと承認済み入力 | 変更なし |
-| 固定スナップショットとpark後の状態 | ハッシュ一致 |
-| 複製元の実験状態 | 変更なし |
-| Bedrock指定 | 子プロセスから除去 |
-| 自動マージ | 実施していない |
+| Actual final approval command | Succeeded once with a normal `done` response |
+| Manual park, hook replay, or worker startup after approval | None |
+| TAKT execution | One successful live Claude run |
+| Application checks | Three tests passed; line coverage 100% (1/1) |
+| Original code and approved inputs | Unchanged |
+| Frozen snapshot and parked state | Hashes matched |
+| Source experiment state | Unchanged |
+| Bedrock settings | Removed from child processes |
+| Automatic merge | Not performed |
 
-再検証は、実際に承認済みのInception成果物を別環境へ複製し、AI-DLCの正式な後方ジャンプでDelivery Planningを開き直して行った。状態・監査記録を手動で巻き戻してはいない。引き継ぎ対象の5文書は前回承認時と同一であることを確認し、既存の承認と再検証の依頼に基づいて通常のUIから最終承認を反映した。
+Reverification copied real approved Inception artifacts into another environment and reopened Delivery Planning through AI-DLC's official backward jump. State and audit records were not manually rolled back. The five handoff documents matched those from the previous approval, and final approval was recorded through the normal UI based on the existing approval and reverification request.
 
-**確認した範囲は「最終承認後の無介入実行」である。** Inceptionを最初から作り直す試験ではない。承認前は既存回答の転記などを行ったほか、ネイティブ版の`review-brief`呼び出しが失敗したため、同梱の読み取り専用ツールをBunで直接実行して確認を継続した。本体へのパッチや工程の省略は行っていない。
+**The verified scope is unattended execution after final approval.** This did not recreate Inception from scratch. Before approval, existing answers were transferred, and a failing native `review-brief` call was replaced by direct Bun execution of the bundled read-only tool to continue inspection. No core patch or stage omission was used.
 
-## これまでの試行
+## Earlier attempts
 
-最初の通し実験では通常のInceptionを人間の実際の回答・承認で完了したが、正常な`done`応答を連携側が拒否した。修正と承認応答の再処理で復旧し、実装・検証に成功した。[初回の結果](results/2026-09-15.json)は復旧操作ありとして保持している。
+The first end-to-end trial completed normal Inception with real human answers/approvals, but the integration rejected a valid `done` response. Fixing the adapter and reprocessing the real approval response recovered implementation and validation. The [first result](results/2026-09-15.json) remains classified as requiring recovery.
 
-その後の再検証1回目では、承認コマンドに追加された`echo`とリダイレクトをフックが検知できず、単一コマンドへの手動誘導が必要だった。[この結果](results/2026-09-15-recheck-first.json)も無介入成功とは判定していない。これを補強した後の再検証2回目が、上記の最新結果である。
+The first reverification missed an approval command containing `echo` and redirection, requiring manual guidance to use a single command. That [result](results/2026-09-15-recheck-first.json) is also not classified as unattended success. The second reverification after strengthening detection produced the latest result above.
 
-## 最終承認時に見つかった不具合
+## Defect found at final approval
 
-ネイティブの`aidlc engine orchestrate report --stage delivery-planning --result approved --user-input "Approve"`は、承認を記録すると`kind: done`を返す。実装は次工程の指示などを想定し、この正常応答を拒否していた。
+The native command `aidlc engine orchestrate report --stage delivery-planning --result approved --user-input "Approve"` records approval and returns `kind: done`. The integration expected a next-stage directive and incorrectly rejected it.
 
-実際の応答を使った回帰テストで失敗を再現し、`done`を受け付けるよう修正した。応答だけで承認済みと判断せず、状態、承認・完了の監査記録、承認前の入力ハッシュを照合する条件は維持した。フック失敗時にConstructionを続行しないよう求めるメッセージも追加した。現在は型検査と19件のテスト（97アサーション）が成功している。
+A regression test reproduced the failure using the actual response, and the adapter was changed to accept `done`. It still verifies state, approval/completion audit records, and preapproval input hashes rather than trusting the response alone. A hook-failure message tells the host not to continue Construction. Type checking and 19 tests with 97 assertions passed at this point.
 
-初回の失敗後、AI-DLCの担当セッションが公式コマンドでparkした。復旧時には、修正したプラグインへ実際のPostToolUse応答を再入力し、プラグイン側の公式park呼び出しも正常終了した。最終承認の再実行や、状態・承認記録の手動編集は行っていない。
+After the initial failure, the AI-DLC session parked through the official command. Recovery replayed the actual PostToolUse response to the fixed plugin; its official park call also succeeded. Final approval was not repeated, and state/approval records were not manually edited.
 
-## 採用した接続方式
+## Connection used
 
-Claude Codeプラグインのフックが最終承認を検知し、同梱CLIが入力を固定してpark・TAKT起動・検証を担当する。AI-DLC本体へのパッチは不要だった。
+Claude Code plugin hooks detect final approval, and the bundled CLI freezes inputs, parks, starts TAKT, and verifies output. No AI-DLC core patch was required.
 
-TAKTには承認済みInception文書を読み取り用で渡し、別のGit作業領域で実装させる。AI-DLCのフックは元のセッションに残し、TAKTの子プロセスには分離した設定を与える。ユーザーの指摘に従い、この実験ではBedrock指定を外している。
+TAKT receives approved Inception documents as read-only inputs and implements in another Git workspace. Original AI-DLC hooks stay with their session; TAKT child processes receive separate settings. Bedrock flags were removed for this experiment at the user's request.
 
-保存先は`aidlc/takt-handoff/`を使う。実機では`.takt-aidlc/`や独自の`.claude/`内のファイル追加がAI-DLCのソース識別値を変えることを確認したためである。
+Data is stored under `aidlc/takt-handoff/` because adding files under `.takt-aidlc/` or custom `.claude/` paths changed AI-DLC's source identity in live trials.
 
-## 実験の範囲
+## Experiment scope
 
-単一のlibraryユニットを1回の実装単位にまとめた。通常の条件判定によりUser Stories、Refined Mockups、Domain Design、Contract Designはスキップされた。調査・開発方針・要件・作業単位・最終計画はユーザーが実際に承認した。学びの記録は、ユーザーの明示した方針に従って毎回「特になし」とした。
+A single library unit formed one implementation increment. Normal conditional selection skipped User Stories, Refined Mockups, Domain Design, and Contract Design. The user actually approved assessment, practices, requirements, units, and final planning. Learning-record questions were answered with “nothing to add” under the user's explicit instruction.
 
-この接続試験で使ったTAKTのWorkflowは実装1工程であり、詳細設計・レビュー・修正の循環までは含まない。TAKT内のClaudeにはファイル操作だけを許可し、テストは連携CLIが固定した検証スクリプトで実行した。Construction全体の品質向上は、この実験では測定していない。
+This connection test used a one-step implementation workflow, without a detailed-design/review/correction loop. The Claude worker could operate on files; a fixed verification script executed tests through the integration CLI. The experiment did not measure quality improvement for full Construction.
 
-## 実行データと再開時の注意
+## Execution data and resumption notes
 
-| 項目 | 値 |
+| Item | Value |
 |---|---|
-| 実験ディレクトリ | `.experiments/native/2026-09-15T05-38-12.649Z/` |
-| 引き継ぎID | `8569e363b1276a488f1f41ea` |
-| tmuxソケット | `takt-aidlc-lab` |
-| tmuxセッション | `native-20260915-053812` |
-| Claudeセッション | `61d033c9-e09c-4ec1-b62a-6967ed3eadf2` |
+| Experiment directory | `.experiments/native/2026-09-15T05-38-12.649Z/` |
+| Handoff ID | `8569e363b1276a488f1f41ea` |
+| tmux socket | `takt-aidlc-lab` |
+| tmux session | `native-20260915-053812` |
+| Claude session | `61d033c9-e09c-4ec1-b62a-6967ed3eadf2` |
 
-成果物は実験プロジェクト内の`aidlc/takt-handoff/runs/<ID>/attempts/1/work/`、テスト結果はその親の`verification.json`にある。元のAI-DLCセッションはpark状態で停止している。同じ作業をAI-DLCで重ねて実装しないよう、この実験の続きを始める場合は先に結果を確認する。
+Artifacts are in the experiment project's `aidlc/takt-handoff/runs/<ID>/attempts/1/work/`; test results are in its parent's `verification.json`. Original AI-DLC remains parked. Inspect results before continuing the experiment so AI-DLC does not implement the same work again.
 
-## 次に進める方向
+## Directions identified at the time
 
-1. **推奨: Construction用Workflowを拡充する。** 詳細設計・実装・レビュー・修正・検証の役割と完了条件を定める。
-2. **接続部分を配布用に整理する。** 導入手順、対応範囲、運用時の確認方法をまとめる。
+1. **Recommended: expand the Construction workflow.** Define detailed design, implementation, review, correction, verification, and completion conditions.
+2. **Prepare the integration for distribution.** Document installation, supported scope, and operational checks.
 
-## 再検証で見つかった複合コマンドの問題
+## Compound-command issue found during reverification
 
-最終工程を別環境で再実行した際、Claudeが承認コマンドに`2>&1`と`echo`を追加した。単一コマンドだけを扱うフックがこれを検知せず、承認の記録だけが先に進んだ。単一コマンドで再送するとTAKTは成功したが、手動誘導を挟んだため無介入成功とは判定していない。[この試行の記録](results/2026-09-15-recheck-first.json)を保存した。
+When rerunning the final stage in another environment, Claude appended `2>&1` and `echo` to the approval command. The single-command hook did not detect it, so only approval advanced. Resending a single command let TAKT succeed, but the manual guidance prevents classifying this as unattended success. The [attempt record](results/2026-09-15-recheck-first.json) is preserved.
 
-この問題への対処として、直接呼び出しの承認に連結やリダイレクトを検出したらPreToolUseで実行前に拒否し、形式の修正を案内する処理を追加した。19件のテストが成功した。補強後の再検証2回目では承認コマンドが単独で実行され、手動復旧なしに完了した。複合コマンドへの拒否応答はプラグインテストで確認している。
+PreToolUse was updated to reject recognized approval commands containing chaining or redirection before execution and explain the required form. Nineteen tests passed. The next reverification used a single approval command and completed without recovery. Plugin tests also verified the rejection response.
 
-## 最新の実行データ
+## Latest execution data
 
-- 実験ディレクトリ: `.experiments/native-recheck/2026-09-15T09-28-11.704Z/`
-- 引き継ぎID: `31b6e77267cc7d90c22fbe4f`
-- tmuxセッション: `recheck-1789464491835`（ソケットは`takt-aidlc-lab`）
-- Claudeセッション: `77b4e18e-b186-4d67-8179-3c8a65ee0e4f`
-- 元のAI-DLCセッション: park状態で停止
+- Experiment directory: `.experiments/native-recheck/2026-09-15T09-28-11.704Z/`
+- Handoff ID: `31b6e77267cc7d90c22fbe4f`
+- tmux session: `recheck-1789464491835`, socket `takt-aidlc-lab`
+- Claude session: `77b4e18e-b186-4d67-8179-3c8a65ee0e4f`
+- Original AI-DLC session: stopped in parked state
 
-再検証環境の作成と起動には`recheck.ts`、結果の照合には`collect-recheck.ts`を使った。最終承認直前の実環境をそのまま複製したチェックポイントも実験ディレクトリに保持している。これらのスクリプトは承認後のフックを直接呼び出さない。
+The trial used `recheck.ts` for setup/startup and `collect-recheck.ts` for comparison. A checkpoint copied directly from the live environment immediately before final approval remains in the experiment directory. Those scripts did not directly invoke postapproval hooks.
 
-## 後続のConstruction拡充
+## Subsequent Construction expansion
 
-接続試験の後、設計・レビュー・修正を含む専用Workflowを追加した。別の実モデル試験でも完了している。[結果と適用範囲](../construction/RESULTS.md)を参照。
+After the connection test, a dedicated workflow added design, review, and corrections and completed in a separate live-model trial. See its [results and scope](../construction/RESULTS.md).

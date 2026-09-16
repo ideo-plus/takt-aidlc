@@ -1,93 +1,93 @@
-# Code GenerationステージをTAKTで実行する
+# Run the Code Generation stage with TAKT
 
-## 接続の構造
+[日本語](code-generation-stage.ja.md)
 
-AI-DLCは通常どおりInceptionと必要なConstruction設計を進める。`next`または`continue`が`run-stage / code-generation`を返した時点で、選択したホスト（Claude Code／Codex）のPostToolUseフックが入力を固定し、公式CLIでparkする。TAKTは別の作業領域でCGだけを実行する。
+## Integration structure
+
+AI-DLC handles Inception and the required Construction designs normally. When `next` or `continue` returns `run-stage / code-generation`, the selected Claude Code or Codex host's PostToolUse hook freezes inputs and parks AI-DLC through the official CLI. TAKT runs CG in a separate workspace.
 
 ```mermaid
 flowchart LR
-  A[AI-DLC: Inception・必要な設計] --> B[CG開始を検出]
-  B --> C[入力を固定・AI-DLCをpark]
-  C --> D[TAKT: 計画・技術レビュー]
-  D --> E[実装・ビルド・テスト・センサー]
-  E --> F[コードレビュー]
-  F -->|修正| E
-  F --> G[supervise: 要件充足の最終判定]
-  G -->|修正| E
-  G -->|承認| H[完了報告・CG結果を保存]
+  A[AI-DLC: Inception and required designs] --> B[Detect CG entry]
+  B --> C[Freeze inputs and park AI-DLC]
+  C --> D[TAKT: planning and technical review]
+  D --> E[Implementation, build, tests, sensors]
+  E --> F[Code review]
+  F -->|Corrections| E
+  F --> G[supervise: final requirement validation]
+  G -->|Corrections| E
+  G -->|Approved| H[Report and save CG results]
 ```
 
-これはClaude Code／Codexのホストプラグインであり、AI-DLC独自Stageのプラグインや本体パッチではない。tmuxも不要。TAKTのワーカーはClaudeまたはCodexを使用する。
+This is a Claude Code / Codex host plugin. It requires neither an AI-DLC custom stage nor a core patch, and does not use tmux. TAKT workers may use Claude or Codex.
 
-## 本家CGとの対応
+## Mapping native CG responsibilities
 
-| 本家CGの役割 | TAKTでの処理 |
+| Native CG responsibility | TAKT implementation |
 |---|---|
-| 入力読込・計画作成 | `plan`: Intent、現在のUnit設計、CG定義、規約と知識を使って実装手順を作る |
-| 計画確認 | `plan-review`: 自動の技術レビュー。修正なら`plan`へ戻る |
-| コード生成・成果物記録 | `implement`: ソース、テスト、変更一覧、要求との対応を生成する |
-| 実装の検査 | 固定スクリプトでビルド、テスト、センサーを実行する |
-| レビューと修正 | `code-review` → `fix` → 再検査・再レビュー |
-| 要件充足の最終判定 | `supervise`: 組み込みsupervisor／superviseを使い、現在のコードをIntent・全要求ID・前段の指摘へ照合する。修正ならfixへ戻る |
-| 完了報告 | `finish`: 実測結果をまとめ、最後にビルドとテストをもう一度確認する |
+| Read inputs and plan | `plan`: derive implementation steps from the Intent, current unit designs, CG definition, conventions, and knowledge |
+| Check the plan | `plan-review`: automatic technical review; return to `plan` for corrections |
+| Generate code and record artifacts | `implement`: create source, tests, the change manifest, and requirement mappings |
+| Validate the implementation | Run fixed build, test, and sensor scripts |
+| Review and correct code | `code-review` → `fix` → repeat checks and review |
+| Final requirement validation | `supervise`: use built-in supervisor/supervise to independently compare current code with the Intent, all requirement IDs, and earlier findings; return to fix when needed |
+| Report completion | `finish`: summarize measured results, then rebuild and retest once more |
 
-人間の計画承認とウォーキングスケルトン後の承認は、自動の技術判定へ置き換える。TAKT内には質問待ちを置かない。判断できない入力矛盾や要件不足は`blocked`で終了する。最大20ステップと実行時間の上限がある。
+Automatic technical decisions replace human plan approval and approval after the walking skeleton. TAKT does not wait for questions. Contradictory or insufficient inputs that cannot be resolved autonomously produce `blocked`. Execution has a 20-step maximum and a time limit.
 
-本家のBuild and Testステージ全体は委譲しない。ただし、CGがビルド・テストできるコードを返すために必要な検証はCG内で実行する。
+CG-only mode does not delegate the entire native Build and Test stage. It does run the checks needed for CG to return buildable, testable code.
 
-## 原文をどう渡すか
+## Original sources passed to TAKT
 
-パスだけを案内する方式ではなく、担当ステップごとに原文の本文をインストラクションへ展開する。
+The integration expands source contents into the instructions for each role:
 
 - `.claude/aidlc-common/stages/construction/code-generation.md`
-- 現在のIntentの`project-description.json`と設定したInception成果物
-- 現在のUnitのfunctional-design、NFR、infrastructure-designのMarkdown
-- org・team・projectのmemory、Construction規約、共有知識
-- developer、architecture-reviewer、qualityの担当者定義と関連知識
-- CG定義が指定するセンサーのMarkdown、存在する成果物テンプレート
-- ビルド・テスト・型検査などの固定スクリプト
+- The current Intent's `project-description.json` and configured Inception artifacts
+- Functional, NFR, and infrastructure design Markdown for the current unit
+- Organization, team, and project memory; Construction conventions; shared knowledge
+- Developer, architecture-reviewer, and quality agent definitions and knowledge
+- Sensor Markdown named by CG and any available artifact templates
+- Fixed build, test, and type-check scripts
 
-`aidlc engine testing-posture render`で解決したTesting Contractも原文とhashを渡す。必要な要求IDは本家traceabilityツールの読み取り専用プローブで解決する。プローブは正規の成果物でも承認でもなく、終了後に削除する。
+The original Testing Contract text and hash come from `aidlc engine testing-posture render`. Required IDs are resolved with a read-only probe of the native traceability tool. The probe is neither an official artifact nor an approval and is deleted afterward.
 
-`input/project/`に読み取り用コピー、`input/context.json`に索引、`control/injection.json`に各ステップへ渡した出典とhashを残す。計画の`appliedRules`には、適用した規則と使い方を記録させ、技術レビューで照合する。注入した事実と、モデルが意味を正しく理解したことは区別する。
+Read-only copies are placed in `input/project/`, the index in `input/context.json`, and per-step provenance/hashes in `control/injection.json`. The plan records specific rules and applications in `appliedRules` for review. Injecting a source does not prove that a model interpreted it correctly.
 
-## センサーと成功条件
+## Sensors and success conditions
 
-| 検査 | 実装 |
+| Check | Implementation |
 |---|---|
-| required-sections | CG計画、Unitテスト手順、完了報告のH2見出しを確認。独自テンプレートがある場合はその見出しを要求 |
-| traceability | 本家が解決した全要求ID、CGの対象ファイル、実際の変更一覧、計画との一致を確認 |
-| linter / type-check | プロジェクトが指定した固定スクリプトを実行。終了コード0とJSONの`pass: true`の両方を要求 |
-| build / test | 固定スクリプトの終了コード0を必須とする。カバレッジなどの目標はテストスクリプトに実装 |
+| required-sections | Check H2 headings in the CG plan, unit-test instructions, and summary; honor custom template headings |
+| traceability | Check all native requirement IDs, target files, actual changes, and agreement with the plan |
+| linter / type-check | Run configured fixed scripts; require both exit code zero and JSON `pass: true` |
+| build / test | Require exit code zero; enforce coverage and similar targets in the test script |
 
-センサーのMarkdownは実行契約として渡す。検査結果はTAKT側のledgerと`cg/sensors.json`へ記録する。ネイティブのセンサーディスパッチャーと監査イベントは再現しない。
+Sensor Markdown is part of the execution contract. Results are recorded in TAKT's ledger and `cg/sensors.json`. The native sensor dispatcher and audit events are not reproduced.
 
-linterとtype-checkには、検査スクリプト、または理由と固定入力の出典を持つ明示的な適用外設定が必要。適用外は`not_applicable`で記録し、成功した検査に見せない。本家の助言的・失敗時継続の挙動より厳しく、必要な検査が失敗すれば完了しない。
+Each linter/type-check sensor requires either a script or an explicit exemption with a reason and a frozen source. Exemptions are recorded as `not_applicable`, not as passed checks. Unlike advisory or continue-on-failure behavior in native guidance, a required failed check prevents completion here.
 
-計画、テスト手順、コード、検査、レビュー、superviseの承認をhashで結び付ける。最新のコードレビュー後に、同じコードに対するsuperviseの承認がなければ完了できない。入力の変更、レビュー後のコード変更、計画外の変更、未実行・失敗したビルドやテストを成功として受け入れない。
+Hashes bind the plan, test instructions, code, checks, reviews, and supervise approval. Completion requires approval after the latest code review for the same code. Changed inputs, post-review source changes, unplanned changes, missing checks, and failed builds/tests cannot be accepted as successful generation.
 
-supervisorはビルド・テストのログを審査しない。要件の成立をコードから独立に判断し、機械ゲートの成功はrunnerが別に保証する。全要求IDとコード上の根拠を`cg/supervision.json`へ保存する。
+The supervisor does not review build/test logs. It independently judges requirements from code, while the runner separately enforces machine gates. All requirement IDs and code evidence are saved in `cg/supervision.json`.
 
-## 出力と状態
+## Outputs and state
 
-`aidlc/takt-handoff/cg-runs/<id>/`に保存する。
+Runs are stored under `aidlc/takt-handoff/code-generation-stage-runs/<id>/`.
 
 - `status.json`: `parked` → `running` → `verified` / `blocked` / `failed`
-- `snapshot/`: 固定した入力
-- `attempts/1/work/`: 生成ソース、テスト、`cg/`成果物、TAKTレポート
-- `attempts/1/control/`: 注入履歴、検査スクリプト、ledger
-- `attempts/1/final-build.json`、`final-test.json`: 最終レビュー後の再検証
+- `snapshot/`: frozen inputs
+- `attempts/1/work/`: generated source, tests, `cg/` artifacts, and TAKT reports
+- `attempts/1/control/`: injection records, checking scripts, and ledger
+- `attempts/1/final-build.json` and `final-test.json`: post-review verification
 
-`verified`はこのTAKT実行のCG検証が成功したという意味。元のAI-DLCはCGでparkしたままで、コードの自動取り込み、ネイティブCGの完了報告、後続工程の自動再開は未実装。人間承認のreceiptや本家の監査行を作らない。
+`verified` means this TAKT CG run passed validation. The original AI-DLC session remains parked at CG. Code import, native CG completion, and automatic resumption are not implemented. No human approval receipts or native audit rows are created.
 
-## 現在の制約
+## Current limits
 
-- AI-DLC 2.8.2・State Version 8・単一監査シャード・通常のCG入口に限定する。
-- 初版は`test-after`のみ。TDDなどのTesting Contractを勝手に変更して実行せず、委譲前に拒否する。
-- 現在の1 Unitを対象とし、ソースは通常ファイルを明示列挙する。globとsymlinkには対応しない。
-- 元のAI-DLCの自律CGとの併用、単独Stage runner、任意のシェルラッパー経由の入口検出には対応しない。
-- ビルド出力は`cg/`、カバレッジは`coverage/`など検証対象から除外する領域へ出す。一般アプリの任意の出力ディレクトリへの対応は未実装。
-- 同じOSユーザーが実行するコードに対する完全なセキュリティ隔離ではない。元の入力のhashとプロバイダーの権限制御を併用する。
-- 中断時のロック自動回収、失敗したCGのCLI再試行は未実装。実行プロセスと状態を確認して復旧する。
-
-導入は[設定手順](getting-started.md)、確認済みの範囲は[CG検証記録](../experiments/code-generation/RESULTS.md)を参照。
+- AI-DLC 2.8.2, State Version 8, one audit shard, and normal CG entry are required.
+- Only `test-after` is supported. Other Testing Contracts, including TDD, are rejected before parking rather than silently reordered.
+- One current unit is supported. Enumerate regular source files; globs and symlinks are unsupported.
+- Do not combine this with native autonomous CG. Single-stage runners and arbitrary shell wrappers are unsupported entry points.
+- Put build output under excluded directories such as `cg/` and coverage under `coverage/`. Arbitrary application output directories are not supported.
+- This is not complete OS isolation from code running as the same user. Input hashes and provider permission controls are used together.
+- Automatic stale-lock recovery, mid-run resumption, and CG retry through the CLI are not implemented.

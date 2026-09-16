@@ -68,7 +68,7 @@ test('TAKT本体が組み込みペルソナを選び、移動したローカルf
 
 test('facetの欠落はpark前に拒否し、park後の変更は実行を失敗させる', async () => {
   const f = await cgFixture();
-  const path = `${f.control}/takt/facets/instructions/code-generation-plan.md`;
+  const path = `${f.control}/takt/facets/instructions/code-generation-plan.ja.md`;
   const content = readFileSync(join(f.project, path), 'utf8');
   const state = readFileSync(f.state, 'utf8');
   unlinkSync(join(f.project, path));
@@ -103,7 +103,7 @@ test('Constructionでも工程用facetを固定し、park後の変更を拒否�
   await capturePhase(f.project, f.event);
   f.approve();
   const run = (await preparePhase(f.project, f.event))!;
-  const path = `${f.control}/takt/facets/instructions/construction-draft.md`;
+  const path = `${f.control}/takt/facets/instructions/construction-draft.ja.md`;
   expect(readJson<any>(join(run.run, 'manifest.json')).files[path]).toBeTruthy();
   writeFileSync(join(f.project, path), '変更された工程指示');
   expect((await executePhase(f.project, run.id)).state).toBe('failed');

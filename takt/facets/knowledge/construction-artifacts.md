@@ -1,6 +1,6 @@
-# Construction工程の入力と成果物
+# Construction stage inputs and artifacts
 
-input/construction-context.jsonには現在の工程、Unit、必須成果物、要求ID、上流成果物、CIの出力対象がある。
-input/construction-outputには技術レビュー対象の実ファイル、input/phase-checks.jsonには全体検証の実測が置かれる。
-Functional Designの対応先はrules.mdに実在するBRx.yである。NFR RequirementsのNFRx.y詳細IDは、NFR Design以降でも対応する本文へ引き継がれる。
-repair_requiredは全体検証の失敗を所有UnitのCGへ一度戻すための結果であり、検証成功ではない。
+input/construction-context.json describes the current stage, unit, required artifacts, requirement IDs, upstream artifacts, and CI output targets.
+input/construction-output contains actual files for technical review. input/phase-checks.json contains measured phase-wide results.
+Functional Design targets are BRx.y IDs that exist in rules.md. Detailed NFRx.y IDs from NFR Requirements are carried into the corresponding text in NFR Design and later stages.
+repair_required requests one return to the owning unit's CG after a phase-wide check fails. It is not a successful verification result.

@@ -1,11 +1,11 @@
-# Unit（合成CGテスト入力）
+# Unit: synthetic CG test input
 
-## ユニット一覧
+## Unit list
 
-| Unit ID | Directory | 名前 |
+| Unit ID | Directory | Name |
 |---|---|---|
 | U1 | answer-value-update | AnswerValueUpdate |
 
 ## U1
 
-kind: library。src/value.tsの定数変更とsrc/value.test.tsの5件のテストを担当する。他Unitや外部システムへの依存はない。
+kind: library. Owns the constant change in src/value.ts and five tests in src/value.test.ts. There are no dependencies on other units or external systems.

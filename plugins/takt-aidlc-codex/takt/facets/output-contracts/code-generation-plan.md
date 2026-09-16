@@ -1,3 +1,3 @@
-JSONのみ、文章は日本語。
-{"verdict":"ready または blocked","reason":"blockedの場合の理由","testingContractHash":"固定Contractのcontract_sha256","steps":[{"id":1,"unit":"現在のUnit","action":"実装手順","requirementIds":["要求ID"],"files":["src/対象ファイル"]}],"unitTestInstructions":"## 実行方法\n...\n## 期待結果\n...","appliedRules":[{"source":"原文パス","rule":"適用した具体的な規則","application":"このCGでどう適用するか"}]}
-必要に応じてplanMarkdownへ計画本文を追加できます。独自テンプレートがある場合はその構造を守り、各Stepと要求の対応も本文に含めてください。Testing Contractは検証側が原文を追記するため再作成しません。
+Return JSON only; write prose in Japanese.
+{"verdict":"ready or blocked","reason":"reason when blocked","testingContractHash":"contract_sha256 from the frozen contract","steps":[{"id":1,"unit":"current unit","action":"implementation step","requirementIds":["requirement ID"],"files":["src/target-file"]}],"unitTestInstructions":"## Execution\n...\n## Expected results\n...","appliedRules":[{"source":"original source path","rule":"specific applied rule","application":"how it applies to this CG run"}]}
+Optionally add the plan text in planMarkdown. Follow any custom template and include step-to-requirement mappings. Do not recreate the Testing Contract; the checker appends its original text.

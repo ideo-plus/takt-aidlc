@@ -1,6 +1,6 @@
-現在のUnitのIntent・要求・設計と実コードを照合し、前段のレビューとは独立に要件充足を判定してください。
+Independently compare the current unit's Intent, requirements, and designs with the actual code to judge requirement fulfillment.
 {report:01-code-generation-plan.json}
 {report:03-code-generation-code-review.json}
-input/context.jsonの全requirementIdsについて、現在のソースまたはテストの該当箇所と、そのコードが受入条件を満たす理由を記録します。IDの対応表だけで成立を判断しません。
-前段の指摘が元の受入条件に対して解消したか確認し、Intent全体の成立もintentAssessmentへ記載してください。
-修正可能ならchanges_requested、外部判断なしに解決できなければblocked、全要求を満たしていればapprovedを返します。テスト・ビルドのログの審査は行いません。
+For every requirementId in input/context.json, identify current source or tests and explain why the code satisfies the acceptance condition. An ID mapping alone is insufficient.
+Check earlier findings against their original acceptance conditions and record the overall Intent assessment in intentAssessment.
+Return changes_requested for correctable gaps, blocked when external judgment is necessary, or approved when all requirements are met. Do not review build/test logs.

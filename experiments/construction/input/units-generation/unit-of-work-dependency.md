@@ -1,22 +1,22 @@
-# ユニット依存関係（Unit Dependency DAG）
+# Unit Dependency DAG
 
 ## Sources
 
 - `aidlc/spaces/default/intents/260915-answer-value-update/inception/units-generation/unit-of-work.md`
 
-## 依存グラフ
+## Dependency graph
 
-ユニットは`U1 (answer-value-update)`の1つのみであり、依存関係を構成する相手ユニットが存在しないため、依存グラフは空である。
+There is only `U1 (answer-value-update)`, so there are no other units to depend on and no dependency edges.
 
-## 統合ポイント
+## Integration points
 
-該当なし（他ユニットとの統合は発生しない）。
+Not applicable: there is no integration with another unit.
 
-## 並行開発の機会
+## Parallel development opportunities
 
-該当なし（単一ユニットのため並行開発の余地はない）。
+Not applicable to a single unit.
 
-## 機械可読エッジブロック
+## Machine-readable edge block
 
 ```yaml
 units:

@@ -1,51 +1,53 @@
-# CG単体・HOTLの検証記録
+# CG-only HOTL verification record
 
-## 結論
+[日本語](RESULTS.ja.md)
 
-Codex CLIに`gpt-5.6-luna`と推論強度`max`を渡して、TAKTのCG Workflowを起動できた。整合した5テスト入力の試行は、計画レビュー後の修正中に30分の上限で終了した。**実モデルのCG完走は未確認。**モデルなしの自動テストではビルド・型検査失敗からの修正を含む成功経路を確認している。
+## Conclusion
 
-この記録は、以前のConstruction全体のClaude成功とは別の検証である。現在の対象はCG単体で、人間承認待ちは含まない。
+TAKT's CG workflow started with Codex CLI using `gpt-5.6-luna` and reasoning effort `max`. The consistent five-test trial reached plan review and timed out during corrections after 30 minutes. **A complete live-model CG run remains unverified.** Model-free tests covered successful execution including corrections after build and type-check failures.
 
-## 固定した条件
+This record is separate from the earlier successful Claude experiment for the full prototype Construction workflow. This trial covers CG only without human approval waits.
 
-- AI-DLC 2.8.2、TAKT 0.65.0、Bun 1.3.13、Codex CLI 0.154.0。
-- Codexモデルは`gpt-5.6-luna`、`model_reasoning_effort`は`max`。TAKT設定と実際のCodexセッションの両方で確認した。
-- 本家CG、担当者・共有知識、センサーの原文をインストラクションへ展開する。
-- 値41→42、名前付きexport維持、5テスト、行カバレッジ80%以上、ビルドと型検査。
-- Intentと設計、CG開始イベントは[合成入力](input/PROVENANCE.md)。人間の承認記録を作らず、元の承認済み実験文書も変更していない。
+## Fixed conditions
 
-## 自動テスト
+- AI-DLC 2.8.2, TAKT 0.65.0, Bun 1.3.13, Codex CLI 0.154.0.
+- `gpt-5.6-luna` with `model_reasoning_effort: max`, confirmed in both TAKT configuration and actual Codex sessions.
+- Native CG, agent/shared knowledge, and sensor source contents expanded into instructions.
+- Change 41 to 42; preserve the named export; five tests; at least 80% line coverage; build and type checking.
+- Intent, designs, and the CG-start event were [synthetic inputs](input/PROVENANCE.md). No human approval records were created, and earlier approved experiment documents were not altered.
 
-30テスト・162 assertionsが成功。型検査、プラグインビルド、Claude Codeのプラグイン検証も成功した。
+## Automated tests
 
-CGの試験では、実際のTAKTエンジンに固定応答を渡し、以下を確認する。モデルの判断品質を評価するテストではない。
+At the time of this record, 30 tests and 162 assertions passed, as did type checking, plugin build, and Claude Code plugin validation.
 
-- Intent・本家CG・センサー原文がTAKTの実際のプロンプトに含まれる。
-- 計画→計画レビュー→実装→コードレビュー→完了報告が自動遷移する。
-- ビルド失敗と、終了コード0でも`pass: false`を返す型検査不合格を修正してから成功する。
-- 元のソースを維持し、固定入力の変更やレビュー後のコード変更を拒否する。
-- 入力不足は`blocked`で終了し、人間の承認記録を生成しない。
-- CG以外の応答では起動せず、重複通知でも実行を重ねない。
-- 未対応のTDD契約を`test-after`へ書き換えて実行しない。
+Tests use fixed responses with the real TAKT engine. They do not assess model judgment quality. They verify that:
 
-## 実モデルで分かったこと
+- Actual TAKT prompts include the Intent, native CG, and sensor source text.
+- Planning, plan review, implementation, code review, and reporting advance automatically.
+- Build failures and type-check results with exit zero but `pass: false` are corrected before success.
+- Original source is preserved; changes to frozen inputs or reviewed code are rejected.
+- Missing information produces `blocked` without human approval records.
+- Non-CG responses do not start work, and duplicate events do not create duplicate runs.
+- Unsupported TDD contracts are not silently converted to `test-after`.
 
-| 試行 | 結果 |
+## Findings from live models
+
+| Trial | Result |
 |---|---|
-| Claude | 実際の利用上限を検出し失敗。CG完了には到達していない |
-| Luna Max・旧3テスト入力 | 本家standardの5〜8テストとの矛盾を検出し`blocked`。入力矛盾を押し通さなかった |
-| Luna Max・整合した5テスト入力 | 計画の形式エラーを自動修正。技術レビューの2指摘を受けて計画へ戻り、修正中に30分でタイムアウト（failed） |
+| Claude | Detected an actual usage limit and failed before CG completion |
+| Luna Max, earlier three-test input | Detected a conflict with the native Standard requirement of five to eight tests and returned `blocked` |
+| Luna Max, consistent five-test input | Corrected plan-format errors; received two technical-review findings; returned to planning and timed out at 30 minutes during corrections (`failed`) |
 
-レビューは、計画本文の要求対応と、Brownfield規約の影響調査・予定差分・既存テストの基準の不足を指摘した。これは本家の原文を使ったレビューの実例であり、CGの完了実績ではない。
+Review identified insufficient requirement mapping in the plan text and missing Brownfield impact analysis, intended differences, and baseline-test procedures. This demonstrates review using native source material, not completed CG execution.
 
-出典の形式チェックが`input/project/`付きの原文パスと`input/context.json`を認めない不具合を修正した。後者が残っていた実行でも、Luna Maxは原文ファイルを直接引用する計画に修正して計画ゲートを通過した。実行中の固定ゲートを差し替える操作はしていない。終了後には、計画JSONからMarkdownへ変換するときに要求IDが落ちる問題を修正し、Brownfieldの事前確認を計画に含める指示も追加した。修正後は自動テストで確認しており、Luna Maxでは再実行していない。
+A provenance-format check incorrectly rejected paths prefixed with `input/project/` and `input/context.json`; it was fixed. In a run where the latter issue remained, Luna Max revised the plan to cite original files directly and passed the planning gate. Frozen gates were not replaced during execution. Afterward, the conversion from plan JSON to Markdown was fixed to retain requirement IDs, and planning instructions explicitly added Brownfield prechecks. Automated tests covered these changes; Luna Max was not rerun afterward.
 
-[機械可読の実験結果](results/2026-09-15.json)にはモデル設定、到達工程、終了状態、検証済み範囲を記録する。詳細ログとコードの生成先は各自の`.experiments/`内に保存し、認証情報を含み得る生ログは配布しない。
+The [machine-readable results](results/2026-09-15.json) record model settings, reached stages, terminal states, and verified scope. Detailed logs and generated code remain in each local `.experiments/` directory. Raw logs that may contain credentials are not distributed.
 
-## 未確認・未実装
+## Unverified or unimplemented
 
-- CG入口を実際のClaude Code上のAI-DLCから通して、その後のLuna MaxのCG全工程まで完走する試験。
-- 実アプリ・複数Unit・TDD・大規模な依存導入への適用。
-- 元のAI-DLCへの結果取り込み、ネイティブCG完了、後続工程の自動再開。
+- A complete journey from a real Claude Code AI-DLC CG entry through all Luna Max CG steps.
+- Application to real applications, multiple units, TDD, or substantial dependency installation.
+- Import into AI-DLC, native CG completion, and automatic resumption of later stages.
 
-再現コマンドは[導入手順](../../docs/getting-started.md)を参照。
+See the [setup guide](../../docs/getting-started.md) for reproduction guidance.

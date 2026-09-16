@@ -1,9 +1,9 @@
-# コンポーネント（合成入力）
+# Components: synthetic input
 
-## 構成
+## Structure
 
-ValueModuleはsrc/value.tsにある単一のES module。名前付き数値定数answerだけを公開する。変更前は41、変更後は42。データモデル、状態遷移、永続化、外部I/Oは持たない。
+ValueModule is a single ES module in src/value.ts. It exposes only the named numeric constant answer, changing from 41 to 42. It has no data model, state transitions, persistence, or external I/O.
 
-## 依存と境界
+## Dependencies and boundaries
 
-同じUnitのsrc/value.test.tsがモジュールを検証する。別Unitや外部サービスとの依存はない。契約はanswerというexport名と数値型の維持。内部実装の定数値を42へ変えることが今回の意図である。
+The same unit's src/value.test.ts validates the module. There are no other-unit or external-service dependencies. The contract preserves the answer export name and numeric type. The intended change is to set the internal constant value to 42.

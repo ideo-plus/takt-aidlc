@@ -4,8 +4,8 @@ import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cleanEnvironment, command, digest, fileInside, readJson, requireSuccess, snapshot, unchanged, writeJson, type Snapshot } from '../handoff/io';
 import { collectCgContext, type CgContext } from './context';
-import adaptation from '../../takt/facets/policies/code-generation-hotl.md' with { type: 'text' };
-import supervisionContract from '../../takt/facets/policies/aidlc-supervision.md' with { type: 'text' };
+import adaptation from '../../takt/facets/policies/code-generation-hotl.ja.md' with { type: 'text' };
+import supervisionContract from '../../takt/facets/policies/aidlc-supervision.ja.md' with { type: 'text' };
 import { workflowFiles, materializeWorkflow } from '../takt/workflow';
 import { prepareProvider } from '../handoff/provider';
 import { sources } from './code-generation-gate';
@@ -87,7 +87,7 @@ export async function prepareCg(project: string, directive: any) {
   if (!start) throw new Error('現在のCG開始記録がありません');
   const entryHash = digest(start.block.trim());
   const id = digest(JSON.stringify({ entryHash, unit: cg.unit, files, configHash })).slice(0, 24);
-  const base = join(cgStorage(project), 'cg-runs'); mkdirSync(base, { recursive: true });
+  const base = join(cgStorage(project), 'code-generation-stage-runs'); mkdirSync(base, { recursive: true });
   const run = join(base, id); mkdirSync(run, { recursive: true });
   const lock = join(base, 'prepare.lock'); const fd = openSync(lock, 'wx'); closeSync(fd);
   try {
@@ -119,7 +119,7 @@ export async function prepareCg(project: string, directive: any) {
 
 export async function executeCg(project: string, id: string) {
   if (!/^[a-f0-9]{24}$/.test(id)) throw new Error('不正なCG run IDです');
-  const run = join(cgStorage(project), 'cg-runs', id);
+  const run = join(cgStorage(project), 'code-generation-stage-runs', id);
   const m = readJson<CgManifest>(join(run, 'manifest.json'));
   const statusPath = join(run, 'status.json');
   const status = readJson<CgStatus>(statusPath);

@@ -1,10 +1,10 @@
-# AI-DLC CGのHOTL実行契約
-TAKTが担うのはCode Generationステージだけです。設計工程やBuild and Testステージ全体を実行しません。
-以下の資料は固定したAI-DLCの原文です。Intent、既存設計、開発規約、CGの実装手順と成果物要件に従ってください。
-ただし人間の対話承認・ウォーキングスケルトン後の承認・AI-DLCエンジンの状態更新は実行しません。ユーザーの方針により、CG内の計画確認とレビューはTAKTの自動判定へ置き換えます。
-本家のTask委譲はTAKTの担当ステップへの委譲として扱います。ネイティブのPlan Approval receiptやdispatch markerは生成・要求せず、ここでは固定入力のhash、計画のTesting Contract hash、TAKTの計画レビュー結果を生成の前提にします。
-センサー定義も開発契約です。定義された検査を実行し、その実測結果を残してください。ただしAI-DLCのネイティブ監査記録を捏造せず、人間のApprove Planを得たとも記録しないでください。元のaidlc/・.claude/・.codex/・.agents/を更新せず、CGの報告はTAKTのレポートとcg/に保存します。
-原文の<record>などは元プロジェクトでの出典です。添付した固定コピーと作業領域のソースを参照し、元の記録領域へ書き込まないでください。
-規約はstrict-additiveとして読み、空のテンプレート例を確定事項と見なさないでください。人が明示した既存の要求・例外を優先し、不明な判断は捏造せずblockedとして終了してください。
-Testing Contractの方法・順序・品質目標を弱めてはいけません。ビルドとテストの両方が成功するまでCG完了を返してはいけません。
-AI-DLC原文にあるBash等の権限は元の担当者の説明です。現在許可されたツールだけを使ってください。
+# AI-DLC CG HOTL execution contract
+TAKT owns only the Code Generation stage, not design stages or the entire Build and Test stage.
+The following materials are frozen AI-DLC original sources. Follow the Intent, existing designs, development conventions, CG procedures, and artifact requirements.
+Do not perform interactive human approval, approval after the walking skeleton, or AI-DLC engine state updates. Under the user's policy, TAKT automatically evaluates CG plans and reviews.
+Treat native Task delegation as delegation to the corresponding TAKT step. Do not create or require native Plan Approval receipts or dispatch markers. Generation prerequisites here are frozen-input hashes, the plan's Testing Contract hash, and TAKT plan-review results.
+Sensor definitions are part of the development contract. Run the defined checks and record measurements, without fabricating native AI-DLC audit records or claiming human Approve Plan. Do not update original aidlc/, .claude/, .codex/, or .agents/; save CG output to TAKT reports and cg/.
+Original placeholders such as <record> identify provenance in the source project. Use attached frozen copies and workspace source; do not write to original record locations.
+Read conventions as strict-additive. Do not treat empty template examples as settled facts. Prioritize explicit human requirements and exceptions; stop as blocked instead of inventing undecided matters.
+Do not weaken the Testing Contract's method, ordering, or targets. Do not report CG complete until both build and tests succeed.
+Permissions such as Bash in original AI-DLC sources describe the original role. Use only tools permitted for the current role.

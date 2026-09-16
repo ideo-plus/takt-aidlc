@@ -2,20 +2,20 @@ name: aidlc-construction-phase
 initial_step: draft
 max_steps: 8
 policies:
-  aidlc-verification: ../facets/policies/aidlc-verification.md
-  construction-hotl: ../facets/policies/construction-hotl.md
-  aidlc-supervision: ../facets/policies/aidlc-supervision.md
+  aidlc-verification: ../facets/policies/aidlc-verification.ja.md
+  construction-hotl: ../facets/policies/construction-hotl.ja.md
+  aidlc-supervision: ../facets/policies/aidlc-supervision.ja.md
 knowledge:
-  aidlc-frozen-inputs: ../facets/knowledge/aidlc-frozen-inputs.md
-  construction-artifacts: ../facets/knowledge/construction-artifacts.md
+  aidlc-frozen-inputs: ../facets/knowledge/aidlc-frozen-inputs.ja.md
+  construction-artifacts: ../facets/knowledge/construction-artifacts.ja.md
 instructions:
-  construction-draft: ../facets/instructions/construction-draft.md
-  construction-review: ../facets/instructions/construction-review.md
-  construction-supervise: ../facets/instructions/construction-supervise.md
+  construction-draft: ../facets/instructions/construction-draft.ja.md
+  construction-review: ../facets/instructions/construction-review.ja.md
+  construction-supervise: ../facets/instructions/construction-supervise.ja.md
 report_formats:
-  construction-draft: ../facets/output-contracts/construction-draft.md
-  construction-review: ../facets/output-contracts/construction-review.md
-  construction-supervise: ../facets/output-contracts/construction-supervise.md
+  construction-draft: ../facets/output-contracts/construction-draft.ja.md
+  construction-review: ../facets/output-contracts/construction-review.ja.md
+  construction-supervise: ../facets/output-contracts/construction-supervise.ja.md
 steps:
   - name: draft
     session_key: construction-author

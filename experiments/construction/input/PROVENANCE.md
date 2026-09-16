@@ -1,3 +1,3 @@
-# 実験入力の出典
+# Provenance of experiment inputs
 
-2026年9月15日の実AI-DLCセッションでユーザーが承認したInception文書のコピー。ConstructionのWorkflow試験で使用する。監査・承認記録は含めず、試験用の承認境界は合成データとして明示する。
+Copies of Inception documents approved by the user in a real AI-DLC session on September 15, 2026. They were used for the prototype Construction workflow trial. Audit/approval records are excluded; the test approval boundary is explicitly synthetic.

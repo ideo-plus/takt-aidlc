@@ -1,7 +1,6 @@
-# 固定入力と出典
+# Frozen inputs and provenance
 
-AI-DLC文書の元パスは出典を表し、この作業領域で直接編集する場所ではない。
-CGとConstruction各工程の原文コピーはinput/project配下にあり、入力の索引とSHA256で対応が分かる。
-旧Construction試作はinput/manifest.jsonのartifactsに示したコピーを使う。
-Testing Contractには合意済みのテスト方法・順序・品質目標とhashが含まれる。
-TAKTのレポート、検証ログ、生成ソースは別々の成果物であり、レポートに書いた成功と実測の成功は同義ではない。
+Original paths in AI-DLC documents identify provenance; they are not writable locations in this workspace.
+CG and Construction stage copies are under input/project, with an input index and SHA256 mappings.
+The Testing Contract contains the agreed test method, ordering, quality targets, and hash.
+TAKT reports, verification logs, and generated source are separate artifacts. Success stated in a report is not the same as measured success.

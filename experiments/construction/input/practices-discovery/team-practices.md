@@ -1,41 +1,36 @@
-# チーム実践（Practices Discovery - Step 5: Lead Integration 確定版）
+# Team practices: Practices Discovery Step 5 final integration
 
-> このドキュメントはPractices DiscoveryステージのStep 5（Lead Integration）で
-> 確定した最終版です。Step 2のリードドラフト、Step 3の支援エージェント
-> （品質・開発者・DevSecOps）による独立レビュー、Step 4の人間へのインタビュー
-> 回答をすべて統合しています。人間がインタビューで明言した決定を最優先とし、
-> 推測は決定の根拠としてのみ残しています。
+> This is the final document from Practices Discovery Step 5 (Lead Integration). It combines the Step 2 lead draft, independent quality/developer/DevSecOps reviews in Step 3, and human interview answers in Step 4. Explicit human decisions take priority; inferences remain only as supporting rationale.
 >
-> 詳細な調査根拠は `evidence.md` を、強い制約（Mandated/Forbidden）は
-> `discovered-rules.md` を参照してください。
+> See `evidence.md` for investigation evidence and `discovered-rules.md` for Mandated/Forbidden constraints.
 
 ## Way of Working
 
-- **決定**: ブランチ戦略・マージ方式の基本方針として、`aidlc/spaces/default/memory/org.md` のデフォルトである**トランクベース開発**（短命なfeatureブランチを`main`へsquash-merge）を踏襲する。ただし、プルリクエストレビューを経由するか直接`main`へコミットするかは**今回は判断せず、将来のインテントで決める**（人間の確定回答）。
-- 今回の実験（本インテント）では**自動マージは行わない**（人間の確定回答）。
-- **根拠**: このリポジトリは単一コミット（`db4bc05 test: seed native workflow experiment`）のみで、ブランチは`main`1本のみ、リモート未設定（`git remote -v`は空）。ブランチ戦略・レビュー体制の実運用証拠は存在しないため、上記の決定は今回の変更（定数1行の値変更）に限定した判断であり、恒久的なチーム規約として確立したものではない。
+- **Decision:** follow the trunk-based default in `aidlc/spaces/default/memory/org.md`: short-lived feature branches squash-merged to `main`. Whether to use pull request review or direct main commits is deliberately undecided for this Intent and left to a future Intent, as explicitly answered by the human.
+- **No automatic merge** in this experiment, per the confirmed human answer.
+- **Evidence:** the repository has one commit (`db4bc05 test: seed native workflow experiment`), only `main`, and no remote (`git remote -v` is empty). There is no operational evidence for a branch/review process. The decision is limited to this one-line constant change, not a permanent team convention.
 
 ## Walking Skeleton
 
-- **決定**: 行わない。今回の変更規模（定数1行の値変更）ではウォーキングスケルトンは不要と判断する（人間の確定回答）。
-- **根拠**: スコープは`classic`。実装対象が`src/value.ts`の1行のみであり、全体を通しで確認する疎通確認の必要性がない。
+- **Decision:** none. The human confirmed that a separate skeleton is unnecessary for this one-line change.
+- **Evidence:** scope is `classic`, and implementation is limited to one line in `src/value.ts`; no separate end-to-end connectivity check is needed.
 
 ## Testing Posture
 
-- **Methodology**: test-after
-- **Ordering**: `src/value.ts`の値を41から42へ変更した後、`bun test`を実行して(1) `answer === 42`であること（ハッピーパス）、(2) `typeof answer === "number"`（型健全性）、(3) `answer`が旧値41に戻っていないこと（回帰防止）の3点を検証する、という順序で進める。
-- 最小限のテスト環境を用意し、`bun test`による自動検証を行う（人間の確定回答）。**`package.json`は作成せず**、外部依存を増やさずBunを直接実行する（人間の確定回答）。Bunは`package.json`が無くてもテストファイルを直接実行できるため（例: `bun test src/value.test.ts` あるいは`bun test`でカレントディレクトリ配下のテストファイルを自動検出）、この構成でも`bun test`は問題なく機能する。
-- テストファイルは`src/value.test.ts`に配置する（開発者エージェントレビューの提案を採用。テスト対象ファイルの隣に置くBunの慣行に従う）。
-- **カバレッジ**: `bun test --coverage`で確認する（人間の確定回答）。対象コードが`src/value.ts`の1行（1エクスポート）のみのため、上記3テストのいずれかが実行されれば行カバレッジは自明に100%へ達し、org.mdの`classic`スコープ既定である80%行カバレッジの床は形式的に満たされる。
-- **CI（既定との差分）**: 今回はローカルでの`bun test`実行結果をもってCI実行ゲートに代替し、CIワークフロー（GitHub Actions等）は新設しない（人間の確定回答）。org.mdの`classic`スコープ既定は「マージ前にCI実行を追加フロアとして要求する」としており、この決定はその既定と**異なる**。今回のインテント限定の明示的な合意として、この差分を正直に記録する。将来インテントでCI/CDを整備する際は、この既定へ復帰することを検討する。
-- **エラーハンドリング**: 開発者エージェントレビューの指摘のとおり、今回の変更対象（定数エクスポート1行）には統合境界（API呼び出し・DB操作・ファイルI/O・外部サービス）が存在しないため、エラーハンドリング方針は適用対象外とする。
+- **Methodology:** test-after.
+- **Ordering:** change 41 to 42 in `src/value.ts`, then run `bun test` to check (1) `answer === 42`, (2) `typeof answer === "number"`, and (3) no return to the old value 41.
+- Provide a minimal test environment and automate with `bun test`, as confirmed by the human. **Do not create package.json** or add external dependencies; invoke Bun directly. Bun can run `bun test src/value.test.ts` or discover tests through `bun test` without a package manifest.
+- Put tests in `src/value.test.ts`, adopting the developer review suggestion to follow Bun's adjacent-test convention.
+- **Coverage:** use `bun test --coverage`, as confirmed by the human. The one-line/one-export target reaches 100% line coverage when any of these tests executes it, formally satisfying org.md's 80% floor for `classic` scope.
+- **CI deviation:** use local `bun test` evidence in place of a CI execution gate and do not add a CI workflow, per the human's confirmed answer. This differs from org.md's `classic` default requiring CI before merge. Record it as an explicit agreement limited to this Intent. A future CI/CD Intent should reconsider returning to the default.
+- **Error handling:** not applicable. As the developer review noted, the one-line constant export has no integration boundary: no API calls, database operations, file I/O, or external services.
 
 ## Deployment
 
-- 本インテントはデプロイ対象外。インテント記述で「外部サービス・UI・DB・デプロイは不要」と明記されているため、org.mdの「マージ時にステージングへデプロイ」というデフォルトルールは本インテントのスコープ外として扱う。
+Deployment is outside this Intent. The description explicitly excludes external services, UI, databases, and deployment, so org.md's default staging deployment on merge does not apply.
 
 ## Code Style
 
-- **決定**: Lint・フォーマッタの導入は今回のインテントでは行わず、将来のインテントに委ねる（人間の確定回答）。
-- 既存コード（`src/value.ts`）のフォーマット（インデントなし、行末セミコロンあり）をそのまま踏襲し、新たなスタイルルールは持ち込まない。
-- （参考）本インテントの変更は入力を受け取らず外部通信・永続化・認証認可を一切行わない静的な定数エクスポートであり、攻撃対象領域はゼロ（DevSecOpsレビューで確認）。この点からもLint/SAST等の基盤新規導入は本インテントでは必須ではない。
+- **Decision:** do not add linting or formatting tools for this Intent; defer them to future work, as confirmed by the human.
+- Preserve the existing `src/value.ts` format: no indentation and a trailing semicolon. Introduce no new style rules.
+- The historical DevSecOps review assessed this static constant export as having no attack surface: no inputs, communication, persistence, authentication, or authorization. It therefore did not require adding lint/SAST infrastructure for this Intent.
