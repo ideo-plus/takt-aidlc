@@ -8,7 +8,7 @@ export const codexOutput = join(root, 'dist/codex/plugins/takt-aidlc');
 
 export async function buildPlugin() {
   const taktFiles = readdirSync(join(root, 'takt'), { recursive: true, withFileTypes: true }).filter(entry => entry.isFile()).map(entry => join(entry.parentPath, entry.name).slice(root.length + 1)).sort();
-  const sourceFiles = ['src/takt/language.ts', 'src/takt/workflow.ts', 'src/construction-phase/supervision.ts', 'src/construction-phase/construction-supervision-gate.ts', ...taktFiles, 'src/handoff/cli.ts', 'src/handoff/approval.ts', 'src/hosts/events.ts', 'src/handoff/io.ts', 'src/handoff/provider.ts', 'src/construction-phase/context.ts', 'src/construction-phase/runner.ts', 'src/construction-phase/stage.ts', 'src/construction-phase/construction-gate.ts', 'src/construction-phase/native-trace.ts', 'src/construction-phase/code-generation-gate.ts', 'src/hosts/harness.ts', 'src/hosts/codex.ts', 'src/code-generation/context.ts', 'src/code-generation/runner.ts', 'src/code-generation/code-generation-gate.ts'];
+  const sourceFiles = ['src/setup/cli.ts', 'src/setup/project.ts', 'src/takt/language.ts', 'src/takt/workflow.ts', 'src/construction-phase/supervision.ts', 'src/construction-phase/construction-supervision-gate.ts', ...taktFiles, 'src/handoff/cli.ts', 'src/handoff/approval.ts', 'src/hosts/events.ts', 'src/handoff/io.ts', 'src/handoff/provider.ts', 'src/construction-phase/context.ts', 'src/construction-phase/runner.ts', 'src/construction-phase/stage.ts', 'src/construction-phase/construction-gate.ts', 'src/construction-phase/native-trace.ts', 'src/construction-phase/code-generation-gate.ts', 'src/hosts/harness.ts', 'src/hosts/codex.ts', 'src/code-generation/context.ts', 'src/code-generation/runner.ts', 'src/code-generation/code-generation-gate.ts'];
   for (const [target, source, manifestDir] of [
     [output, 'plugins/claude', '.claude-plugin'],
     [codexOutput, 'plugins/codex', '.codex-plugin'],
@@ -20,6 +20,8 @@ export async function buildPlugin() {
     const built = await Bun.build({ entrypoints: [join(root, 'src/handoff/cli.ts')], target: 'bun', format: 'esm', outdir: join(target, 'scripts'), naming: 'handoff.js' });
     if (!built.success) throw new Error(built.logs.map(String).join('\n'));
     if (!existsSync(join(target, 'scripts/handoff.js'))) throw new Error('連携CLIが生成されませんでした');
+    const setup = await Bun.build({ entrypoints: [join(root, 'src/setup/cli.ts')], target: 'bun', format: 'esm', outdir: join(target, 'scripts'), naming: 'setup.js' });
+    if (!setup.success) throw new Error(setup.logs.map(String).join('\n'));
     cpSync(join(root, 'src/construction-phase/construction-supervision-gate.ts'), join(target, 'scripts/construction-supervision-gate.ts'));
     cpSync(join(root, 'src/construction-phase/native-trace.ts'), join(target, 'scripts/native-trace.ts'));
     cpSync(join(root, 'src/construction-phase/construction-gate.ts'), join(target, 'scripts/construction-gate.ts'));
@@ -31,6 +33,7 @@ export async function buildPlugin() {
       aidlcVersion: '2.8.2', bunVersion: Bun.version,
       sources: Object.fromEntries(inputs.map(path => [path, digest(readFileSync(join(root, path)))])),
       bundleSha256: digest(readFileSync(join(target, 'scripts/handoff.js'))),
+      setupSha256: digest(readFileSync(join(target, 'scripts/setup.js'))),
     });
   }
   writeJson(join(root, 'dist/codex/.agents/plugins/marketplace.json'), {

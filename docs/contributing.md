@@ -33,6 +33,7 @@ Users install prebuilt plugins through the GitHub marketplace. Include regenerat
 | Path | Purpose |
 |---|---|
 | `takt/{ja,en}/workflows/` / `takt/{ja,en}/facets/` | Workflow YAML, local facets, and the rationale for built-in personas |
+| `src/setup/` | Project initialization CLI; bundled as `scripts/setup.js` |
 | `plugins/claude/` / `plugins/codex/` | Editable manifests and hooks |
 | `dist/claude/` / `dist/codex/` | Local build output, excluded from Git |
 | `plugins/takt-aidlc-claude/` / `plugins/takt-aidlc-codex/` | Committed distribution output; do not edit directly |

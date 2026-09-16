@@ -85,7 +85,7 @@ CG単体の入口確認と、固定入力から動く`executeCgWorkspace`を分�
 
 `language`は`ja`（省略時の既定）または`en`です。英語で実行する場合は`language: "en"`とし、`workflow`およびConstructionの`constructionWorkflow`も`takt/en/workflows/`を指定してください。組み込みファセットと実行時の追加ポリシーも同じ言語になります。AI-DLCの原文は翻訳せず固定入力として渡します。
 
-[TAKT定義の取得手順](getting-started.ja.md#download-the-takt-bundle)に従い、`takt/`を両言語のファセットごと`aidlc/takt-handoff/`へ配置する。リポジトリのclone・ビルドは不要。
+[プロジェクト初期設定](getting-started.ja.md#initialize-the-project)を`--scope construction`で実行し、設定と日英のTAKT定義を配置する。アプリケーション固有の設定を整えてから委譲を有効にする。
 CGには`takt/ja/workflows/aidlc-code-generation-stage.yaml`、工程の作成・レビューには`takt/ja/workflows/aidlc-construction-phase.yaml`を使う。ローカルの指示・ポリシー・知識・出力契約も固定入力になる。ペルソナはTAKT 0.65.0の組み込みを使う。
 
 ホストは`hostHarness`、委譲範囲は`delegationScope`、ワーカーは`provider`で選ぶ。委譲範囲の指定は必須で、`code-generation`または`construction`を指定する。

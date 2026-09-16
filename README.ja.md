@@ -35,7 +35,7 @@ codex plugin add takt-aidlc@takt-aidlc
 ## 対象プロジェクトで使う
 
 1. 対象プロジェクトで`aidlc config --harness claude --yes`または`aidlc config --harness codex --yes`を実行します。
-2. [設定手順](docs/getting-started.ja.md#configure-an-ai-dlc-project)に従い、`aidlc/takt-handoff/config.json`に入力・ソース・ビルド／テストのスクリプト・センサーを指定します。利用する`hostHarness`と、下表の委譲範囲を選びます。ファセットを含む`takt/`一式はインストール済みプラグインからコピーするか、認証付きHTTPSで取得でき、cloneは不要です。
+2. 同梱の[初期設定コマンド](docs/getting-started.ja.md#initialize-the-project)を実行し、TAKT定義と`aidlc/takt-handoff/config.json`を配置します。言語と下表の委譲範囲を選び、[設定手順](docs/getting-started.ja.md#configure-an-ai-dlc-project)に従って入力・ソース・ビルド／テスト・センサーを設定した後、`enabled`を`true`にします。初期設定は既存ファイルを保持します。
 3. `claude`を起動して`/aidlc`、または`codex`を起動して`$aidlc`で進めます。選択した入口までは通常のAI-DLCで質問と承認を進め、その入口からTAKTが自動で実行します。
 
 | 委譲範囲 | TAKTの開始タイミング | 設定手順 |

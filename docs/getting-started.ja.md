@@ -81,48 +81,44 @@ claude
 
 CG単体は`delegationScope: "code-generation"`、Inception承認後のConstruction全体は`delegationScope: "construction"`を指定します。両ホストで使えます。全体・Unit別の検証設定は[Constructionガイド](construction-phase.ja.md)を参照してください。以降の設定例はCG単体です。
 
-<a id="download-the-takt-bundle"></a>
+<a id="initialize-the-project"></a>
 
-## TAKT定義を取得する
+## プロジェクトを初期設定する
 
-インストール済みプラグインの`takt/`を、ディレクトリごと対象プロジェクトへコピーします。インストールしたバージョンと揃えられ、Gitのcheckoutやビルドも不要です。
+インストール済みプラグインの初期設定コマンドで、同梱TAKT定義の配置と設定のひな形作成をまとめて行います。clone・ビルド・手動コピーは不要です。インストール時やセッション開始時に自動実行される処理ではなく、対象プロジェクトで一度実行します。
 
-Claude Codeは`claude plugin list --json`の`takt-aidlc@takt-aidlc`にある`installPath`、Codexは`codex plugin add takt-aidlc@takt-aidlc --json`の`installedPath`で配置先を確認できます。Codexのコマンドはプラグインのインストールも行います。表示されたパスを使ってコピーしてください。
-
-```sh
-mkdir -p aidlc/takt-handoff
-cp -R /path/from-the-cli/takt aidlc/takt-handoff/
-```
-
-認証済みGitHub CLI（`gh auth login`）から、HTTPSでアーカイブを取得する方法もあります。リポジトリが非公開でも使えますが、アクセス権のあるアカウントが必要です。認証なしの`curl`では取得できません。
+Claude Codeは`claude plugin list --json`の`takt-aidlc@takt-aidlc`にある`installPath`、Codexは`codex plugin add takt-aidlc@takt-aidlc --json`の`installedPath`でインストール先を確認できます。Codexのコマンドはプラグインのインストールも行います。下の`/path/from-the-cli`を、そのパスに置き換えてください。
 
 ```sh
-(
-  set -e
-  mkdir -p aidlc/takt-handoff
-  takt_download_dir=$(mktemp -d)
-  trap 'rm -rf "$takt_download_dir"' EXIT
-  gh api repos/ideo-plus/takt-aidlc/tarball/main > "$takt_download_dir/source.tar.gz"
-  takt_archive_root=$(tar -tzf "$takt_download_dir/source.tar.gz" | sed -n '1s@/.*@@p')
-  tar -xzf "$takt_download_dir/source.tar.gz" --strip-components=1 -C aidlc/takt-handoff "$takt_archive_root/takt"
-)
+# 日本語・CG単体
+bun "/path/from-the-cli/scripts/setup.js" --project .
+
+# 英語・Construction全体・Codexワーカー
+bun "/path/from-the-cli/scripts/setup.js" --project . --language en --scope construction --provider codex
 ```
 
-`delegationScope`は必須で、`code-generation`または`construction`を指定します。
+通常はどちらか一方を実行します。`--project`の既定値は現在のディレクトリ、`--language`は`ja`、`--scope`は`code-generation`です。`hostHarness`は実行元プラグインから判定します。`--provider`は省略時にホストと同じ値になり、`claude`または`codex`を指定すれば別のワーカーを選べます。
 
-どちらの方法でも`aidlc/takt-handoff/takt/`が作られます。`takt/ja/workflows/`と`takt/en/workflows/`のYAMLは`../facets/`を参照するため、YAMLだけをコピーすると不足します。マーケットプレイスをタグやコミットに固定している場合は、インストール済みのコピーを使うか、APIコマンドの`main`を同じrefへ置き換えてください。
+配置先は次のとおりです。
 
-[TAKT定義のガイド](../takt/README.ja.md)に、指示・ポリシー・ペルソナ・知識・出力契約を説明しています。ペルソナはTAKT 0.65.0の組み込みを使い、AI-DLC固有の指示・規則・知識・出力形式はローカルのMarkdownで補います。参照するMarkdownもYAMLと一緒に固定・検査するため、委譲前に準備してください。
+- `aidlc/takt-handoff/takt/`：日英両方のWorkflowとファセット一式。
+- `aidlc/takt-handoff/config.json`：ホスト・言語・委譲範囲・Workflowパスを設定したひな形。Constructionの場合は全体ビルド・テストのスクリプトパスも含みます。
+
+新規設定は`enabled: false`です。プロジェクト固有の入力・ソース・ビルド／テスト・センサーを整えた後で`true`にします。検証スクリプト自体は生成しません。次節のCG設定例、または[Construction設定](construction-phase.ja.md#設定)に従って仕上げてください。
+
+**既存の設定ファイルとTAKTディレクトリは、それぞれ丸ごと保持します。** 再実行時にオプションを変えても既存設定は切り替わらず、既存ディレクトリのファイル補充・更新も行いません。出力の`created`／`preserved`で処理結果を確認し、設定とWorkflowの言語を揃えてください。初期設定は更新コマンドではありません。
+
+[TAKT定義のガイド](../takt/README.ja.md)に、指示・ポリシー・ペルソナ・知識・出力契約を説明しています。参照するMarkdownもYAMLと一緒に固定・検査するため、委譲前に準備してください。
 
 <a id="configure-cg-delegation-before-cg-entry"></a>
 
 ## CG入口までに委譲を設定する
 
-CGへ入る前に、上のTAKT定義を取得します。
+CGへ入る前に、上の初期設定を実行します。
 
 対象アプリケーションのビルド、Unitテスト、適用するセンサーを実行するBunスクリプトを用意します。スクリプトは固定コピーから実行し、生成コードの作業領域をカレントディレクトリにします。
 
-`aidlc/takt-handoff/config.json`を作成してください。以下は雛形です。`<intent-dir>`を置き換え、必要なソース・設定ファイルをすべて列挙し、指定するスクリプトを実装します。
+初期設定で作成された`aidlc/takt-handoff/config.json`を編集してください。以下は設定例です。`<intent-dir>`を置き換え、必要なソース・設定ファイルをすべて列挙し、指定するスクリプトを実装します。
 
 ```json
 {

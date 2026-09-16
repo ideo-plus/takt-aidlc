@@ -31,7 +31,7 @@ Start a new host session after installation. For Codex, [enable and trust hooks]
 ## Use in your project
 
 1. In your target project, run `aidlc config --harness claude --yes` or `aidlc config --harness codex --yes`.
-2. Follow the [setup guide](docs/getting-started.md#configure-an-ai-dlc-project) to configure inputs, source files, build/test scripts, and sensors in `aidlc/takt-handoff/config.json`. Select the matching `hostHarness` and a delegation scope below. The guide copies the installed `takt/` bundle or downloads it over authenticated HTTPS; no checkout is needed.
+2. Run the bundled [setup command](docs/getting-started.md#initialize-the-project) to place TAKT definitions and create `aidlc/takt-handoff/config.json`. Choose the language and a delegation scope below, then follow the [setup guide](docs/getting-started.md#configure-an-ai-dlc-project) to configure inputs, sources, build/test scripts, and sensors before setting `enabled` to `true`. Setup preserves existing files.
 3. Start `claude` and use `/aidlc`, or start `codex` and use `$aidlc`. Complete the usual AI-DLC questions and approvals up to the selected boundary. TAKT starts automatically there.
 
 | Delegation scope | When TAKT starts | Setup |

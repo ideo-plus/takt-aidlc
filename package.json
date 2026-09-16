@@ -4,7 +4,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "test": "bun scripts/test-runtime.ts && bun test tests/plugin.test.ts tests/environment.test.ts tests/code-generation.test.ts tests/codex-plugin.test.ts tests/construction-phase.test.ts tests/construction-live-input.test.ts tests/command-output.test.ts tests/marketplace.test.ts tests/takt-workflow.test.ts tests/approval.test.ts tests/supervision.test.ts",
+    "test": "bun scripts/test-runtime.ts && bun test tests/plugin.test.ts tests/environment.test.ts tests/code-generation.test.ts tests/codex-plugin.test.ts tests/construction-phase.test.ts tests/construction-live-input.test.ts tests/command-output.test.ts tests/marketplace.test.ts tests/takt-workflow.test.ts tests/approval.test.ts tests/supervision.test.ts tests/setup.test.ts",
     "prepare:test-runtime": "bun scripts/test-runtime.ts",
     "build:plugin": "bun scripts/build-plugin.ts",
     "typecheck": "tsc --noEmit",

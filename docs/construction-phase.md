@@ -79,7 +79,7 @@ Adapt these paths and scripts to the target project:
 
 `language` accepts `ja` (the default) or `en`. For English execution, set `language: "en"` and point `workflow` and, in Construction mode, `constructionWorkflow` to `takt/en/workflows/`. Built-in facets and injected runtime policies use the same language. Original AI-DLC sources remain frozen inputs without translation.
 
-Follow [TAKT bundle download](getting-started.md#download-the-takt-bundle) and place the complete `takt/`, including both language trees, under `aidlc/takt-handoff/`. No clone or build of this repository is required.
+Run [project setup](getting-started.md#initialize-the-project) with `--scope construction` to create the configuration and place both languages’ TAKT definitions. Complete the application-specific settings before enabling delegation.
 Use `takt/ja/workflows/aidlc-code-generation-stage.yaml` for CG and `takt/ja/workflows/aidlc-construction-phase.yaml` for artifact creation and review. Local instructions, policies, knowledge, and output contracts are frozen inputs. Personas use TAKT 0.65.0 built-ins.
 
 `hostHarness` selects the host, `delegationScope` the scope, and `provider` the worker. Scope is required and must be `code-generation` or `construction`.
