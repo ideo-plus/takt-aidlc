@@ -98,7 +98,7 @@ Alternatively, download the repository archive over HTTPS with an authenticated 
 
 Both methods create `aidlc/takt-handoff/takt/`. YAML files in `takt/workflows/` reference `../facets/`; copying a YAML file alone is insufficient. If the marketplace is pinned to a tag or commit, use the installed copy or replace `main` with the same ref in the API command.
 
-The [TAKT directory guide](../takt/README.md) explains instructions, policies, personas, knowledge, and output contracts. Prepare or customize these files before delegation; referenced Markdown files are frozen and checked alongside the YAML. Existing self-contained YAML configurations continue to work.
+The [TAKT directory guide](../takt/README.md) explains instructions, policies, personas, knowledge, and output contracts. Personas use the built-ins shipped with TAKT 0.65.0; local Markdown files contain the AI-DLC-specific instructions, policies, knowledge, and report formats. Prepare or customize these files before delegation; referenced Markdown files are frozen and checked alongside the YAML. Existing self-contained YAML configurations continue to work.
 
 ## Configure CG delegation before CG entry
 

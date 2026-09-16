@@ -12,7 +12,7 @@ takt/
 └── facets/
     ├── instructions/               各ステップで実行する手順
     ├── policies/                   HOTL・変更範囲・品質判定の共通ルール
-    ├── personas/                   担当者の専門性と責任範囲
+    ├── personas/                   組み込みペルソナの選択理由
     ├── knowledge/                  固定入力・成果物・検証記録の読み方
     └── output-contracts/           レポートの形式と必須項目
 ```
@@ -20,11 +20,12 @@ takt/
 ## YAMLとMarkdownの役割
 
 YAMLにはステップ、遷移、編集権限、品質ゲート、利用するファセットの参照を置く。
-指示本文とレポート形式はMarkdownへ置き、共有する役割・ルール・知識は複数のステップから参照する。
-TAKTのYAMLでは`personas`、`policies`、`knowledge`、`instructions`、`report_formats`にファイルを宣言し、ステップから別名で参照する。
+指示本文とレポート形式はMarkdownへ置き、役割にはTAKTの組み込みペルソナを使い、共有ルールと知識は複数のステップから参照する。
+TAKTのYAMLでは`policies`、`knowledge`、`instructions`、`report_formats`にローカルファイルを宣言し、ステップから別名で参照する。
+ペルソナは`planner`、`coder`、`architecture-reviewer`、`coding-reviewer`、`exec-assistant`を名前指定する。[選択理由と本家の参照先](facets/personas/README.md)を参照。
 `report_formats`が指すファイルの配置先は`facets/output-contracts/`。
 
-配布用YAMLは`takt/workflows/`に置き、`../facets/`を参照する。連携CLIは実行前にYAMLと参照先を専用の制御領域へ配置し、TAKT 0.65.0で許可されるペルソナ参照パスへ変換する。元のディレクトリ構成は変更しない。
+配布用YAMLは`takt/workflows/`に置き、`../facets/`を参照する。連携CLIは実行前にYAMLとローカルファセットを専用の制御領域へ配置し、相対参照を更新する。組み込みペルソナはTAKTが解決する。元のディレクトリ構成は変更しない。
 
 ## AI-DLCの原文との関係
 
@@ -39,7 +40,7 @@ HOTLへの置換規則は`policies/cg-hotl.md`と`policies/stage-hotl.md`にあ�
 YAMLだけをコピーすると参照先が足りないため、委譲前の検証で停止する。
 
 連携CLIは宣言されたMarkdownも入力一覧とhashに含める。実行用YAMLを移動するときは固定コピーからファセットを配置し、参照を更新する。
-実行後もこれらのファイルのhashを検査する。カスタマイズする場合も、ファイル参照はYAMLの上記5宣言に集約する。Markdownの`include`／`extends`は使わず、単一ファイルへ展開する。
+実行後もこれらのファイルのhashを検査する。カスタマイズする場合も、ファイル参照はYAMLのトップレベル宣言に集約する。Markdownの`include`／`extends`は使わず、単一ファイルへ展開する。
 
 ## 編集と検証
 
@@ -52,6 +53,6 @@ bun run build:marketplace
 bun run check:marketplace
 ```
 
-`check:takt`は実行時と同じ配置を一時領域に作り、TAKT 0.65.0の`workflow doctor`で検証する。モデルは呼ばず、利用者のTAKT設定も変更しない。元のYAMLを直接`workflow doctor`へ渡すと、このバージョンのペルソナ参照制約に触れるため、このコマンドを使う。
+`check:takt`はローカルファセットの依存を確認し、元のYAMLをTAKT 0.65.0の`workflow doctor`で検証する。モデルは呼ばず、利用者のTAKT設定も変更しない。組み込みペルソナを使うため、ペルソナのパス制約を避けるための配置変更は不要。
 
 テストではファセットの参照解決、移動後の読み込み、入力変更の検出、両委譲モードの実行を確認する。

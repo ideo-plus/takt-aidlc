@@ -1,9 +1,6 @@
 name: aidlc-construction-stage-hotl
 initial_step: draft
 max_steps: 8
-personas:
-  stage-author: ../facets/personas/stage-author.md
-  reviewer: ../facets/personas/reviewer.md
 policies:
   evidence: ../facets/policies/evidence.md
   stage-hotl: ../facets/policies/stage-hotl.md
@@ -20,7 +17,7 @@ steps:
   - name: draft
     session_key: stage-author
     edit: false
-    persona: stage-author
+    persona: planner
     policy:
       - evidence
       - stage-hotl
@@ -46,7 +43,7 @@ steps:
   - name: review
     session_key: stage-reviewer
     edit: false
-    persona: reviewer
+    persona: architecture-reviewer
     policy:
       - evidence
       - stage-hotl

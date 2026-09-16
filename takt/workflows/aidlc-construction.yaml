@@ -2,11 +2,6 @@ name: aidlc-construction
 description: 承認済みInceptionから詳細設計・独立レビュー・実装・修正・機械検証を行う。
 max_steps: 18
 initial_step: design
-personas:
-  designer: ../facets/personas/designer.md
-  reviewer: ../facets/personas/reviewer.md
-  developer: ../facets/personas/developer.md
-  reporter: ../facets/personas/reporter.md
 policies:
   evidence: ../facets/policies/evidence.md
   legacy-execution: ../facets/policies/legacy-execution.md
@@ -28,7 +23,7 @@ steps:
   - name: design
     session_key: construction-designer
     edit: false
-    persona: designer
+    persona: planner
     policy:
       - evidence
       - legacy-execution
@@ -52,7 +47,7 @@ steps:
   - name: design-review
     session_key: construction-design-reviewer
     edit: false
-    persona: reviewer
+    persona: architecture-reviewer
     policy:
       - evidence
       - legacy-execution
@@ -79,7 +74,7 @@ steps:
     session_key: construction-implementer
     edit: true
     required_permission_mode: edit
-    persona: developer
+    persona: coder
     policy:
       - evidence
       - legacy-execution
@@ -99,7 +94,7 @@ steps:
   - name: code-review
     session_key: construction-code-reviewer
     edit: false
-    persona: reviewer
+    persona: coding-reviewer
     policy:
       - evidence
       - legacy-execution
@@ -126,7 +121,7 @@ steps:
     session_key: construction-implementer
     edit: true
     required_permission_mode: edit
-    persona: developer
+    persona: coder
     policy:
       - evidence
       - legacy-execution
@@ -146,7 +141,7 @@ steps:
   - name: finish
     session_key: construction-reporter
     edit: false
-    persona: reporter
+    persona: exec-assistant
     policy:
       - evidence
       - legacy-execution

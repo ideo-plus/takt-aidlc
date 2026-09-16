@@ -2,11 +2,6 @@ name: aidlc-code-generation-hotl
 description: 本家AI-DLCのCG定義・Intent・知識・センサーを入力とする、対話承認なしのCG単体。
 initial_step: plan
 max_steps: 20
-personas:
-  planner: ../facets/personas/planner.md
-  reviewer: ../facets/personas/reviewer.md
-  developer: ../facets/personas/developer.md
-  reporter: ../facets/personas/reporter.md
 policies:
   evidence: ../facets/policies/evidence.md
   cg-hotl: ../facets/policies/cg-hotl.md
@@ -53,7 +48,7 @@ steps:
   - name: plan-review
     session_key: cg-plan-reviewer
     edit: false
-    persona: reviewer
+    persona: architecture-reviewer
     policy:
       - evidence
       - cg-hotl
@@ -80,7 +75,7 @@ steps:
     session_key: cg-developer
     edit: true
     required_permission_mode: edit
-    persona: developer
+    persona: coder
     policy:
       - evidence
       - cg-hotl
@@ -100,7 +95,7 @@ steps:
   - name: code-review
     session_key: cg-code-reviewer
     edit: false
-    persona: reviewer
+    persona: coding-reviewer
     policy:
       - evidence
       - cg-hotl
@@ -127,7 +122,7 @@ steps:
     session_key: cg-developer
     edit: true
     required_permission_mode: edit
-    persona: developer
+    persona: coder
     policy:
       - evidence
       - cg-hotl
@@ -147,7 +142,7 @@ steps:
   - name: finish
     session_key: cg-reporter
     edit: false
-    persona: reporter
+    persona: exec-assistant
     policy:
       - evidence
       - cg-hotl

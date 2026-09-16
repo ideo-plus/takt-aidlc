@@ -30,7 +30,7 @@ bun run build:marketplace
 
 | パス | 用途 |
 |---|---|
-| `takt/workflows/` / `takt/facets/` | TAKTのYAMLと5種類のファセットの編集元 |
+| `takt/workflows/` / `takt/facets/` | TAKTのYAML、ローカルファセット、組み込みペルソナの選択理由 |
 | `plugins/claude/` / `plugins/codex/takt-aidlc/` | マニフェストとフックの編集元 |
 | `dist/claude/` / `dist/codex/` | ローカル開発用の生成先（Git管理外） |
 | `plugins/takt-aidlc-claude/` / `plugins/takt-aidlc/` | 公開する生成物（Git管理対象、直接編集しない） |
