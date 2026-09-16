@@ -20,10 +20,10 @@ const implement = (value: number, tests = testSource) => [
 
 export async function constructionFixture(options: { live?: boolean; repairs?: boolean; needsInput?: boolean; implementationNeedsInput?: boolean; designWritesFile?: boolean; maxSteps?: number } = {}) {
   const f = await fixture({ provider: options.live ? 'claude' : 'mock' });
-  cpSync(join(repo, 'takt/facets'), join(f.project, '.takt-aidlc/facets'), { recursive: true });
-  let workflow = readFileSync(join(repo, 'takt/aidlc-construction.yaml'), 'utf8');
+  cpSync(join(repo, 'takt'), join(f.project, '.takt-aidlc/takt'), { recursive: true });
+  let workflow = readFileSync(join(repo, 'takt/workflows/aidlc-construction.yaml'), 'utf8');
   if (options.maxSteps) workflow = workflow.replace('max_steps: 18', `max_steps: ${options.maxSteps}`);
-  put(join(f.project, '.takt-aidlc/workflow.yaml'), workflow);
+  put(join(f.project, '.takt-aidlc/takt/workflows/aidlc-construction.yaml'), workflow);
   put(join(f.project, '.takt-aidlc/verify.ts'), readFileSync(join(repo, 'experiments/native-session/verify-app.ts'), 'utf8'));
   // 元の実機で承認されたInceptionを、今回の実行境界の入力として複製する。
   const original = join(repo, 'experiments/construction/input');
@@ -31,7 +31,7 @@ export async function constructionFixture(options: { live?: boolean; repairs?: b
   const record = f.artifact.split('/inception/')[0];
   for (const name of names) put(join(f.project, record, 'inception', name), readFileSync(join(original, name), 'utf8'));
   const c = readJson<any>(join(f.project, '.takt-aidlc/config.json'));
-  Object.assign(c, { construction: true, disableBedrock: true, timeoutMs: 600000, artifacts: names.map(name => `${record}/inception/${name}`) });
+  Object.assign(c, { workflow: '.takt-aidlc/takt/workflows/aidlc-construction.yaml', construction: true, disableBedrock: true, timeoutMs: 600000, artifacts: names.map(name => `${record}/inception/${name}`) });
   writeJson(join(f.project, '.takt-aidlc/config.json'), c);
   let scenario: unknown[];
   if (options.needsInput) {

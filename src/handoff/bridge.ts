@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { cleanEnvironment, command, digest, fileInside, quote, readJson, requireSuccess, snapshot, unchanged, withoutBedrock, writeJson, type Snapshot } from './io';
 import { harnessDirectory, type HostHarness } from '../hosts/harness';
 import { prepareConstruction } from '../construction/runtime';
-import { workflowFiles } from '../takt/workflow';
+import { workflowFiles, materializeWorkflow } from '../takt/workflow';
 
 export type Config = {
   enabled: true; artifacts: string[]; sources: string[]; workflow: string;
@@ -232,11 +232,15 @@ export async function executeHandoff(project: string, id: string, retry = false)
       writeFileSync(join(workspace, '.gitignore'), '\n.claude/\n.takt/\n', { flag: 'a' });
       for (const args of [['init', '-q'], ['config', 'core.hooksPath', '/dev/null'], ['add', '.'], ['-c', 'user.name=TAKT handoff', '-c', 'user.email=handoff@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', 'chore: seed handoff workspace']]) requireSuccess(await command(['git', ...args], workspace, env, 10000));
       const gate = c.construction ? prepareConstruction(attempt, workspace, fileInside(join(run, 'snapshot'), c.verifyScript), input) : undefined;
-      const controlFiles = gate ? snapshot(dirname(gate), ['construction-gate.ts', 'context.json']) : undefined;
-      const result = await command(['takt', '--pipeline', '--skip-git', '--provider', c.provider, '--workflow', fileInside(join(run, 'snapshot'), c.workflow), '--task', 'input/manifest.jsonとInception成果物を読み、指定Workflowを実行してください。入力は変更せず、成果物を作業領域に作ってください。'], workspace, env, c.timeoutMs);
+      const control = join(attempt, 'control'); mkdirSync(control, { recursive: true });
+      const { workflow, controlFiles: facetFiles } = materializeWorkflow(join(run, 'snapshot'), c.workflow, control);
+      writeFileSync(join(control, 'workflow.yaml'), Bun.YAML.stringify(workflow));
+      const controlFiles = snapshot(control, ['workflow.yaml', ...facetFiles, ...(gate ? ['construction-gate.ts', 'context.json'] : [])]);
+      const result = await command(['takt', '--pipeline', '--skip-git', '--provider', c.provider, '--workflow', join(control, 'workflow.yaml'), '--task', 'input/manifest.jsonとInception成果物を読み、指定Workflowを実行してください。入力は変更せず、成果物を作業領域に作ってください。'], workspace, env, c.timeoutMs);
       writeJson(join(attempt, 'takt.json'), result);
-      if (gate && controlFiles) {
-        unchanged(dirname(gate), controlFiles); unchanged(workspace, input); unchanged(project, m.files);
+      unchanged(control, controlFiles);
+      if (gate) {
+        unchanged(workspace, input); unchanged(project, m.files);
         if (digest(readFileSync(boundary.statePath)) !== status.parkStateHash) throw new Error('実行中に元のAI-DLC状態が変化しました');
         const evidence = await command([process.execPath, gate, 'result'], workspace, env, 10000);
         writeJson(join(attempt, 'construction.json'), evidence);
@@ -256,8 +260,8 @@ export async function executeHandoff(project: string, id: string, retry = false)
       // 検証コマンドも入力を書き換えていないことを確認する。
       unchanged(workspace, input); unchanged(project, m.files); unchanged(join(run, 'snapshot'), m.files);
       if (digest(readFileSync(boundary.statePath)) !== status.parkStateHash) throw new Error('検証中に元のAI-DLC状態が変化しました');
-      if (gate && controlFiles) {
-        unchanged(dirname(gate), controlFiles);
+      unchanged(control, controlFiles);
+      if (gate) {
         requireSuccess(await command([process.execPath, gate, 'result'], workspace, env, 10000));
       }
       status.state = 'verified'; delete status.pid;

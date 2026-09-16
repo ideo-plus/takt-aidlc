@@ -25,7 +25,7 @@ dist/
       hooks/hooks.json
       scripts/handoff.js
       scripts/cg-gate.ts
-      takt/aidlc-code-generation.yaml
+      takt/workflows/aidlc-code-generation.yaml
 ```
 
 Codexの配布ディレクトリ内に、manifestのnameと一致する`takt-aidlc`フォルダを置く。`hooks/hooks.json`の標準探索を使えば、manifestにhooksフィールドを追加せずに配布できる。マーケットプレイスへの登録は配布手順として別に扱う。

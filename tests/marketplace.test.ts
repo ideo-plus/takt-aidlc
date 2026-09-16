@@ -43,7 +43,7 @@ test('公開するGitツリーだけで両CLIからインストールしフッ�
     const codex = JSON.parse(run(['codex', 'plugin', 'add', 'takt-aidlc@takt-aidlc', '--json']));
     for (const [host, installed] of [['claude', installedClaude.installPath], ['codex', codex.installedPath]]) {
       expect(readFileSync(join(installed, 'LICENSE'), 'utf8')).toContain('MIT License');
-      expect(readFileSync(join(installed, 'takt/aidlc-code-generation.yaml'), 'utf8')).toContain('./facets/instructions/cg-plan.md');
+      expect(readFileSync(join(installed, 'takt/workflows/aidlc-code-generation.yaml'), 'utf8')).toContain('../facets/instructions/cg-plan.md');
       expect(readFileSync(join(installed, 'takt/facets/instructions/cg-plan.md'), 'utf8')).toContain('現在のUnitのCG計画');
       const hooks = JSON.parse(readFileSync(join(installed, 'hooks/hooks.json'), 'utf8')).hooks;
       const hook = spawnSync('/bin/sh', ['-c', hooks.SessionStart[0].hooks[0].command], {

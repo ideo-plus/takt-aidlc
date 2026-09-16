@@ -3,28 +3,28 @@ description: 本家AI-DLCのCG定義・Intent・知識・センサーを入力�
 initial_step: plan
 max_steps: 20
 personas:
-  planner: ./facets/personas/planner.md
-  reviewer: ./facets/personas/reviewer.md
-  developer: ./facets/personas/developer.md
-  reporter: ./facets/personas/reporter.md
+  planner: ../facets/personas/planner.md
+  reviewer: ../facets/personas/reviewer.md
+  developer: ../facets/personas/developer.md
+  reporter: ../facets/personas/reporter.md
 policies:
-  evidence: ./facets/policies/evidence.md
-  cg-hotl: ./facets/policies/cg-hotl.md
+  evidence: ../facets/policies/evidence.md
+  cg-hotl: ../facets/policies/cg-hotl.md
 knowledge:
-  inputs: ./facets/knowledge/frozen-inputs.md
-  cg-artifacts: ./facets/knowledge/cg-artifacts.md
+  inputs: ../facets/knowledge/frozen-inputs.md
+  cg-artifacts: ../facets/knowledge/cg-artifacts.md
 instructions:
-  cg-plan: ./facets/instructions/cg-plan.md
-  cg-plan-review: ./facets/instructions/cg-plan-review.md
-  cg-implement: ./facets/instructions/cg-implement.md
-  cg-code-review: ./facets/instructions/cg-code-review.md
-  cg-fix: ./facets/instructions/cg-fix.md
-  cg-finish: ./facets/instructions/cg-finish.md
+  cg-plan: ../facets/instructions/cg-plan.md
+  cg-plan-review: ../facets/instructions/cg-plan-review.md
+  cg-implement: ../facets/instructions/cg-implement.md
+  cg-code-review: ../facets/instructions/cg-code-review.md
+  cg-fix: ../facets/instructions/cg-fix.md
+  cg-finish: ../facets/instructions/cg-finish.md
 report_formats:
-  cg-plan: ./facets/output-contracts/cg-plan.md
-  cg-plan-review: ./facets/output-contracts/cg-plan-review.md
-  cg-code-review: ./facets/output-contracts/cg-code-review.md
-  cg-finish: ./facets/output-contracts/cg-finish.md
+  cg-plan: ../facets/output-contracts/cg-plan.md
+  cg-plan-review: ../facets/output-contracts/cg-plan-review.md
+  cg-code-review: ../facets/output-contracts/cg-code-review.md
+  cg-finish: ../facets/output-contracts/cg-finish.md
 steps:
   - name: plan
     session_key: cg-planner

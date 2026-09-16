@@ -61,10 +61,6 @@ export async function phaseFixture(
     );
   }
   put(
-    join(f.project, control, "stage-workflow.yaml"),
-    readFileSync(join(repo, "takt/aidlc-construction-stage.yaml"), "utf8"),
-  );
-  put(
     join(f.project, control, "phase-build.ts"),
     `const r=await Bun.build({entrypoints:${JSON.stringify(options.twoUnits ? ["src/value.ts", "src/consumer.ts"] : ["src/value.ts"])},target:'bun',outdir:'cg/build'});if(!r.success)process.exit(1);console.log('phase build passed');\n`,
   );
@@ -76,7 +72,7 @@ export async function phaseFixture(
     ...f.config,
     provider: "mock",
     delegationScope: "construction",
-    stageWorkflow: `${control}/stage-workflow.yaml`,
+    stageWorkflow: `${control}/takt/workflows/aidlc-construction-stage.yaml`,
     phaseBuildScript: `${control}/phase-build.ts`,
     phaseVerifyScript: `${control}/phase-test.ts`,
     pipelinePaths: [".github/workflows/ci.yml"],

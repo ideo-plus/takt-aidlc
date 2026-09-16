@@ -574,11 +574,15 @@ exec ${quote(claude)} --setting-sources project --strict-mcp-config --mcp-config
       for (const args of [["init", "-q"], ["config", "core.hooksPath", "/dev/null"], ["add", "."], ["-c", "user.name=TAKT handoff", "-c", "user.email=handoff@example.invalid", "-c", "commit.gpgsign=false", "commit", "-qm", "chore: seed handoff workspace"]])
         requireSuccess(await command(["git", ...args], workspace, env, 1e4));
       const gate = c.construction ? prepareConstruction(attempt, workspace, fileInside(join5(run, "snapshot"), c.verifyScript), input) : undefined;
-      const controlFiles = gate ? snapshot(dirname4(gate), ["construction-gate.ts", "context.json"]) : undefined;
-      const result = await command(["takt", "--pipeline", "--skip-git", "--provider", c.provider, "--workflow", fileInside(join5(run, "snapshot"), c.workflow), "--task", "input/manifest.json\u3068Inception\u6210\u679C\u7269\u3092\u8AAD\u307F\u3001\u6307\u5B9AWorkflow\u3092\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u5165\u529B\u306F\u5909\u66F4\u305B\u305A\u3001\u6210\u679C\u7269\u3092\u4F5C\u696D\u9818\u57DF\u306B\u4F5C\u3063\u3066\u304F\u3060\u3055\u3044\u3002"], workspace, env, c.timeoutMs);
+      const control = join5(attempt, "control");
+      mkdirSync5(control, { recursive: true });
+      const { workflow, controlFiles: facetFiles } = materializeWorkflow(join5(run, "snapshot"), c.workflow, control);
+      writeFileSync3(join5(control, "workflow.yaml"), Bun.YAML.stringify(workflow));
+      const controlFiles = snapshot(control, ["workflow.yaml", ...facetFiles, ...gate ? ["construction-gate.ts", "context.json"] : []]);
+      const result = await command(["takt", "--pipeline", "--skip-git", "--provider", c.provider, "--workflow", join5(control, "workflow.yaml"), "--task", "input/manifest.json\u3068Inception\u6210\u679C\u7269\u3092\u8AAD\u307F\u3001\u6307\u5B9AWorkflow\u3092\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u5165\u529B\u306F\u5909\u66F4\u305B\u305A\u3001\u6210\u679C\u7269\u3092\u4F5C\u696D\u9818\u57DF\u306B\u4F5C\u3063\u3066\u304F\u3060\u3055\u3044\u3002"], workspace, env, c.timeoutMs);
       writeJson(join5(attempt, "takt.json"), result);
-      if (gate && controlFiles) {
-        unchanged(dirname4(gate), controlFiles);
+      unchanged(control, controlFiles);
+      if (gate) {
         unchanged(workspace, input);
         unchanged(project, m.files);
         if (digest(readFileSync5(boundary.statePath)) !== status.parkStateHash)
@@ -611,8 +615,8 @@ exec ${quote(claude)} --setting-sources project --strict-mcp-config --mcp-config
       unchanged(join5(run, "snapshot"), m.files);
       if (digest(readFileSync5(boundary.statePath)) !== status.parkStateHash)
         throw new Error("\u691C\u8A3C\u4E2D\u306B\u5143\u306EAI-DLC\u72B6\u614B\u304C\u5909\u5316\u3057\u307E\u3057\u305F");
-      if (gate && controlFiles) {
-        unchanged(dirname4(gate), controlFiles);
+      unchanged(control, controlFiles);
+      if (gate) {
         requireSuccess(await command([process.execPath, gate, "result"], workspace, env, 1e4));
       }
       status.state = "verified";

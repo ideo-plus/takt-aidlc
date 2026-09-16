@@ -1,13 +1,10 @@
 {
-  "version": "0.2.2",
+  "version": "0.2.3",
   "aidlcVersion": "2.8.2",
   "bunVersion": "1.3.13",
   "sources": {
     "src/takt/workflow.ts": "1aa13b7ea7401156b0833da9d436b3ed11ca27214cc85953fa04b113c8dca4f5",
-    "takt/README.md": "d43c75676f99a2c9472747a83ee10f585a994174c8758c1545a269970380eef9",
-    "takt/aidlc-code-generation.yaml": "12d2f73a609f16609c832c020b006d4cd051b84cc4a8ed471bf315c0013d58fa",
-    "takt/aidlc-construction-stage.yaml": "b84365fe1a2423260497bb9ee901de85994e0fd0e31554563373f019247d2e80",
-    "takt/aidlc-construction.yaml": "75ca3721fa945a09ec336ced9ca3246bad0a846b736df22dfea30f80c3bae925",
+    "takt/README.md": "b6cc1d49f8d48795f71ad05ad78569aff6c8fcf66195832374f2fb52431f851d",
     "takt/facets/instructions/cg-code-review.md": "6e5be980186f171fcbe82446eb66509674099d45ec1068894e2da16927a1e25f",
     "takt/facets/instructions/cg-finish.md": "737afc186cdc0b6cf7aef23e184d12ce51864673c60654812161ad9e6ef36683",
     "takt/facets/instructions/cg-fix.md": "682a3449f5fc354801c69474a1833f90426f6f775c9f5ae378512fe4e1e2ba97",
@@ -45,8 +42,11 @@
     "takt/facets/policies/evidence.md": "d09607e990817216d6ba9bfe42fa4698c1f65fa782c423a39bca8312da51f66e",
     "takt/facets/policies/legacy-execution.md": "41b69511f0324271cd235960def7881b4c18ad0dabcc9a01ff1e1f1da1be512c",
     "takt/facets/policies/stage-hotl.md": "f2d8d918cd12f618c387a71df8e4387705cc53fff70235cc98e1f5a7d1758d88",
+    "takt/workflows/aidlc-code-generation.yaml": "3ff4172c6304344a18d083c785f35ed013cd12ddc746c7ce827d3db0739ef578",
+    "takt/workflows/aidlc-construction-stage.yaml": "58b204ea60d4e139ec0bd3966fac05b9e2c6810260230982d9c715d54ef84bcf",
+    "takt/workflows/aidlc-construction.yaml": "a3c51f42936e20bebbb54fb2fc03fadb6f8ebc79120352b7dc3a24dbc03a5741",
     "src/handoff/cli.ts": "a045a681783dc006e9da4c873d2ae20826baeb75e361656ddb8041d509cf0c38",
-    "src/handoff/bridge.ts": "448ff0df18345b126c0e12c4e43bb5388844ab3ea873321b9d15126c1dcda7cb",
+    "src/handoff/bridge.ts": "bb9d4dc66bb4a6a6ce68fb1f978490354cc94db9fdd56659c5c55bc999045791",
     "src/handoff/io.ts": "422660068420141dc0bc789bb35e0fb334e3347c69b4eb4544fe55fb3f74904b",
     "src/handoff/provider.ts": "e2567beff884fba1d52db08ca8e36c78266adf3dbe20bdad27b48f8e30d49873",
     "src/construction-phase/context.ts": "a667edafbfa81b11f6d54c995622b0599120b893fd48cbe83f0014599645fbb4",
@@ -63,8 +63,8 @@
     "src/code-generation/runner.ts": "b9ead0b63c6578964847a15918745fac961d71d89dfaee621381abe73123e444",
     "src/code-generation/cg-gate.ts": "6ddc345648e8f3a6b0cdacf08a07a416e2091d40f68a2d85f9cd2cd07bbed8e9",
     "LICENSE": "20d237c297511eb6a0711b4928d02750bb94a21b594dfcc8ea9ca8435c8487ef",
-    "plugins/claude/.claude-plugin/plugin.json": "ff1c6036dbfb690fe09cdb3fbd8965be94b31fa3966a9359dd6a77e33cd388d3",
+    "plugins/claude/.claude-plugin/plugin.json": "85a492c799c38926ef21bd2a248d7666d5047d2a8f2f560845bcc458619cf485",
     "plugins/claude/hooks/hooks.json": "05440a2c9d2cf4185805d13283ed39dd7f996a3e6b7aa4f3924bc5646964b570"
   },
-  "bundleSha256": "494310b0c0475d1759643ddf7e787a064a118094580e07085fe11b4a32162fde"
+  "bundleSha256": "ab34590c606e60a51a3445bfe67464ea524cd746b01b546ae258702a7505724e"
 }

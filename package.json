@@ -14,7 +14,8 @@
     "experiment:codex-host": "bun scripts/test-runtime.ts && bun experiments/codex-host/run.ts",
     "experiment:construction-phase": "bun scripts/test-runtime.ts && bun experiments/construction-phase/run.ts",
     "build:marketplace": "bun scripts/build-marketplace.ts",
-    "check:marketplace": "bun scripts/build-marketplace.ts --check"
+    "check:marketplace": "bun scripts/build-marketplace.ts --check",
+    "check:takt": "bun scripts/check-takt.ts"
   },
   "devDependencies": {
     "bun-types": "1.3.13",

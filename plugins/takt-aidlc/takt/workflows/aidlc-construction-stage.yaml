@@ -2,20 +2,20 @@ name: aidlc-construction-stage-hotl
 initial_step: draft
 max_steps: 8
 personas:
-  stage-author: ./facets/personas/stage-author.md
-  reviewer: ./facets/personas/reviewer.md
+  stage-author: ../facets/personas/stage-author.md
+  reviewer: ../facets/personas/reviewer.md
 policies:
-  evidence: ./facets/policies/evidence.md
-  stage-hotl: ./facets/policies/stage-hotl.md
+  evidence: ../facets/policies/evidence.md
+  stage-hotl: ../facets/policies/stage-hotl.md
 knowledge:
-  inputs: ./facets/knowledge/frozen-inputs.md
-  stage-artifacts: ./facets/knowledge/stage-artifacts.md
+  inputs: ../facets/knowledge/frozen-inputs.md
+  stage-artifacts: ../facets/knowledge/stage-artifacts.md
 instructions:
-  stage-draft: ./facets/instructions/stage-draft.md
-  stage-review: ./facets/instructions/stage-review.md
+  stage-draft: ../facets/instructions/stage-draft.md
+  stage-review: ../facets/instructions/stage-review.md
 report_formats:
-  stage-draft: ./facets/output-contracts/stage-draft.md
-  stage-review: ./facets/output-contracts/stage-review.md
+  stage-draft: ../facets/output-contracts/stage-draft.md
+  stage-review: ../facets/output-contracts/stage-review.md
 steps:
   - name: draft
     session_key: stage-author

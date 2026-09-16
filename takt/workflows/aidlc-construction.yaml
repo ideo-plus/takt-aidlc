@@ -3,27 +3,27 @@ description: 承認済みInceptionから詳細設計・独立レビュー・実�
 max_steps: 18
 initial_step: design
 personas:
-  designer: ./facets/personas/designer.md
-  reviewer: ./facets/personas/reviewer.md
-  developer: ./facets/personas/developer.md
-  reporter: ./facets/personas/reporter.md
+  designer: ../facets/personas/designer.md
+  reviewer: ../facets/personas/reviewer.md
+  developer: ../facets/personas/developer.md
+  reporter: ../facets/personas/reporter.md
 policies:
-  evidence: ./facets/policies/evidence.md
-  legacy-execution: ./facets/policies/legacy-execution.md
+  evidence: ../facets/policies/evidence.md
+  legacy-execution: ../facets/policies/legacy-execution.md
 knowledge:
-  inputs: ./facets/knowledge/frozen-inputs.md
+  inputs: ../facets/knowledge/frozen-inputs.md
 instructions:
-  legacy-design: ./facets/instructions/legacy-design.md
-  legacy-design-review: ./facets/instructions/legacy-design-review.md
-  legacy-implement: ./facets/instructions/legacy-implement.md
-  legacy-code-review: ./facets/instructions/legacy-code-review.md
-  legacy-fix: ./facets/instructions/legacy-fix.md
-  legacy-finish: ./facets/instructions/legacy-finish.md
+  legacy-design: ../facets/instructions/legacy-design.md
+  legacy-design-review: ../facets/instructions/legacy-design-review.md
+  legacy-implement: ../facets/instructions/legacy-implement.md
+  legacy-code-review: ../facets/instructions/legacy-code-review.md
+  legacy-fix: ../facets/instructions/legacy-fix.md
+  legacy-finish: ../facets/instructions/legacy-finish.md
 report_formats:
-  legacy-design: ./facets/output-contracts/legacy-design.md
-  legacy-design-review: ./facets/output-contracts/legacy-design-review.md
-  legacy-code-review: ./facets/output-contracts/legacy-code-review.md
-  legacy-finish: ./facets/output-contracts/legacy-finish.md
+  legacy-design: ../facets/output-contracts/legacy-design.md
+  legacy-design-review: ../facets/output-contracts/legacy-design-review.md
+  legacy-code-review: ../facets/output-contracts/legacy-code-review.md
+  legacy-finish: ../facets/output-contracts/legacy-finish.md
 steps:
   - name: design
     session_key: construction-designer

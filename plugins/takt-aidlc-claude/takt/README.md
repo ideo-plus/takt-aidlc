@@ -5,9 +5,10 @@ AI-DLCの作業をTAKTへ委譲する定義を、このディレクトリにま�
 
 ```text
 takt/
-├── aidlc-code-generation.yaml       CG単体。Construction全体でも共用
-├── aidlc-construction-stage.yaml    Construction各工程の作成・レビュー
-├── aidlc-construction.yaml          旧Construction試作
+├── workflows/
+│   ├── aidlc-code-generation.yaml       CG単体。Construction全体でも共用
+│   ├── aidlc-construction-stage.yaml    Construction各工程の作成・レビュー
+│   └── aidlc-construction.yaml          旧Construction試作
 └── facets/
     ├── instructions/               各ステップで実行する手順
     ├── policies/                   HOTL・変更範囲・品質判定の共通ルール
@@ -23,7 +24,7 @@ YAMLにはステップ、遷移、編集権限、品質ゲート、利用する�
 TAKTのYAMLでは`personas`、`policies`、`knowledge`、`instructions`、`report_formats`にファイルを宣言し、ステップから別名で参照する。
 `report_formats`が指すファイルの配置先は`facets/output-contracts/`。
 
-TAKT 0.65.0の外部ペルソナの参照範囲に合わせ、配布用YAMLは`takt/`直下に置き、`./facets/`を参照する。
+配布用YAMLは`takt/workflows/`に置き、`../facets/`を参照する。連携CLIは実行前にYAMLと参照先を専用の制御領域へ配置し、TAKT 0.65.0で許可されるペルソナ参照パスへ変換する。元のディレクトリ構成は変更しない。
 
 ## AI-DLCの原文との関係
 
@@ -45,9 +46,12 @@ YAMLだけをコピーすると参照先が足りないため、委譲前の検�
 このディレクトリを編集し、プラグイン配布物のコピーは直接編集しない。
 
 ```sh
+bun run check:takt
 bun run test
 bun run build:marketplace
 bun run check:marketplace
 ```
 
-テストではTAKT 0.65.0の`workflow doctor`による参照解決、移動後の読み込み、入力変更の検出、両委譲モードの実行を確認する。
+`check:takt`は実行時と同じ配置を一時領域に作り、TAKT 0.65.0の`workflow doctor`で検証する。モデルは呼ばず、利用者のTAKT設定も変更しない。元のYAMLを直接`workflow doctor`へ渡すと、このバージョンのペルソナ参照制約に触れるため、このコマンドを使う。
+
+テストではファセットの参照解決、移動後の読み込み、入力変更の検出、両委譲モードの実行を確認する。

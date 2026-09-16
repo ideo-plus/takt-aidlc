@@ -96,7 +96,7 @@ Alternatively, download the repository archive over HTTPS with an authenticated 
 )
 ```
 
-Both methods create `aidlc/takt-handoff/takt/`. YAML files reference `./facets/`; copying a YAML file alone is insufficient. If the marketplace is pinned to a tag or commit, use the installed copy or replace `main` with the same ref in the API command.
+Both methods create `aidlc/takt-handoff/takt/`. YAML files in `takt/workflows/` reference `../facets/`; copying a YAML file alone is insufficient. If the marketplace is pinned to a tag or commit, use the installed copy or replace `main` with the same ref in the API command.
 
 The [TAKT directory guide](../takt/README.md) explains instructions, policies, personas, knowledge, and output contracts. Prepare or customize these files before delegation; referenced Markdown files are frozen and checked alongside the YAML. Existing self-contained YAML configurations continue to work.
 
@@ -124,7 +124,7 @@ Create `aidlc/takt-handoff/config.json`. This is a template: replace `<intent-di
     "aidlc/spaces/default/intents/<intent-dir>/inception/delivery-planning/bolt-plan.md"
   ],
   "sources": ["src/value.ts"],
-  "workflow": "aidlc/takt-handoff/takt/aidlc-code-generation.yaml",
+  "workflow": "aidlc/takt-handoff/takt/workflows/aidlc-code-generation.yaml",
   "buildScript": "aidlc/takt-handoff/build.ts",
   "verifyScript": "aidlc/takt-handoff/test.ts",
   "sensorScripts": {
@@ -187,7 +187,7 @@ codex plugin marketplace upgrade takt-aidlc
 codex plugin add takt-aidlc@takt-aidlc
 ```
 
-Restart the host after updating. Prepare a matching `takt/` bundle, including facets, for new runs; do not change an active run's frozen inputs. The former repository-level `workflows/` directory has moved to `takt/`. When switching to these templates, update `workflow` and (for Construction) `stageWorkflow` in the config. Existing inline YAML can still be used.
+Restart the host after updating. Prepare a matching `takt/` bundle, including facets, for new runs; do not change an active run's frozen inputs. The former repository-level `workflows/` directory has moved to `takt/workflows/`. When switching to these templates, update `workflow` and (for Construction) `stageWorkflow` in the config. Existing inline YAML can still be used.
 
 For migration from the previous local development setup:
 
