@@ -1,5 +1,5 @@
 {
-  "version": "0.4.0+codex.20260916021412",
+  "version": "0.4.0+codex.20260916021605",
   "aidlcVersion": "2.8.2",
   "bunVersion": "1.3.13",
   "sources": {
@@ -52,8 +52,8 @@
     "src/code-generation/runner.ts": "15434da82c9f5e2c44f39506299e0240482b98ebcea320e6a3854874615d7bd3",
     "src/code-generation/code-generation-gate.ts": "811fc3c1d8923668283e10c01b54a563571b230a237dbd50e99cc533c09475c2",
     "LICENSE": "20d237c297511eb6a0711b4928d02750bb94a21b594dfcc8ea9ca8435c8487ef",
-    "plugins/codex/takt-aidlc/.codex-plugin/plugin.json": "f861b802451bba00fc0c9bb713330e41fc628dae3ebc001e508b5250fda3cfe5",
-    "plugins/codex/takt-aidlc/hooks/hooks.json": "bc39570d69a90ab9dced7eaea1e01173fb00a7b43e2a5c05d00284098b588320"
+    "plugins/codex/.codex-plugin/plugin.json": "663f2c810b65d6210200910562de4e5627acb1c4231bfd849b950d26cf6230b3",
+    "plugins/codex/hooks/hooks.json": "bc39570d69a90ab9dced7eaea1e01173fb00a7b43e2a5c05d00284098b588320"
   },
   "bundleSha256": "739b763c45ab2c8961bba26d85e45dddc16b83d0e95f0e5a3109f2330bd8498d"
 }

@@ -11,7 +11,7 @@ export async function buildPlugin() {
   const sourceFiles = ['src/takt/workflow.ts', 'src/construction-phase/supervision.ts', 'src/construction-phase/construction-supervision-gate.ts', ...taktFiles, 'src/handoff/cli.ts', 'src/handoff/approval.ts', 'src/hosts/events.ts', 'src/handoff/io.ts', 'src/handoff/provider.ts', 'src/construction-phase/context.ts', 'src/construction-phase/runner.ts', 'src/construction-phase/stage.ts', 'src/construction-phase/construction-gate.ts', 'src/construction-phase/native-trace.ts', 'src/construction-phase/code-generation-gate.ts', 'src/hosts/harness.ts', 'src/hosts/codex.ts', 'src/code-generation/context.ts', 'src/code-generation/runner.ts', 'src/code-generation/code-generation-gate.ts'];
   for (const [target, source, manifestDir] of [
     [output, 'plugins/claude', '.claude-plugin'],
-    [codexOutput, 'plugins/codex/takt-aidlc', '.codex-plugin'],
+    [codexOutput, 'plugins/codex', '.codex-plugin'],
   ]) {
     // このビルド専用の生成先だけを置き換える。
     rmSync(target, { recursive: true, force: true }); mkdirSync(target, { recursive: true });

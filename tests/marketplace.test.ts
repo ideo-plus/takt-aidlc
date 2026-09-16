@@ -24,7 +24,7 @@ test('公開するGitツリーだけで両CLIからインストールしフッ�
     mkdirSync(env.CODEX_HOME);
     mkdirSync(env.CLAUDE_CONFIG_DIR);
     // No src/, node_modules/, dist/, or build step is available to installers.
-    for (const path of ['.agents/plugins', '.claude-plugin', 'plugins/takt-aidlc', 'plugins/takt-aidlc-claude']) {
+    for (const path of ['.agents/plugins', '.claude-plugin', 'plugins/takt-aidlc-codex', 'plugins/takt-aidlc-claude']) {
       cpSync(join(root, path), join(checkout, path), { recursive: true });
     }
     run(['git', 'init', '-q'], checkout);
