@@ -20,7 +20,7 @@ bun run test
 bun run build:marketplace
 ```
 
-`bun run test`はAI-DLC 2.8.2のテスト用ランタイムを`.experiments/cache/`に準備します。以前の手元の実験データは不要です。CGの合成入力は`experiments/code-generation/input/`、旧実験の入力は`experiments/construction/input/`に含めています。
+`bun run test`はAI-DLC 2.8.2のテスト用ランタイムを`.experiments/cache/`に準備します。以前の手元の実験データは不要です。CGの合成入力は`experiments/code-generation/input/`に含めています。
 
 テストはmockプロバイダーを使い、モデルの認証情報なしで動きます。実際のTAKT実行エンジン、AI-DLCの状態・承認の照合、品質ゲートを通します。Codex CLIによるプラグインの隔離インストールも検証するため、Codex CLI 0.154.0を用意してください。
 

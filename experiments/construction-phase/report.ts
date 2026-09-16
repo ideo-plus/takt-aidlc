@@ -37,7 +37,7 @@ export function liveReport(run: string) {
           const endedAt =
             events.findLast((e) => e.type === "workflow_complete")?.endTime ??
             (r ? statSync(path).mtime.toISOString() : null);
-          const ledger = join(base, name, "control/stage-ledger.json");
+          const ledger = join(base, name, "control/construction-ledger.json");
           const reviews = existsSync(ledger)
             ? readJson<any[]>(ledger)
                 .filter((r) => r.phase === "review")

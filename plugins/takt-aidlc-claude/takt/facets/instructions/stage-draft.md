@@ -1,8 +1,0 @@
-input/stage-context.jsonと注入された原文を使い、現在の工程の成果物を応答してください。
-必須ファイルをartifactsに入れ、各Markdownには2つ以上のH2を置きます。traceability.jsonが必要ならstage、upstream_ids、coverage[{id,status:"OK",target:"本家センサーが求める対応先"}]を含めてください。Functional Designはrules.mdに実在するBRx.yをtargetへ記載し、派生ルールの孤立も解消します。上流IDはinput/stage-context.jsonのrequirementIdsを使い、NFR Requirementsでは要求文書にNFRx.yの詳細IDを付与し、NFR Design以降も対応する本文にそのIDを引き継ぎます。
-upstreamにはupstreamArtifactsを全部列挙し、appliedRulesで本家の工程定義への対応を示します。
-ファイルは直接変更しません。CI工程だけはpipelinePathsの各ファイルの内容をwritesへ入れます。その他の工程のwritesは空です。
-規約・要求の矛盾や未決事項を推測せず、解決不能ならblockedと理由を返します。
-Build and Testでは全UnitのCG成果物と検証結果を読み、品質目標の一覧・検証方法・実測の根拠・Unit間の要求対応をまとめます。検証未実行の場合は成功と捏造せず、検証ゲートが実行する計画と期待結果を示します。
-差し戻し時はレポートの指摘とinput/phase-checks.jsonがあればその失敗を修正してください。
-Build and Testの実測失敗がアプリ修正を必要とする場合は、verdictをrepair_requiredとし、repairUnitにinputのunitsから所有Unit名、reasonに失敗根拠を返してください。コントローラーがそのUnitの共通CGへ一度だけ戻します。

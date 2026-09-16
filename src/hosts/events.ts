@@ -1,0 +1,1 @@
+export type HookEvent = { hook_event_name: string; session_id: string; tool_use_id: string; cwd: string; tool_name: string; tool_input: { command?: string }; tool_response?: { stdout?: string; interrupted?: boolean } };

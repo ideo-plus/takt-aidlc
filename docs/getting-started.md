@@ -96,9 +96,11 @@ Alternatively, download the repository archive over HTTPS with an authenticated 
 )
 ```
 
+`delegationScope` is required; only `code-generation` and `construction` are supported.
+
 Both methods create `aidlc/takt-handoff/takt/`. YAML files in `takt/workflows/` reference `../facets/`; copying a YAML file alone is insufficient. If the marketplace is pinned to a tag or commit, use the installed copy or replace `main` with the same ref in the API command.
 
-The [TAKT directory guide](../takt/README.md) explains instructions, policies, personas, knowledge, and output contracts. Personas use the built-ins shipped with TAKT 0.65.0; local Markdown files contain the AI-DLC-specific instructions, policies, knowledge, and report formats. Prepare or customize these files before delegation; referenced Markdown files are frozen and checked alongside the YAML. Existing self-contained YAML configurations continue to work.
+The [TAKT directory guide](../takt/README.md) explains instructions, policies, personas, knowledge, and output contracts. Personas use the built-ins shipped with TAKT 0.65.0; local Markdown files contain the AI-DLC-specific instructions, policies, knowledge, and report formats. Prepare or customize these files before delegation; referenced Markdown files are frozen and checked alongside the YAML.
 
 ## Configure CG delegation before CG entry
 
@@ -124,7 +126,7 @@ Create `aidlc/takt-handoff/config.json`. This is a template: replace `<intent-di
     "aidlc/spaces/default/intents/<intent-dir>/inception/delivery-planning/bolt-plan.md"
   ],
   "sources": ["src/value.ts"],
-  "workflow": "aidlc/takt-handoff/takt/workflows/aidlc-code-generation.yaml",
+  "workflow": "aidlc/takt-handoff/takt/workflows/aidlc-code-generation-stage.yaml",
   "buildScript": "aidlc/takt-handoff/build.ts",
   "verifyScript": "aidlc/takt-handoff/test.ts",
   "sensorScripts": {
@@ -155,7 +157,7 @@ If a sensor does not apply, omit its script and explicitly provide a reason with
 
 To use Claude workers, set `provider` to `claude` and remove `codexReasoningEffort`. Set `model` to an available Claude model or omit it. `disableBedrock: true` removes inherited Bedrock flags/model overrides only in the child process; it does not reconfigure the host's authentication.
 
-Loading the plugin without an enabled CG config does not start delegation. The workflow requires the runner's context and quality gates and cannot be invoked standalone. The legacy `construction: true` config is not the current CG mode.
+Loading the plugin without an enabled CG config does not start delegation. The workflow requires the runner's context and quality gates and cannot be invoked standalone.
 
 ## Inspect a run
 
@@ -187,7 +189,7 @@ codex plugin marketplace upgrade takt-aidlc
 codex plugin add takt-aidlc@takt-aidlc
 ```
 
-Restart the host after updating. Prepare a matching `takt/` bundle, including facets, for new runs; do not change an active run's frozen inputs. The former repository-level `workflows/` directory has moved to `takt/workflows/`. When switching to these templates, update `workflow` and (for Construction) `stageWorkflow` in the config. Existing inline YAML can still be used.
+Restart the host after updating. Prepare a matching `takt/` bundle, including facets, for new runs; do not change an active run's frozen inputs. The former repository-level `workflows/` directory has moved to `takt/workflows/`. When switching to these templates, update `workflow` and (for Construction) `constructionWorkflow` in the config.
 
 For migration from the previous local development setup:
 

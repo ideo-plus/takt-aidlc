@@ -19,9 +19,9 @@ export type UnitChecks = Pick<
   CgConfig,
   "buildScript" | "verifyScript" | "sensorScripts" | "sensorExceptions"
 > & { mockScenario?: string };
-export type PhaseConfig = Omit<CgConfig, "delegationScope" | "handoffStage"> & {
+export type PhaseConfig = Omit<CgConfig, "delegationScope"> & {
   delegationScope: "construction";
-  stageWorkflow: string;
+  constructionWorkflow: string;
   phaseBuildScript: string;
   phaseVerifyScript: string;
   unitChecks?: Record<string, UnitChecks>;
@@ -99,7 +99,7 @@ export function phaseConfig(project: string) {
   }
   for (const key of [
     "workflow",
-    "stageWorkflow",
+    "constructionWorkflow",
     "buildScript",
     "verifyScript",
     "phaseBuildScript",
@@ -294,7 +294,7 @@ export function phaseFiles(project: string, c: PhaseConfig, ctx: PhaseContext) {
     ...ctx.stages.flatMap((s) => s.files),
     ...c.sources,
     ...workflowFiles(project, c.workflow),
-    ...workflowFiles(project, c.stageWorkflow),
+    ...workflowFiles(project, c.constructionWorkflow),
     c.phaseBuildScript,
     c.phaseVerifyScript,
     ...Object.values(c.stageSensorScripts ?? {}),

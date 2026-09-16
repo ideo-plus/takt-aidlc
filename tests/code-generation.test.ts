@@ -37,7 +37,7 @@ test('CG原文を展開し、ビルド失敗・型検査不合格を修正して
   expect(readFileSync(join(f.project, 'src/value.ts'), 'utf8')).toBe('export const answer = 41;\n');
   expect(f.lib.readAuditShardEvents(f.project).some((r: any) => r.event === 'PLAN_APPROVAL_RECORDED' || r.event === 'GATE_APPROVED')).toBe(false);
   put(join(result.workspace!, 'src/value.ts'), 'export const answer = 43;\n');
-  const stale = await command([process.execPath, join(control, 'cg-gate.ts'), 'result'], result.workspace!, cleanEnvironment(), 10000);
+  const stale = await command([process.execPath, join(control, 'code-generation-gate.ts'), 'result'], result.workspace!, cleanEnvironment(), 10000);
   expect(stale.code).not.toBe(0);
 }, 60000);
 

@@ -1,148 +1,332 @@
-// Bunで単独実行できる品質ゲート。配布物と各attemptのcontrol/へそのままコピーする。
-import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
-import { spawnSync } from 'node:child_process';
-
-export const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
-const json = (path: string) => JSON.parse(readFileSync(path, 'utf8'));
-const save = (path: string, value: unknown) => { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, JSON.stringify(value, null, 2) + '\n'); };
-
-// レポート、制御ファイル、既知のカバレッジ出力をソースの識別値から除く。
-export function sourceHash(workspace: string): string {
-  const files: Record<string, string> = {};
-  function visit(dir: string) {
-    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-      const path = join(dir, entry.name), rel = relative(workspace, path);
-      if (/^(?:\.git|\.claude|\.takt|construction|coverage|\.handoff-coverage-[^/]+)(?:\/|$)/.test(rel)) continue;
-      assert.ok(!entry.isSymbolicLink(), `symlinkは検証対象にできません: ${rel}`);
-      if (entry.isDirectory()) visit(path);
-      else if (entry.isFile()) files[rel] = hash(readFileSync(path));
-    }
+import { nativeTrace, resolveTraceIds } from "./native-trace";
+import assert from "node:assert/strict";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  writeFileSync,
+  rmSync,
+} from "node:fs";
+import { dirname, join } from "node:path";
+import { spawnSync } from "node:child_process";
+import { hash, sources } from "./code-generation-gate";
+const read = (p: string) => JSON.parse(readFileSync(p, "utf8"));
+const save = (p: string, v: unknown) => {
+  mkdirSync(dirname(p), { recursive: true });
+  writeFileSync(p, JSON.stringify(v, null, 2) + "\n");
+};
+export function stageGate(control: string, phase: string) {
+  const ctx = read(join(control, "construction-context.json")),
+    root = ctx.workspace;
+  assert.equal(realpathSync(process.cwd()), realpathSync(root));
+  for (const [p, h] of Object.entries(ctx.inputs))
+    assert.equal(hash(readFileSync(join(root, p))), h, `固定入力が変化: ${p}`);
+  const runs = readdirSync(join(root, ".takt/runs"));
+  assert.equal(runs.length, 1);
+  const reports = join(root, ".takt/runs", runs[0], "reports");
+  const draftPath = join(reports, "01-construction-draft.json"),
+    reviewPath = join(reports, "02-construction-review.json");
+  const ledgerPath = join(control, "construction-ledger.json"),
+    ledger: any[] = existsSync(ledgerPath) ? read(ledgerPath) : [];
+  const latest = (p: string) => ledger.findLast((r) => r.phase === p);
+  const codeHash = () => hash(JSON.stringify(sources(root)));
+  const artifactDir = join(root, "input/construction-output");
+  const draft = read(draftPath);
+  const verifyDraft = () => {
+    assert.equal(
+      latest("draft")?.reportHash,
+      hash(readFileSync(draftPath)),
+      "レビュー対象の成果物が変化",
+    );
+    for (const [p, h] of Object.entries(latest("draft").artifacts))
+      assert.equal(hash(readFileSync(join(artifactDir, p))), h, "成果物が変化");
+    assert.equal(
+      codeHash(),
+      latest("draft").codeHash,
+      "成果物生成後にソースが変化",
+    );
+  };
+  const repair = () => {
+    assert.equal(ctx.stage.slug, "build-and-test");
+    assert.ok(ctx.units.includes(draft.repairUnit) && draft.reason?.trim());
+    const failed = latest("failed-check");
+    assert.ok(
+      failed && failed.codeHash === codeHash(),
+      "修正要求に対応する検証失敗がない",
+    );
+    return {
+      state: "repair_required",
+      unit: draft.repairUnit,
+      reason: draft.reason,
+      checks: failed.checks,
+    };
+  };
+  if (phase === "result") {
+    if (draft.verdict === "repair_required") return repair();
+    if (draft.verdict === "blocked")
+      return { state: "blocked", reason: draft.reason };
+    const review = read(reviewPath);
+    if (review.verdict === "blocked")
+      return { state: "blocked", reason: review.reason };
+    verifyDraft();
+    assert.equal(latest("review")?.verdict, "approved");
+    assert.equal(latest("review").reportHash, hash(readFileSync(reviewPath)));
+    return {
+      state: "verified",
+      artifactDir,
+      artifacts: latest("draft").artifacts,
+      writes: Object.keys(draft.writes ?? {}),
+      reports,
+      codeHash: codeHash(),
+    };
   }
-  visit(workspace);
-  return hash(JSON.stringify(files));
-}
-
-const reportNames = { design: '01-design.json', designReview: '02-design-review.json', codeReview: '03-code-review.json', handoff: '04-handoff.json' } as const;
-type Phase = 'design' | 'design-review' | 'implement' | 'fix' | 'code-review' | 'finish';
-
-export function runGate(control: string, phase: Phase | 'result') {
-  const context = json(join(control, 'context.json'));
-  const workspace: string = context.workspace;
-  assert.equal(realpathSync(process.cwd()), realpathSync(workspace));
-  for (const [path, expected] of Object.entries(context.inputs)) {
-    const file = join(workspace, path);
-    assert.ok(lstatSync(file).isFile() && !lstatSync(file).isSymbolicLink(), `入力形式が変化しました: ${path}`);
-    assert.equal(hash(readFileSync(file)), expected, `入力が変化しました: ${path}`);
+  const r = phase === "draft" ? draft : read(reviewPath);
+  if (phase === "draft" && r.verdict === "repair_required") {
+    repair();
+    return { state: "checked", verdict: "repair_required" };
   }
-  const runDirs = readdirSync(join(workspace, '.takt/runs'));
-  assert.equal(runDirs.length, 1, '単一のTAKT実行だけを扱います');
-  const reportsDir = join(workspace, '.takt/runs', runDirs[0], 'reports');
-  const report = (kind: keyof typeof reportNames) => {
-    const path = join(reportsDir, reportNames[kind]);
-    assert.ok(lstatSync(path).isFile() && !lstatSync(path).isSymbolicLink());
-    const value = json(path);
-    assert.ok(value && typeof value === 'object' && !Array.isArray(value));
-    return value;
-  };
-  const reportHash = (kind: keyof typeof reportNames) => hash(readFileSync(join(reportsDir, reportNames[kind])));
-  const ledgerPath = join(control, 'ledger.json');
-  const ledger: any[] = existsSync(ledgerPath) ? json(ledgerPath) : [];
-  const latest = (name: string) => ledger.findLast(row => row.phase === name);
-  const code = sourceHash(workspace);
-  const designApproved = () => {
-    const row = latest('design-review');
-    assert.equal(row?.verdict, 'approved', '設計レビューが承認されていません');
-    assert.equal(row.designHash, reportHash('design'), '設計レビュー後に設計が変化しました');
-    assert.equal(row.reportHash, reportHash('designReview'), '設計レビューの記録が変化しました');
-  };
-  const reviewed = () => {
-    designApproved();
-    const row = latest('code-review');
-    assert.equal(row?.verdict, 'approved', 'コードレビューが承認されていません');
-    assert.equal(row.sourceHash, code, 'レビュー後にコードが変化しました');
-    assert.equal(row.reportHash, reportHash('codeReview'), 'コードレビューの記録が変化しました');
-  };
-  if (phase === 'result') {
-    const implementationQuestions = join(workspace, 'construction/questions.json');
-    if (existsSync(implementationQuestions)) {
-      const value = json(implementationQuestions);
-      assert.ok(Array.isArray(value.questions) && value.questions.length > 0);
-      return { state: 'needs_input', stage: 'implementation', questions: value.questions, reportsDir };
-    }
-    for (const kind of Object.keys(reportNames) as (keyof typeof reportNames)[]) {
-      if (!existsSync(join(reportsDir, reportNames[kind]))) continue;
-      const value = report(kind);
-      if (value.verdict === 'needs_input') {
-        assert.ok(Array.isArray(value.questions) && value.questions.length > 0);
-        return { state: 'needs_input', stage: kind, questions: value.questions, reportsDir };
+  if (r.verdict === "blocked") {
+    assert.ok(r.reason?.trim());
+    ledger.push({ phase, verdict: "blocked" });
+    save(ledgerPath, ledger);
+    return { state: "checked", verdict: "blocked" };
+  }
+  if (phase === "draft") {
+    // 修正時は前回の生成したCIファイルのみ変化を認める。
+    const allowed = new Set<string>(ctx.pipelinePaths);
+    const actual = sources(root);
+    for (const p of new Set([
+      ...Object.keys(ctx.initialSources),
+      ...Object.keys(actual),
+    ]))
+      if (!allowed.has(p))
+        assert.equal(
+          actual[p],
+          ctx.initialSources[p],
+          `設計中のソース変更: ${p}`,
+        );
+    assert.equal(r.verdict, "ready");
+    assert.ok(r.artifacts && typeof r.artifacts === "object");
+    assert.deepEqual(
+      [...r.upstream].sort(),
+      [...ctx.upstreamArtifacts].sort(),
+      "上流成果物の確認漏れ",
+    );
+    assert.ok(
+      r.appliedRules?.some(
+        (x: any) =>
+          typeof x.source === "string" &&
+          x.source.replace(`${root}/`, "").replace(/^input\/project\//, "") ===
+            ctx.stage.file &&
+          x.rule?.trim() &&
+          x.application?.trim(),
+      ),
+      "本家工程定義への対応がない",
+    );
+    const names = Object.keys(r.artifacts);
+    assert.ok(
+      ctx.required.every((p: string) => names.includes(p)),
+      `必須成果物不足: ${ctx.required.join(", ")}`,
+    );
+    rmSync(artifactDir, { recursive: true, force: true });
+    mkdirSync(artifactDir, { recursive: true });
+    const hashes: Record<string, string> = {};
+    for (const [p, content] of Object.entries(r.artifacts)) {
+      assert.ok(
+        /^[\w-]+\.(md|json)$/.test(p) &&
+          typeof content === "string" &&
+          content.trim(),
+      );
+      if (p.endsWith(".md")) {
+        const headings: string[] = content.match(/^##\s+.+$/gm) ?? [];
+        assert.ok(headings.length >= 2, `required-sections: ${p}`);
+        const template = ctx.stage.templates?.[p];
+        if (template) {
+          const required: string[] =
+            readFileSync(join(root, "input/project", template), "utf8").match(
+              /^##\s+.+$/gm,
+            ) ?? [];
+          assert.ok(
+            required.every((h) => headings.includes(h)),
+            `テンプレート違反: ${p}`,
+          );
+        }
       }
+      writeFileSync(join(artifactDir, p), content as string);
+      hashes[p] = hash(content as string);
     }
-    reviewed();
-    const row = latest('finish');
-    assert.equal(row?.sourceHash, code, '完了時のコードと一致しません');
-    assert.equal(row.reportHash, reportHash('handoff'));
-    return { state: 'complete', reportsDir, sourceHash: code, checks: ledger.length };
+    if (ctx.stage.sensors.includes("traceability")) {
+      const trace = read(join(artifactDir, "traceability.json"));
+      assert.equal(trace.stage, ctx.stage.slug);
+      assert.deepEqual(
+        [...trace.upstream_ids].sort(),
+        [...ctx.requirementIds].sort(),
+      );
+      const targetDir = join(
+        ctx.traceProject,
+        ctx.record,
+        "construction",
+        ctx.unit,
+        ctx.stage.slug,
+      );
+      rmSync(targetDir, { recursive: true, force: true });
+      mkdirSync(targetDir, { recursive: true });
+      for (const name of names)
+        writeFileSync(
+          join(targetDir, name),
+          readFileSync(join(artifactDir, name)),
+        );
+      const result = nativeTrace(
+        ctx.traceProject,
+        join(targetDir, "traceability.json"),
+        ctx.stage.slug,
+      );
+      save(join(root, "input/traceability-check.json"), result);
+      assert.equal(
+        result.pass,
+        true,
+        `本家traceability不合格: ${JSON.stringify(result)}`,
+      );
+      if (ctx.stage.slug === "nfr-requirements")
+        resolveTraceIds(ctx.traceProject, ctx.record, ctx.unit, "nfr-design");
+      if (ctx.stage.slug === "nfr-design")
+        resolveTraceIds(
+          ctx.traceProject,
+          ctx.record,
+          ctx.unit,
+          "infrastructure-design",
+        );
+    }
+    const writes = r.writes ?? {};
+    for (const [p, content] of Object.entries(writes)) {
+      assert.ok(
+        allowed.has(p) && typeof content === "string",
+        `許可されていないCIファイル: ${p}`,
+      );
+      if (/\.ya?ml$/.test(p)) {
+        const yaml = Bun.YAML.parse(content as string);
+        assert.ok(
+          yaml && typeof yaml === "object" && !Array.isArray(yaml),
+          `CIのYAMLが不正: ${p}`,
+        );
+      }
+      mkdirSync(dirname(join(root, p)), { recursive: true });
+      writeFileSync(join(root, p), content as string);
+    }
+    if (ctx.stage.slug === "ci-pipeline")
+      assert.deepEqual(
+        Object.keys(writes).sort(),
+        [...ctx.pipelinePaths].sort(),
+        "CI設定が未生成",
+      );
+    const sensors: Record<string, unknown> = {
+      "required-sections": { status: "passed" },
+      "upstream-coverage": { status: "passed" },
+    };
+    for (const id of ctx.stage.sensors.filter(
+      (s: string) => s === "linter" || s === "type-check",
+    )) {
+      const script = ctx.sensorScripts[id];
+      const snippets = Object.values(r.artifacts).some((s: any) =>
+        /```(?:typescript|javascript|tsx|jsx|ts|js)\b/.test(s),
+      );
+      if (!script) {
+        assert.ok(
+          !snippets,
+          `${id}: TS/JSのコード例を検査するstageSensorScriptsが必要`,
+        );
+        sensors[id] = {
+          status: "not_applicable",
+          reason: "検査対象のTS/JSコード例がない",
+        };
+        continue;
+      }
+      assert.equal(hash(readFileSync(script.path)), script.hash);
+      const result = spawnSync(process.execPath, [script.path], {
+        cwd: root,
+        env: { ...process.env, AIDLC_ARTIFACTS_DIR: artifactDir },
+        encoding: "utf8",
+        timeout: 60000,
+        maxBuffer: 256 * 1024,
+      });
+      assert.equal(result.status, 0);
+      const output = JSON.parse(result.stdout);
+      assert.equal(output.pass, true, `${id}不合格`);
+      sensors[id] = { status: "passed", output };
+    }
+    if (ctx.stage.sensors.includes("traceability"))
+      sensors.traceability = { status: "passed" };
+    // Build and Test/CIは同じソースに対する固定の全体検証を必須にする。
+    const checks: Record<string, unknown> = {};
+    if (["build-and-test", "ci-pipeline"].includes(ctx.stage.slug))
+      for (const [name, script] of Object.entries(ctx.checks) as [
+        string,
+        any,
+      ][]) {
+        assert.equal(hash(readFileSync(script.path)), script.hash);
+        const result = spawnSync(process.execPath, [script.path], {
+          cwd: root,
+          encoding: "utf8",
+          timeout: 60000,
+          maxBuffer: 256 * 1024,
+        });
+        checks[name] = {
+          code: result.status,
+          stdout: result.stdout,
+          stderr: result.stderr,
+        };
+        save(join(root, "input/phase-checks.json"), checks);
+        if (result.status !== 0) {
+          ledger.push({ phase: "failed-check", checks, codeHash: codeHash() });
+          save(ledgerPath, ledger);
+        }
+        assert.equal(
+          result.status,
+          0,
+          `${name}失敗。input/phase-checks.jsonを確認すること`,
+        );
+      }
+    ledger.push({
+      phase,
+      verdict: "ready",
+      reportHash: hash(readFileSync(draftPath)),
+      artifacts: hashes,
+      codeHash: codeHash(),
+      sensors,
+      checks,
+    });
+  } else {
+    verifyDraft();
+    assert.ok(["approved", "changes_requested"].includes(r.verdict));
+    assert.ok(Array.isArray(r.findings));
+    for (const k of [
+      "intent",
+      "stageDefinition",
+      "conventions",
+      "testingContract",
+    ])
+      assert.ok(r.alignment?.[k]?.trim());
+    if (r.verdict === "approved") assert.equal(r.findings.length, 0);
+    ledger.push({
+      phase,
+      verdict: r.verdict,
+      reportHash: hash(readFileSync(reviewPath)),
+    });
   }
-  let verdict = 'passed';
-  let binding: Record<string, string> = {};
-  if (phase === 'design') {
-    assert.equal(code, context.initialSourceHash, '設計中にコードが変更されました');
-    const d = report('design');
-    assert.ok(['ready', 'needs_input'].includes(d.verdict));
-    assert.ok(Array.isArray(d.units) && d.units.length > 0);
-    const seen = new Set<string>();
-    for (const unit of d.units) {
-      assert.ok(typeof unit.id === 'string' && unit.id.trim() && !seen.has(unit.id), 'Unit IDは一意でなければなりません');
-      assert.ok(Array.isArray(unit.dependsOn) && unit.dependsOn.every((id: unknown) => typeof id === 'string' && seen.has(id)), 'Unitは依存順に並べてください');
-      assert.ok(Array.isArray(unit.files)); seen.add(unit.id);
-    }
-    for (const key of ['functional', 'nonfunctional', 'interfaces', 'infrastructure', 'testPlan']) assert.ok(typeof d[key] === 'string' && d[key].trim(), `設計の${key}がありません`);
-    assert.ok(Array.isArray(d.questions));
-    if (d.verdict === 'ready') assert.equal(d.questions.length, 0);
-    verdict = d.verdict; binding = { designHash: reportHash('design') };
-  } else if (phase === 'design-review') {
-    assert.equal(code, context.initialSourceHash, '設計レビュー中にコードが変更されました');
-    assert.equal(latest('design')?.designHash, reportHash('design'));
-    const d = report('designReview');
-    assert.ok(['approved', 'changes_requested', 'needs_input'].includes(d.verdict));
-    assert.ok(Array.isArray(d.findings) && Array.isArray(d.questions));
-    if (d.verdict === 'approved') { assert.equal(d.findings.length, 0, '未解決指摘を承認できません'); assert.equal(d.questions.length, 0); }
-    verdict = d.verdict; binding = { designHash: reportHash('design'), reportHash: reportHash('designReview') };
-  } else if (phase === 'implement' || phase === 'fix') {
-    designApproved();
-    assert.equal(hash(readFileSync(context.verifyScript)), context.verifyHash, '検証スクリプトが変化しました');
-    const result = spawnSync(process.execPath, [context.verifyScript], { cwd: workspace, encoding: 'utf8', timeout: 30000, maxBuffer: 128 * 1024 });
-    const receipt = { phase, code: result.status, signal: result.signal, stdout: result.stdout ?? '', stderr: result.stderr ?? '', sourceHash: sourceHash(workspace) };
-    save(join(control, 'checks', `${ledger.length + 1}.json`), receipt);
-    save(join(workspace, 'construction/verification.json'), receipt);
-    ledger.push({ ...receipt, phase: 'test', verdict: result.status === 0 ? 'passed' : 'failed' }); save(ledgerPath, ledger);
-    assert.equal(result.status, 0, 'テスト失敗。construction/verification.jsonを読み、実装を修正してください');
-  } else if (phase === 'code-review') {
-    designApproved();
-    const test = latest('test');
-    assert.equal(test?.verdict, 'passed'); assert.equal(test.sourceHash, code, 'テスト後にコードが変化しました');
-    const d = report('codeReview');
-    assert.ok(['approved', 'changes_requested', 'needs_input'].includes(d.verdict));
-    assert.ok(Array.isArray(d.findings) && Array.isArray(d.questions));
-    if (d.verdict === 'approved') { assert.equal(d.findings.length, 0, '未解決指摘を承認できません'); assert.equal(d.questions.length, 0); }
-    verdict = d.verdict; binding = { reportHash: reportHash('codeReview') };
-  } else if (phase === 'finish') {
-    reviewed();
-    const d = report('handoff');
-    assert.equal(d.verdict, 'complete');
-    assert.ok(typeof d.summary === 'string' && d.summary.trim());
-    binding = { reportHash: reportHash('handoff') };
-  } else throw new Error(`未知の工程: ${phase}`);
-  ledger.push({ phase, verdict, sourceHash: sourceHash(workspace), ...binding }); save(ledgerPath, ledger);
-  // 参照用のコピー。判定の正本はcontrol/に置く。
-  save(join(workspace, 'construction/progress.json'), ledger);
-  return { state: 'checked', phase, verdict };
+  save(ledgerPath, ledger);
+  return { state: "checked", verdict: r.verdict };
 }
-
 if (import.meta.main) {
-  try { console.log(JSON.stringify(runGate(dirname(realpathSync(import.meta.path)), process.argv[2] as Phase | 'result'))); }
-  catch (error) { console.error(String(error)); process.exitCode = 1; }
+  try {
+    console.log(
+      JSON.stringify(
+        stageGate(dirname(realpathSync(import.meta.path)), process.argv[2]),
+      ),
+    );
+  } catch (e) {
+    console.error(String(e));
+    process.exitCode = 1;
+  }
 }

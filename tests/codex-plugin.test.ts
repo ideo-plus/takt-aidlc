@@ -26,7 +26,7 @@ beforeAll(async () => {
   }
   expect(installed).toBeTruthy();
   expect(readFileSync(join(installed, 'scripts/handoff.js'), 'utf8')).not.toContain(repo);
-  expect(digest(readFileSync(join(installed, 'scripts/cg-gate.ts')))).toBe(digest(readFileSync(join(repo, 'src/code-generation/cg-gate.ts'))));
+  expect(digest(readFileSync(join(installed, 'scripts/code-generation-gate.ts')))).toBe(digest(readFileSync(join(repo, 'src/code-generation/code-generation-gate.ts'))));
   hooks = readJson<any>(join(installed, 'hooks/hooks.json')).hooks;
 }, 60000);
 

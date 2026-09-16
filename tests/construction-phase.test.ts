@@ -42,7 +42,7 @@ test("Constructionは依存順に設計・共通CGを実行し、全体検証と
   ).toBe(false);
   const first = result.steps![0];
   const ledger = readJson<any[]>(
-    join(first.attempt, "control/stage-ledger.json"),
+    join(first.attempt, "control/construction-ledger.json"),
   );
   expect(
     ledger.filter((r) => r.phase === "review").map((r) => r.verdict),
@@ -74,11 +74,11 @@ test("Inception承認がない場合と最終の全体テスト失敗を成功�
   expect(readJson<any>(join(h.run, "attempts/1/final-test.json")).code).toBe(1);
 }, 120000);
 
-test("scope競合・Unitの不正な依存・park後の入力変更を拒否する", async () => {
+test("不正なscope・Unitの不正な依存・park後の入力変更を拒否する", async () => {
   const f = await phaseFixture();
   const path = join(f.project, "aidlc/takt-handoff/config.json");
-  writeJson(path, { ...f.config, handoffStage: "code-generation" });
-  await expect(capturePhase(f.project, f.event)).rejects.toThrow("競合");
+  writeJson(path, { ...f.config, delegationScope: "unknown" });
+  await expect(capturePhase(f.project, f.event)).rejects.toThrow("delegationScope");
   writeJson(path, f.config);
   const dependency = join(
     f.project,

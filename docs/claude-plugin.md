@@ -31,12 +31,9 @@ cat aidlc/takt-handoff/cg-runs/<run-id>/status.json
 
 CGのCLI再試行は未実装。`enabled: false`は新しい委譲を抑止するが、実行中のworkerは停止しない。
 
-元のAI-DLCのフック・担当エージェント・プロジェクト設定は必要。以前の実験で登録したtakt-aidlcの手動フックは、プラグインとの二重登録を避けるためその項目だけ外す。`TAKT_AIDLC_PLUGIN_ONLY=1`は旧takt-aidlc手動フックだけを無効化する互換オプションであり、AI-DLC本体のフックは残す。
 
 Bedrockを使わない場合、ホストの設定調整は[導入手順](getting-started.md)に従う。`disableBedrock: true`が対象とするのはTAKTの子プロセスである。
 
-## 検証と旧方式
+## 検証
 
 移動した配布物のフックからmockのCGを起動する自動テスト、CG以外で起動しないテスト、重複イベントのテストがある。実モデルのCGは[検証記録](../experiments/code-generation/RESULTS.md)を参照。
-
-以前のInception最終承認からの委譲は、`handoffStage: "inception-legacy"`を明示した旧実験向けに残している。[当時の実セッション記録](../experiments/native-session/STATUS.md)は現在のCG入口の実証とは区別する。

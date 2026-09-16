@@ -52,8 +52,8 @@ CG単体の入口確認と、固定入力から動く`executeCgWorkspace`を分�
     "aidlc/spaces/default/intents/<intent>/inception/requirements-analysis/requirements.md"
   ],
   "sources": ["src/value.ts"],
-  "workflow": "aidlc/takt-handoff/takt/workflows/aidlc-code-generation.yaml",
-  "stageWorkflow": "aidlc/takt-handoff/takt/workflows/aidlc-construction-stage.yaml",
+  "workflow": "aidlc/takt-handoff/takt/workflows/aidlc-code-generation-stage.yaml",
+  "constructionWorkflow": "aidlc/takt-handoff/takt/workflows/aidlc-construction-phase.yaml",
   "buildScript": "aidlc/takt-handoff/unit-build.ts",
   "verifyScript": "aidlc/takt-handoff/unit-test.ts",
   "sensorScripts": {
@@ -73,10 +73,9 @@ CG単体の入口確認と、固定入力から動く`executeCgWorkspace`を分�
 ```
 
 [TAKT定義の取得手順](getting-started.md#download-the-takt-bundle)に従い、`takt/`を`facets/`ごと`aidlc/takt-handoff/`へ配置する。リポジトリのclone・ビルドは不要。
-CGには`takt/workflows/aidlc-code-generation.yaml`、工程の作成・レビューには`takt/workflows/aidlc-construction-stage.yaml`を使う。ローカルの指示・ポリシー・知識・出力契約も固定入力になる。ペルソナはTAKT 0.65.0の組み込みを使う。
-旧`aidlc-construction.yaml`は初期試作であり、ここでは使わない。
+CGには`takt/workflows/aidlc-code-generation-stage.yaml`、工程の作成・レビューには`takt/workflows/aidlc-construction-phase.yaml`を使う。ローカルの指示・ポリシー・知識・出力契約も固定入力になる。ペルソナはTAKT 0.65.0の組み込みを使う。
 
-ホストは`hostHarness`、委譲範囲は`delegationScope`、ワーカーは`provider`で選ぶ。CG単体には`delegationScope: "code-generation"`を使える。既存の`handoffStage: "code-generation"`も維持するが、両フィールドが矛盾すれば拒否する。旧`inception-legacy`と`construction: true`は、この新モードへ自動変換しない。
+ホストは`hostHarness`、委譲範囲は`delegationScope`、ワーカーは`provider`で選ぶ。委譲範囲の指定は必須で、`code-generation`または`construction`を指定する。
 
 ### Unitごとの検査
 

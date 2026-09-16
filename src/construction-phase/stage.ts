@@ -23,11 +23,11 @@ import {
   type Snapshot,
 } from "../handoff/io";
 import { prepareProvider } from "../handoff/provider";
-import { sources, cgGateSource } from "../code-generation/cg-gate";
+import { sources, cgGateSource } from "../code-generation/code-generation-gate";
 import type { CgContext } from "../code-generation/context";
 import type { PhaseConfig, StageDefinition } from "./context";
 import { materializeWorkflow } from "../takt/workflow";
-import stageContract from '../../takt/facets/policies/stage-hotl.md' with { type: 'text' };
+import stageContract from '../../takt/facets/policies/construction-hotl.md' with { type: 'text' };
 
 export async function executeStage(args: {
   attempt: string;
@@ -145,7 +145,7 @@ export async function executeStage(args: {
     checks,
     pipelinePaths: stage.slug === "ci-pipeline" ? (c.pipelinePaths ?? []) : [],
   };
-  writeJson(join(workspace, "input/stage-context.json"), {
+  writeJson(join(workspace, "input/construction-context.json"), {
     stage,
     unit,
     required,
@@ -155,17 +155,17 @@ export async function executeStage(args: {
     pipelinePaths: data.pipelinePaths,
     checks: { build: c.phaseBuildScript, test: c.phaseVerifyScript },
   });
-  inputs["input/stage-context.json"] = digest(
-    readFileSync(join(workspace, "input/stage-context.json")),
+  inputs["input/construction-context.json"] = digest(
+    readFileSync(join(workspace, "input/construction-context.json")),
   );
-  writeJson(join(control, "stage-context.json"), data);
+  writeJson(join(control, "construction-context.json"), data);
   copyFileSync(
-    join(import.meta.dir, "stage-gate.ts"),
-    join(control, "stage-gate.ts"),
+    join(import.meta.dir, "construction-gate.ts"),
+    join(control, "construction-gate.ts"),
   );
-  copyFileSync(cgGateSource, join(control, "cg-gate.ts"));
+  copyFileSync(cgGateSource, join(control, "code-generation-gate.ts"));
   copyFileSync(nativeTraceSource, join(control, "native-trace.ts"));
-  const { workflow, controlFiles: facetFiles } = materializeWorkflow(store, c.stageWorkflow, control);
+  const { workflow, controlFiles: facetFiles } = materializeWorkflow(store, c.constructionWorkflow, control);
   const contract = `${stageContract}\n現在の工程は${stage.slug}、Unitは${unit ?? "全Unit"}です。\n`;
   const bundlePaths = paths.filter(
     (path) =>
@@ -197,9 +197,9 @@ export async function executeStage(args: {
     bundlePaths.map((path) => ({ path, sha256: files[path] })),
   );
   const protectedFiles = snapshot(control, [
-    "stage-context.json",
-    "stage-gate.ts",
-    "cg-gate.ts",
+    "construction-context.json",
+    "construction-gate.ts",
+    "code-generation-gate.ts",
     "sources.md",
     "workflow.yaml",
     "injection.json",
@@ -258,7 +258,7 @@ export async function executeStage(args: {
   unchanged(workspace, inputs);
   unchanged(control, protectedFiles);
   const evidence = await command(
-    [process.execPath, join(control, "stage-gate.ts"), "result"],
+    [process.execPath, join(control, "construction-gate.ts"), "result"],
     workspace,
     env,
     10000,

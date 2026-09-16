@@ -7,7 +7,7 @@ import {
   type PhaseConfig,
 } from "../../src/construction-phase/context";
 import { readJson, writeJson } from "../../src/handoff/io";
-import { put, repo } from "../../tests/handoff-fixture";
+import { put } from "../../tests/handoff-fixture";
 export async function phaseFixture(
   options: {
     host?: "claude" | "codex";
@@ -72,14 +72,13 @@ export async function phaseFixture(
     ...f.config,
     provider: "mock",
     delegationScope: "construction",
-    stageWorkflow: `${control}/takt/workflows/aidlc-construction-stage.yaml`,
+    constructionWorkflow: `${control}/takt/workflows/aidlc-construction-phase.yaml`,
     phaseBuildScript: `${control}/phase-build.ts`,
     phaseVerifyScript: `${control}/phase-test.ts`,
     pipelinePaths: [".github/workflows/ci.yml"],
     stageScenarios: {},
     timeoutMs: 180000,
   } as any;
-  delete (config as any).handoffStage;
   if (options.twoUnits) {
     for (const name of ["build", "test", "typecheck"])
       put(
