@@ -4,7 +4,7 @@
 
 ## 設計・レビュー・実装・検証を一つのWorkflowにした
 
-[aidlc-construction.yaml](../workflows/aidlc-construction.yaml)は、承認済みのInception文書から詳細設計を作り、設計レビュー、実装、テスト、コードレビュー、修正、完了報告まで進める。AI-DLC本体はparkのまま保持する。
+[aidlc-construction.yaml](../takt/aidlc-construction.yaml)は、承認済みのInception文書から詳細設計を作り、設計レビュー、実装、テスト、コードレビュー、修正、完了報告まで進める。AI-DLC本体はparkのまま保持する。
 
 ```mermaid
 flowchart TD
@@ -43,7 +43,7 @@ TAKT 0.65.0の`output_contracts`、`session_key`、コマンド形式の`quality
 
 これは設定の差分であり、単独では使えない。既存の`enabled`、`artifacts`、`sources`、`verifyScript`、`provider`も必要である。[設定全体の説明](handoff-poc.md)を参照。
 
-ビルド後の配布物にも`workflows/aidlc-construction.yaml`を含めている。`construction: true`の場合、連携CLIが品質ゲート用の同梱ツールを実行用ディレクトリへ配置し、TAKTのコマンドゲートを有効にする。WorkflowだけをTAKTへ直接渡すと、ゲート用ツールが存在しないため動かない。
+ビルド後の配布物にも`takt/aidlc-construction.yaml`を含めている。`construction: true`の場合、連携CLIが品質ゲート用の同梱ツールを実行用ディレクトリへ配置し、TAKTのコマンドゲートを有効にする。WorkflowだけをTAKTへ直接渡すと、ゲート用ツールが存在しないため動かない。
 
 このリポジトリの実験用設定では、最終承認前に次を実行できる。
 

@@ -29,12 +29,13 @@ bun run build:marketplace
 
 | パス | 用途 |
 |---|---|
+| `takt/` | TAKTのYAMLと5種類のファセットの編集元 |
 | `plugins/claude/` / `plugins/codex/takt-aidlc/` | マニフェストとフックの編集元 |
 | `dist/claude/` / `dist/codex/` | ローカル開発用の生成先（Git管理外） |
 | `plugins/takt-aidlc-claude/` / `plugins/takt-aidlc/` | 公開する生成物（Git管理対象、直接編集しない） |
 | `.claude-plugin/marketplace.json` / `.agents/plugins/marketplace.json` | Claude Code／Codexの公開マーケットプレイス |
 
-ソースやフックを変更したら、編集元のプラグインのバージョンも更新し、`bun run build:marketplace`で再生成する。Codexの開発用キャッシュ更新にはplugin-creatorのcachebusterヘルパーを使える。`bun run check:marketplace`で、配布物が現在のソースから再現できることを確認する。
+ソース・フック・TAKTの定義を変更したら、編集元のプラグインのバージョンも更新し、`bun run build:marketplace`で再生成する。Codexの開発用キャッシュ更新にはplugin-creatorのcachebusterヘルパーを使える。`bun run check:marketplace`で、配布物が現在のソースから再現できることを確認する。
 
 ローカルで確認する場合だけ、次の方法を使う。公開版の同じプラグインと同時に読み込まない。
 

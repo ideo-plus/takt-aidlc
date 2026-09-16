@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { cpSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fixture, put, repo } from '../../tests/handoff-fixture';
 import { readJson, writeJson } from '../../src/handoff/io';
@@ -20,7 +20,8 @@ const implement = (value: number, tests = testSource) => [
 
 export async function constructionFixture(options: { live?: boolean; repairs?: boolean; needsInput?: boolean; implementationNeedsInput?: boolean; designWritesFile?: boolean; maxSteps?: number } = {}) {
   const f = await fixture({ provider: options.live ? 'claude' : 'mock' });
-  let workflow = readFileSync(join(repo, 'workflows/aidlc-construction.yaml'), 'utf8');
+  cpSync(join(repo, 'takt/facets'), join(f.project, '.takt-aidlc/facets'), { recursive: true });
+  let workflow = readFileSync(join(repo, 'takt/aidlc-construction.yaml'), 'utf8');
   if (options.maxSteps) workflow = workflow.replace('max_steps: 18', `max_steps: ${options.maxSteps}`);
   put(join(f.project, '.takt-aidlc/workflow.yaml'), workflow);
   put(join(f.project, '.takt-aidlc/verify.ts'), readFileSync(join(repo, 'experiments/native-session/verify-app.ts'), 'utf8'));

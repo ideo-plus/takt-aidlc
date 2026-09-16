@@ -62,7 +62,7 @@ export async function phaseFixture(
   }
   put(
     join(f.project, control, "stage-workflow.yaml"),
-    readFileSync(join(repo, "workflows/aidlc-construction-stage.yaml"), "utf8"),
+    readFileSync(join(repo, "takt/aidlc-construction-stage.yaml"), "utf8"),
   );
   put(
     join(f.project, control, "phase-build.ts"),

@@ -31,7 +31,7 @@ Start a new host session after installation. For Codex, [enable and trust hooks]
 ## Use in your project
 
 1. In your target project, run `aidlc config --harness claude --yes` or `aidlc config --harness codex --yes`.
-2. Follow the [setup guide](docs/getting-started.md#configure-an-ai-dlc-project) to configure inputs, source files, build/test scripts, and sensors in `aidlc/takt-handoff/config.json`. Select the matching `hostHarness` and a delegation scope below. The guide downloads workflow templates over HTTPS; no checkout is needed.
+2. Follow the [setup guide](docs/getting-started.md#configure-an-ai-dlc-project) to configure inputs, source files, build/test scripts, and sensors in `aidlc/takt-handoff/config.json`. Select the matching `hostHarness` and a delegation scope below. The guide downloads the `takt/` bundle, including all facets, over HTTPS; no checkout is needed.
 3. Start `claude` and use `/aidlc`, or start `codex` and use `$aidlc`. Complete the usual AI-DLC questions and approvals up to the selected boundary. TAKT starts automatically there.
 
 | Delegation scope | When TAKT starts | Setup |
@@ -59,6 +59,7 @@ The current profile supports `test-after` and a single AI-DLC audit shard. Const
 - [Installation, configuration, updates, and troubleshooting](docs/getting-started.md)
 - [CG-only / Construction delegation modes](docs/delegation-modes.md)
 - [Claude Code host](docs/claude-plugin.md) · [Codex host](docs/codex-host.md)
+- [TAKT workflows and facets](takt/README.md)
 - [CG behavior and sensors](docs/code-generation.md) · [Construction behavior](docs/construction-phase.md)
 - [Support and maintainers](docs/contributing.md#問い合わせ)
 

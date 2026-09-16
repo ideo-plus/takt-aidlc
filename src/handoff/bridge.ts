@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { cleanEnvironment, command, digest, fileInside, quote, readJson, requireSuccess, snapshot, unchanged, withoutBedrock, writeJson, type Snapshot } from './io';
 import { harnessDirectory, type HostHarness } from '../hosts/harness';
 import { prepareConstruction } from '../construction/runtime';
+import { workflowFiles } from '../takt/workflow';
 
 export type Config = {
   enabled: true; artifacts: string[]; sources: string[]; workflow: string;
@@ -41,7 +42,7 @@ export function configuration(project: string) {
   if (typeof c.verifyScript !== 'string' || !c.verifyScript) throw new Error('独立した検証スクリプトが必要です');
   for (const path of c.sources) if (/^(?:\.git|\.claude|\.codex|\.agents|\.takt|\.takt-aidlc|aidlc|input)(?:\/|$)/.test(path)) throw new Error(`制御設定をソースとしてコピーできません: ${path}`);
   if (c.construction && c.sources.some(path => /^(?:construction|coverage|\.handoff-coverage-[^/]+)(?:\/|$)/.test(path))) throw new Error('Constructionの出力先をソースとして指定できません');
-  const paths = [...c.artifacts, ...c.sources, c.workflow, c.verifyScript, ...(c.mockScenario ? [c.mockScenario] : [])];
+  const paths = [...c.artifacts, ...c.sources, ...workflowFiles(project, c.workflow), c.verifyScript, ...(c.mockScenario ? [c.mockScenario] : [])];
   const files = snapshot(project, paths);
   return { c, files, configHash: digest(readFileSync(path)) };
 }

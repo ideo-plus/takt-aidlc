@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { command, cleanEnvironment, requireSuccess, writeJson } from '../../src/handoff/io';
 
@@ -18,7 +18,10 @@ const directory = join(project, 'aidlc/takt-handoff'); mkdirSync(directory, { re
 writeFileSync(join(directory, 'workflow.yaml'), `name: native-handoff-value-update\ninitial_step: implement\nmax_steps: 1\nsteps:\n  - name: implement\n    edit: true\n    required_permission_mode: edit\n    instruction: |\n      input/manifest.jsonと承認済みのInception成果物を読んでください。\n      指示されたsrc/value.tsのanswerの変更を実装してください。\n      入力と制御設定は変更しないでください。\n    rules:\n      - condition: 試行終了\n        next: COMPLETE\n`);
 writeFileSync(join(directory, 'verify.ts'), `import { pathToFileURL } from 'node:url';\nimport { join } from 'node:path';\nconst module = await import(pathToFileURL(join(process.cwd(), 'src/value.ts')).href);\nif (module.answer !== 42) throw new Error('answerは42でなければなりません');\nconsole.log('受入条件: answer === 42 を確認');\n`);
 if (withTests) writeFileSync(join(directory, 'verify.ts'), readFileSync(join(import.meta.dir, 'verify-app.ts'), 'utf8'));
-if (construction) writeFileSync(join(directory, 'workflow.yaml'), readFileSync(join(repo, 'workflows/aidlc-construction.yaml'), 'utf8'));
+if (construction) {
+  cpSync(join(repo, 'takt/facets'), join(directory, 'facets'), { recursive: true });
+  writeFileSync(join(directory, 'workflow.yaml'), readFileSync(join(repo, 'takt/aidlc-construction.yaml'), 'utf8'));
+}
 writeJson(join(directory, 'config.json'), {
   enabled: true,
   handoffStage: 'inception-legacy',

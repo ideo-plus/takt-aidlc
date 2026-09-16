@@ -13,6 +13,7 @@ import {
   harnessDirectory,
 } from "../hosts/harness";
 import { digest, fileInside, readJson, snapshot } from "../handoff/io";
+import { workflowFiles } from "../takt/workflow";
 
 export type UnitChecks = Pick<
   CgConfig,
@@ -292,8 +293,8 @@ export function phaseFiles(project: string, c: PhaseConfig, ctx: PhaseContext) {
     ...Object.values(ctx.cg).flatMap((cg) => cg.files),
     ...ctx.stages.flatMap((s) => s.files),
     ...c.sources,
-    c.workflow,
-    c.stageWorkflow,
+    ...workflowFiles(project, c.workflow),
+    ...workflowFiles(project, c.stageWorkflow),
     c.phaseBuildScript,
     c.phaseVerifyScript,
     ...Object.values(c.stageSensorScripts ?? {}),

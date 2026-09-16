@@ -120,7 +120,7 @@ test('移動した配布物だけでフックからworkerを起動できる', as
 test('移動した配布物からConstructionの品質ゲートとレビューを実行できる', async () => {
   const f = await constructionFixture();
   expect(existsSync(join(moved, 'scripts/construction-gate.ts'))).toBe(true);
-  expect(existsSync(join(moved, 'workflows/aidlc-construction.yaml'))).toBe(true);
+  expect(existsSync(join(moved, 'takt/aidlc-construction.yaml'))).toBe(true);
   for (const name of ['PreToolUse', 'PostToolUse']) {
     expect(invoke(f.project, name, { ...f.event, hook_event_name: name }).status).toBe(0);
   }
@@ -142,7 +142,7 @@ test('移動した配布物からConstructionの品質ゲートとレビュー�
 test('CG設定はInception承認で起動せず、CG入口から一度だけ自動実行する', async () => {
   const f = await cgFixture();
   expect(existsSync(join(moved, 'scripts/cg-gate.ts'))).toBe(true);
-  expect(existsSync(join(moved, 'workflows/aidlc-code-generation.yaml'))).toBe(true);
+  expect(existsSync(join(moved, 'takt/aidlc-code-generation.yaml'))).toBe(true);
   const denied = invoke(f.project, 'PreToolUse', { ...f.event, hook_event_name: 'PreToolUse', tool_input: { command: 'aidlc engine orchestrate next 2>&1; echo ok' } });
   expect(JSON.parse(denied.stdout).hookSpecificOutput.permissionDecision).toBe('deny');
   const legacy = invoke(f.project, 'PostToolUse', { ...f.event, tool_input: { command: 'aidlc engine orchestrate report --stage delivery-planning --result approved' }, tool_response: { stdout: '{"kind":"done"}' } });

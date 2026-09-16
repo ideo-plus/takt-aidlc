@@ -26,6 +26,8 @@ import { prepareProvider } from "../handoff/provider";
 import { sources, cgGateSource } from "../code-generation/cg-gate";
 import type { CgContext } from "../code-generation/context";
 import type { PhaseConfig, StageDefinition } from "./context";
+import { materializeWorkflow } from "../takt/workflow";
+import stageContract from '../../takt/facets/policies/stage-hotl.md' with { type: 'text' };
 
 export async function executeStage(args: {
   attempt: string;
@@ -163,10 +165,8 @@ export async function executeStage(args: {
   );
   copyFileSync(cgGateSource, join(control, "cg-gate.ts"));
   copyFileSync(nativeTraceSource, join(control, "native-trace.ts"));
-  const workflow = Bun.YAML.parse(
-    readFileSync(fileInside(store, c.stageWorkflow), "utf8"),
-  ) as any;
-  const contract = `# Construction HOTLの実行契約\n現在の工程は${stage.slug}、Unitは${unit ?? "全Unit"}です。入力のIntent・本家工程定義・規約・知識・センサーを使います。対話承認、ウォーキングスケルトン後の承認、学びの質問、ネイティブの状態・監査記録の更新は行いません。技術レビューへ置き換え、入力から決められないことはblockedで終了してください。成果物の元のrecordパスはinput/projectの固定コピーへ対応します。ファイルは応答のartifacts/writesから検証ゲートが生成します。品質条件を弱めず、実測していない検査を成功と記録しないでください。\n`;
+  const { workflow, controlFiles: facetFiles } = materializeWorkflow(store, c.stageWorkflow, control);
+  const contract = `${stageContract}\n現在の工程は${stage.slug}、Unitは${unit ?? "全Unit"}です。\n`;
   const bundlePaths = paths.filter(
     (path) =>
       path !== cg.stageFile && !/^\.(?:claude|codex)\/tools\//.test(path),
@@ -189,7 +189,7 @@ export async function executeStage(args: {
   for (const step of workflow.steps) {
     if (!["draft", "review"].includes(step.name))
       throw new Error("工程Workflowが不正です");
-    step.instruction = ["upstream", contract, step.instruction];
+    step.instruction = ["upstream", contract, ...[step.instruction].flat()];
   }
   writeFileSync(join(control, "workflow.yaml"), Bun.YAML.stringify(workflow));
   writeJson(
@@ -204,6 +204,7 @@ export async function executeStage(args: {
     "workflow.yaml",
     "injection.json",
     "native-trace.ts",
+    ...facetFiles,
     ...traceInputs.map((p) => `trace-project/${p}`),
   ]);
   const key = `${unit ?? "all"}/${stage.slug}`;

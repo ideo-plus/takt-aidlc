@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { digest, writeJson } from '../src/handoff/io';
 
@@ -7,7 +7,8 @@ export const output = join(root, 'dist/claude');
 export const codexOutput = join(root, 'dist/codex/plugins/takt-aidlc');
 
 export async function buildPlugin() {
-  const sourceFiles = ['src/handoff/cli.ts', 'src/handoff/bridge.ts', 'src/handoff/io.ts', 'src/handoff/provider.ts', 'src/construction-phase/context.ts', 'src/construction-phase/runner.ts', 'src/construction-phase/stage.ts', 'src/construction-phase/stage-gate.ts', 'src/construction-phase/native-trace.ts', 'src/construction-phase/cg-gate.ts', 'workflows/aidlc-construction-stage.yaml', 'src/hosts/harness.ts', 'src/hosts/codex.ts', 'src/construction/runtime.ts', 'src/construction/construction-gate.ts', 'src/code-generation/context.ts', 'src/code-generation/runner.ts', 'src/code-generation/cg-gate.ts', 'workflows/aidlc-code-generation.yaml', 'workflows/aidlc-construction.yaml'];
+  const taktFiles = readdirSync(join(root, 'takt'), { recursive: true, withFileTypes: true }).filter(entry => entry.isFile()).map(entry => join(entry.parentPath, entry.name).slice(root.length + 1)).sort();
+  const sourceFiles = ['src/takt/workflow.ts', ...taktFiles, 'src/handoff/cli.ts', 'src/handoff/bridge.ts', 'src/handoff/io.ts', 'src/handoff/provider.ts', 'src/construction-phase/context.ts', 'src/construction-phase/runner.ts', 'src/construction-phase/stage.ts', 'src/construction-phase/stage-gate.ts', 'src/construction-phase/native-trace.ts', 'src/construction-phase/cg-gate.ts', 'src/hosts/harness.ts', 'src/hosts/codex.ts', 'src/construction/runtime.ts', 'src/construction/construction-gate.ts', 'src/code-generation/context.ts', 'src/code-generation/runner.ts', 'src/code-generation/cg-gate.ts'];
   for (const [target, source, manifestDir] of [
     [output, 'plugins/claude', '.claude-plugin'],
     [codexOutput, 'plugins/codex/takt-aidlc', '.codex-plugin'],
@@ -23,7 +24,7 @@ export async function buildPlugin() {
     cpSync(join(root, 'src/construction-phase/native-trace.ts'), join(target, 'scripts/native-trace.ts'));
     cpSync(join(root, 'src/construction-phase/stage-gate.ts'), join(target, 'scripts/stage-gate.ts'));
     cpSync(join(root, 'src/code-generation/cg-gate.ts'), join(target, 'scripts/cg-gate.ts'));
-    cpSync(join(root, 'workflows'), join(target, 'workflows'), { recursive: true });
+    cpSync(join(root, 'takt'), join(target, 'takt'), { recursive: true });
     const inputs = [...sourceFiles, 'LICENSE', `${source}/${manifestDir}/plugin.json`, `${source}/hooks/hooks.json`];
     writeJson(join(target, 'build-info.json'), {
       version: JSON.parse(readFileSync(join(target, manifestDir, 'plugin.json'), 'utf8')).version,

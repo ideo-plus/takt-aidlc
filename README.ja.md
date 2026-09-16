@@ -31,7 +31,7 @@ codex plugin add takt-aidlc@takt-aidlc
 ## 対象プロジェクトで使う
 
 1. 対象プロジェクトで`aidlc config --harness claude --yes`または`aidlc config --harness codex --yes`を実行します。
-2. [設定手順](docs/getting-started.md#configure-an-ai-dlc-project)に従い、`aidlc/takt-handoff/config.json`に入力・ソース・ビルド／テストのスクリプト・センサーを指定します。利用する`hostHarness`と、下表の委譲範囲を選びます。Workflowの雛形もHTTPSで取得でき、リポジトリのcloneは不要です。
+2. [設定手順](docs/getting-started.md#configure-an-ai-dlc-project)に従い、`aidlc/takt-handoff/config.json`に入力・ソース・ビルド／テストのスクリプト・センサーを指定します。利用する`hostHarness`と、下表の委譲範囲を選びます。ファセットを含む`takt/`一式もHTTPSで取得でき、リポジトリのcloneは不要です。
 3. `claude`を起動して`/aidlc`、または`codex`を起動して`$aidlc`で進めます。選択した入口までは通常のAI-DLCで質問と承認を進め、その入口からTAKTが自動で実行します。
 
 | 委譲範囲 | TAKTの開始タイミング | 設定手順 |
@@ -59,6 +59,7 @@ codex plugin add takt-aidlc@takt-aidlc
 - [導入・設定・更新・トラブルシューティング](docs/getting-started.md)
 - [CG単体／Construction全体の委譲モード](docs/delegation-modes.md)
 - [Claude Codeホスト](docs/claude-plugin.md) · [Codexホスト](docs/codex-host.md)
+- [TAKTのワークフローとファセット](takt/README.md)
 - [CGの動作とセンサー](docs/code-generation.md) · [Constructionの動作](docs/construction-phase.md)
 - [問い合わせ窓口と管理者](docs/contributing.md#問い合わせ)
 

@@ -71,16 +71,25 @@ Run `/aidlc` normally. Use the usual questions and approval gates up to the sele
 
 Use `delegationScope: "code-generation"` for CG only, or `delegationScope: "construction"` for the whole phase after Inception approval. Both hosts support both modes. See the [Construction guide](construction-phase.md) for phase and per-unit checks; the configuration below is for CG only.
 
-## Configure CG delegation before CG entry
+## Download the TAKT bundle
 
-Download the CG workflow in the target project:
+From the target project, download the `takt/` directory, including all facet Markdown files. No Git checkout or build is needed:
 
 ```sh
 mkdir -p aidlc/takt-handoff
-curl --fail --location https://raw.githubusercontent.com/ideo-plus/takt-aidlc/main/workflows/aidlc-code-generation.yaml --output aidlc/takt-handoff/workflow.yaml
+takt_download_dir=$(mktemp -d)
+curl --fail --location https://github.com/ideo-plus/takt-aidlc/archive/refs/heads/main.tar.gz --output "$takt_download_dir/source.tar.gz" &&
+  tar -xzf "$takt_download_dir/source.tar.gz" --strip-components=1 -C aidlc/takt-handoff takt-aidlc-main/takt
+rm -rf "$takt_download_dir"
 ```
 
-If you pinned the marketplace to a tag or commit, use that same ref instead of `main` in the download URL. You can also copy `workflows/aidlc-code-generation.yaml` from the installed plugin. These files are frozen at delegation, so prepare them before entering CG.
+This creates `aidlc/takt-handoff/takt/`. You can also copy the entire `takt/` directory from the installed plugin. YAML files reference `./facets/`; copying a YAML file alone is insufficient. If you pinned the marketplace to a tag or commit, copy `takt/` from that installed version instead of downloading `main`.
+
+The [TAKT directory guide](../takt/README.md) explains instructions, policies, personas, knowledge, and output contracts. Prepare or customize these files before delegation; referenced Markdown files are frozen and checked alongside the YAML. Existing self-contained YAML configurations continue to work.
+
+## Configure CG delegation before CG entry
+
+Download the bundle above before entering CG.
 
 Add trusted Bun scripts for your application's build, unit tests, and applicable sensors. These scripts run from frozen copies with the generated workspace as their working directory.
 
@@ -102,7 +111,7 @@ Create `aidlc/takt-handoff/config.json`. This is a template: replace `<intent-di
     "aidlc/spaces/default/intents/<intent-dir>/inception/delivery-planning/bolt-plan.md"
   ],
   "sources": ["src/value.ts"],
-  "workflow": "aidlc/takt-handoff/workflow.yaml",
+  "workflow": "aidlc/takt-handoff/takt/aidlc-code-generation.yaml",
   "buildScript": "aidlc/takt-handoff/build.ts",
   "verifyScript": "aidlc/takt-handoff/test.ts",
   "sensorScripts": {
@@ -165,7 +174,7 @@ codex plugin marketplace upgrade takt-aidlc
 codex plugin add takt-aidlc@takt-aidlc
 ```
 
-Restart the host after updating. Prepare matching workflow templates for new runs; do not change an active run's frozen inputs.
+Restart the host after updating. Prepare a matching `takt/` bundle, including facets, for new runs; do not change an active run's frozen inputs. The former repository-level `workflows/` directory has moved to `takt/`. When switching to these templates, update `workflow` and (for Construction) `stageWorkflow` in the config. Existing inline YAML can still be used.
 
 For migration from the previous local development setup:
 

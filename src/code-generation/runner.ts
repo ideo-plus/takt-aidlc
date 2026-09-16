@@ -3,7 +3,9 @@ import { chmodSync, closeSync, copyFileSync, existsSync, mkdirSync, openSync, re
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cleanEnvironment, command, digest, fileInside, readJson, requireSuccess, snapshot, unchanged, writeJson, type Snapshot } from '../handoff/io';
-import { adaptation, collectCgContext, type CgContext } from './context';
+import { collectCgContext, type CgContext } from './context';
+import adaptation from '../../takt/facets/policies/cg-hotl.md' with { type: 'text' };
+import { workflowFiles, materializeWorkflow } from '../takt/workflow';
 import { prepareProvider } from '../handoff/provider';
 import { sources } from './cg-gate';
 import { hostHarness, harnessDirectory, delegationScope, type HostHarness } from '../hosts/harness';
@@ -74,7 +76,7 @@ export async function prepareCg(project: string, directive: any) {
   if (/\*\*Construction Autonomy Mode\*\*:\s*autonomous\b/.test(state)) throw new Error('AI-DLC自身の自律CGと同時には実行できません');
   const version = await command(['aidlc', '--version'], project, cleanEnvironment(), 10000);
   requireSuccess(version); if (!/^aidlc 2\.8\.2\b/.test(version.stdout)) throw new Error('aidlc 2.8.2が必要です');
-  const files = snapshot(project, [...cg.files, ...c.sources, c.workflow, c.buildScript, c.verifyScript, ...Object.values(c.sensorScripts ?? {}), ...(c.mockScenario ? [c.mockScenario] : [])]);
+  const files = snapshot(project, [...cg.files, ...c.sources, ...workflowFiles(project, c.workflow), c.buildScript, c.verifyScript, ...Object.values(c.sensorScripts ?? {}), ...(c.mockScenario ? [c.mockScenario] : [])]);
   const lib = await import(pathToFileURL(fileInside(project, `${harnessDirectory(cg.hostHarness)}/tools/aidlc-lib.ts`)).href);
   const rows = lib.readAuditShardEvents(project);
   if (new Set(rows.map((row: any) => row.shard)).size !== 1) throw new Error('CG初版は単一の監査シャードのみ対応しています');
@@ -169,7 +171,7 @@ export async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOrigi
       sensorScripts: Object.fromEntries(Object.entries(cgConfig.sensorScripts ?? {}).map(([name, path]) => [name, { path: frozen(path), hash: m.files[path] }])),
       sensorExceptions: cgConfig.sensorExceptions ?? {},
     });
-    const workflow = Bun.YAML.parse(readFileSync(frozen(cgConfig.workflow), 'utf8')) as any;
+    const { workflow, controlFiles: facetFiles } = materializeWorkflow(snapshotRoot, cgConfig.workflow, control);
     const roleFor: Record<string, string> = { plan: 'plan', 'plan-review': 'review', implement: 'implement', fix: 'implement', 'code-review': 'review', finish: 'report' };
     const injection: Record<string, unknown> = {};
     const bundleFiles: string[] = [];
@@ -185,12 +187,12 @@ export async function executeCgWorkspace({ attempt, snapshotRoot, m, verifyOrigi
     for (const step of workflow.steps) {
       const role = roleFor[step.name]; if (!role) throw new Error(`CG外の工程: ${step.name}`);
       const paths = [...new Set(m.cg.roles[role])];
-      step.instruction = [`cg-source-${role}`, adaptation, step.instruction];
+      step.instruction = [`cg-source-${role}`, adaptation, ...[step.instruction].flat()];
       injection[step.name] = { sources: paths.map(path => ({ path, sha256: m.files[path] })), sourceBundleHash: digest(readFileSync(join(control, `context/${role}.md`))) };
     }
     writeFileSync(join(control, 'workflow.yaml'), Bun.YAML.stringify(workflow));
     writeJson(join(control, 'injection.json'), injection);
-    const protectedControl = snapshot(control, ['cg-gate.ts', 'context.json', 'workflow.yaml', 'injection.json', ...bundleFiles]);
+    const protectedControl = snapshot(control, ['cg-gate.ts', 'context.json', 'workflow.yaml', 'injection.json', ...bundleFiles, ...facetFiles]);
     const env = prepareProvider(attempt, cgConfig, cgConfig.mockScenario ? frozen(cgConfig.mockScenario) : undefined);
     writeJson(join(workspace, '.claude/settings.json'), { permissions: { deny: ['Edit(input/**)', 'Write(input/**)', 'Edit(.claude/**)', 'Write(.claude/**)', 'Edit(.kiro/**)', 'Write(.kiro/**)'] } });
     const ignore = join(workspace, '.gitignore');

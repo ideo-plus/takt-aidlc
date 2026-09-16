@@ -30,7 +30,8 @@ export async function cgFixture(options: { constructionEntry?: boolean; hostHarn
   writeJson(join(f.project, record, 'project-description.json'), 'CG-INTENT-SENTINEL: 合成テスト入力。answerを41から42へ変更する。既存の設計・規約に従い、CG単体をHOTLで実行する。standardの5テストとビルドを必ず通す。');
   put(join(f.project, 'aidlc/spaces/default/memory/team.md'), '# Team\n\n## Testing Posture\n- **Methodology**: test-after\n- **Ordering**: 値を変更してから5件のテストを作り、ビルドと単一Unitのテストを実行する。\n- standard戦略に従って5テストを使い、行カバレッジ80%以上を満たす。\n\n## Code Style\n既存の名前付きexportを維持する。Lint基盤は追加しない。\n');
   const control = 'aidlc/takt-handoff';
-  let workflow = readFileSync(join(repo, 'workflows/aidlc-code-generation.yaml'), 'utf8');
+  cpSync(join(repo, 'takt/facets'), join(f.project, control, 'facets'), { recursive: true });
+  let workflow = readFileSync(join(repo, 'takt/aidlc-code-generation.yaml'), 'utf8');
   if (options.maxSteps) workflow = workflow.replace('max_steps: 20', `max_steps: ${options.maxSteps}`);
   put(join(f.project, control, 'workflow.yaml'), workflow);
   put(join(f.project, control, 'build.ts'), `import { join } from 'node:path';\nconst result = await Bun.build({entrypoints:[join(process.cwd(),'src/value.ts')],target:'bun',outdir:join(process.cwd(),'cg/build')});\nif(!result.success){console.error(result.logs);process.exit(1)}\nconsole.log('Bun build passed');\n`);
